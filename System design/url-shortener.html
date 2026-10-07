@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URL Shortener System Design — Visualizer</title>
+  <style>
+    :root {
+      --bg: #f8f9fc;
+      --surface: #ffffff;
+      --surface-alt: #f0f2f8;
+      --border: #e2e5f0;
+      --text: #1a1d2e;
+      --text-secondary: #5a5e76;
+      --text-tertiary: #8b8fa6;
+      --accent: #4f6ef7;
+      --accent-light: #e8ecff;
+      --accent-dark: #3a54c4;
+      --green: #22c55e;
+      --green-light: #dcfce7;
+      --orange: #f59e0b;
+      --orange-light: #fef3c7;
+      --red: #ef4444;
+      --red-light: #fee2e2;
+      --purple: #8b5cf6;
+      --purple-light: #ede9fe;
+      --teal: #14b8a6;
+      --teal-light: #ccfbf1;
+      --pink: #ec4899;
+      --pink-light: #fce7f3;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+      --shadow-lg: 0 10px 30px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.04);
+      --shadow-xl: 0 20px 50px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.05);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-lg: 16px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ---- Hero Header ---- */
+    .hero {
+      background: linear-gradient(135deg, #4f6ef7 0%, #7c3aed 50%, #ec4899 100%);
+      color: white;
+      padding: 60px 40px 50px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .hero h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      opacity: 0.9;
+      max-width: 600px;
+      margin: 0 auto;
+      position: relative;
+      font-weight: 400;
+    }
+    .hero .badge-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+    .hero .badge {
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.25);
+      padding: 6px 16px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    /* ---- Navigation Tabs ---- */
+    .nav-tabs {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      padding: 0 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .nav-tab {
+      padding: 16px 28px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.25s;
+      user-select: none;
+    }
+    .nav-tab:hover { color: var(--accent); }
+    .nav-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 50px 30px;
+    }
+    .section-title {
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .section-subtitle {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-bottom: 36px;
+    }
+
+    /* ---- Architecture Diagram ---- */
+    #architecture-section { padding-bottom: 30px; }
+    .arch-container {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-lg);
+      padding: 30px;
+      overflow: hidden;
+      position: relative;
+    }
+    .arch-svg-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+    .arch-svg-wrap svg {
+      display: block;
+      margin: 0 auto;
+    }
+    /* SVG component styling */
+    .comp-group { cursor: pointer; }
+    .comp-group:hover .comp-body { filter: brightness(0.97); }
+    .comp-group .comp-body { transition: filter 0.2s, transform 0.2s; }
+    .comp-label {
+      font-family: 'Segoe UI', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      fill: var(--text);
+    }
+    .comp-sublabel {
+      font-family: 'Segoe UI', sans-serif;
+      font-weight: 400;
+      font-size: 10.5px;
+      fill: var(--text-secondary);
+    }
+    .conn-line {
+      stroke-width: 2;
+      fill: none;
+      opacity: 0.5;
+      transition: opacity 0.3s, stroke-width 0.3s;
+    }
+    .conn-line.highlighted {
+      opacity: 1;
+      stroke-width: 3;
+    }
+    .conn-label {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 10px;
+      fill: var(--text-tertiary);
+      transition: fill 0.3s;
+    }
+    .conn-label.highlighted { fill: var(--text); font-weight: 600; }
+    .layer-label {
+      font-family: 'Segoe UI', sans-serif;
+      font-weight: 800;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* Tooltip */
+    .arch-tooltip {
+      position: fixed;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      box-shadow: var(--shadow-xl);
+      max-width: 280px;
+      font-size: 0.85rem;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 200;
+    }
+    .arch-tooltip.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .arch-tooltip h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .arch-tooltip p {
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* ---- Component Breakdown Cards ---- */
+    .comp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
+    }
+    .comp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.3s, transform 0.3s;
+    }
+    .comp-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+    .comp-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+    .comp-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .comp-card .purpose {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+    .comp-card .detail-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      margin-top: 14px;
+      margin-bottom: 4px;
+    }
+    .comp-card .detail-value {
+      font-size: 0.88rem;
+      color: var(--text);
+      line-height: 1.55;
+    }
+    .tech-pill {
+      display: inline-block;
+      background: var(--accent-light);
+      color: var(--accent-dark);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 100px;
+      margin-right: 6px;
+      margin-bottom: 4px;
+    }
+
+    /* ---- Sequence Diagram ---- */
+    .seq-controls {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .seq-btn {
+      padding: 10px 22px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .seq-btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    .seq-btn-primary:hover { background: var(--accent-dark); }
+    .seq-btn-secondary {
+      background: var(--surface-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .seq-btn-secondary:hover { background: var(--border); }
+    .seq-btn-secondary.active {
+      background: var(--accent-light);
+      color: var(--accent-dark);
+      border-color: var(--accent);
+    }
+    .seq-speed {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-left: auto;
+    }
+    .seq-speed input[type="range"] {
+      width: 100px;
+      accent-color: var(--accent);
+    }
+    .seq-diagram-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 30px;
+      overflow-x: auto;
+    }
+    .seq-narration {
+      margin-top: 18px;
+      padding: 16px 22px;
+      background: var(--accent-light);
+      border-radius: var(--radius-sm);
+      border-left: 4px solid var(--accent);
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--accent-dark);
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s;
+    }
+    .seq-step-counter {
+      font-size: 0.82rem;
+      color: var(--text-tertiary);
+      margin-top: 10px;
+    }
+
+    /* ---- Scaling & Trade-offs ---- */
+    .scaling-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
+    }
+    .scale-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+    }
+    .scale-card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .scale-card h3 .icon {
+      width: 32px; height: 32px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    .est-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .est-row:last-child { border-bottom: none; }
+    .est-label { color: var(--text-secondary); }
+    .est-value { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+    .tradeoff-item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tradeoff-item:last-child { border-bottom: none; }
+    .tradeoff-title {
+      font-weight: 700;
+      font-size: 0.92rem;
+      margin-bottom: 4px;
+    }
+    .tradeoff-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+    .failure-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .failure-item:last-child { border-bottom: none; }
+    .failure-badge {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+    .failure-text strong { font-size: 0.9rem; }
+    .failure-text p { font-size: 0.84rem; color: var(--text-secondary); margin-top: 2px; }
+
+    .growth-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .growth-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 700;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-tertiary);
+      border-bottom: 2px solid var(--border);
+    }
+    .growth-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .growth-table tr:last-child td { border-bottom: none; }
+
+    /* ---- Animations ---- */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in {
+      animation: fadeInUp 0.6s ease forwards;
+      opacity: 0;
+    }
+    .fade-in-d1 { animation-delay: 0.1s; }
+    .fade-in-d2 { animation-delay: 0.2s; }
+    .fade-in-d3 { animation-delay: 0.3s; }
+    .fade-in-d4 { animation-delay: 0.4s; }
+
+    @keyframes drawLine {
+      from { stroke-dashoffset: 1000; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .hero h1 { font-size: 2rem; }
+      .section { padding: 30px 16px; }
+      .comp-grid, .scaling-grid { grid-template-columns: 1fr; }
+      .nav-tab { padding: 12px 16px; font-size: 0.82rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ====== HERO ====== -->
+<div class="hero">
+  <h1>URL Shortener System Design</h1>
+  <p>A scalable, highly available service like bit.ly — converting long URLs into short, memorable links and redirecting millions of users per second.</p>
+  <div class="badge-row">
+    <span class="badge">100M+ URLs/month</span>
+    <span class="badge">10:1 Read/Write Ratio</span>
+    <span class="badge">Sub-10ms Redirects</span>
+    <span class="badge">99.99% Uptime</span>
+  </div>
+</div>
+
+<!-- ====== NAV TABS ====== -->
+<nav class="nav-tabs" id="navTabs">
+  <div class="nav-tab active" data-target="architecture-section">Architecture</div>
+  <div class="nav-tab" data-target="components-section">Components</div>
+  <div class="nav-tab" data-target="sequence-section">Request Flows</div>
+  <div class="nav-tab" data-target="scaling-section">Scaling & Trade-offs</div>
+</nav>
+
+<!-- ====== ARCHITECTURE DIAGRAM ====== -->
+<div class="section" id="architecture-section">
+  <h2 class="section-title fade-in">Architecture Overview</h2>
+  <p class="section-subtitle fade-in fade-in-d1">Hover over components to see details. Click to jump to their breakdown.</p>
+  <div class="arch-container fade-in fade-in-d2">
+    <div class="arch-svg-wrap">
+      <svg id="archSvg" viewBox="0 0 1100 620" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+        <!-- Layer backgrounds -->
+        <rect x="20" y="15" width="1060" height="100" rx="14" fill="#f0f2f8" stroke="#e2e5f0" stroke-width="1"/>
+        <text x="45" y="38" class="layer-label" fill="#8b8fa6">CLIENT LAYER</text>
+
+        <rect x="20" y="130" width="1060" height="120" rx="14" fill="#e8ecff" stroke="#c7d0f7" stroke-width="1"/>
+        <text x="45" y="153" class="layer-label" fill="#4f6ef7">API LAYER</text>
+
+        <rect x="20" y="265" width="1060" height="120" rx="14" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1"/>
+        <text x="45" y="288" class="layer-label" fill="#7c3aed">SERVICE LAYER</text>
+
+        <rect x="20" y="400" width="1060" height="100" rx="14" fill="#dcfce7" stroke="#a7f3d0" stroke-width="1"/>
+        <text x="45" y="423" class="layer-label" fill="#16a34a">CACHE LAYER</text>
+
+        <rect x="20" y="515" width="1060" height="95" rx="14" fill="#fef3c7" stroke="#fcd34d" stroke-width="1"/>
+        <text x="45" y="538" class="layer-label" fill="#d97706">DATA LAYER</text>
+
+        <!-- ===== CONNECTIONS (drawn first, behind components) ===== -->
+        <defs>
+          <marker id="arrowBlue" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#4f6ef7"/>
+          </marker>
+          <marker id="arrowPurple" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+          </marker>
+          <marker id="arrowGreen" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/>
+          </marker>
+          <marker id="arrowOrange" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#d97706"/>
+          </marker>
+        </defs>
+
+        <!-- Client -> LB -->
+        <path d="M280 90 L280 158" class="conn-line" stroke="#4f6ef7" marker-end="url(#arrowBlue)" data-from="client" data-to="lb"/>
+        <text x="288" y="128" class="conn-label" data-from="client" data-to="lb">HTTPS</text>
+
+        <!-- Client (Mobile) -> LB -->
+        <path d="M480 90 L380 158" class="conn-line" stroke="#4f6ef7" marker-end="url(#arrowBlue)" data-from="mobile" data-to="lb"/>
+
+        <!-- LB -> API Gateway -->
+        <path d="M335 210 L520 175" class="conn-line" stroke="#4f6ef7" marker-end="url(#arrowBlue)" data-from="lb" data-to="gateway"/>
+        <text x="410" y="186" class="conn-label" data-from="lb" data-to="gateway">HTTP/2</text>
+
+        <!-- API Gateway -> URL Service -->
+        <path d="M570 215 L340 305" class="conn-line" stroke="#7c3aed" marker-end="url(#arrowPurple)" data-from="gateway" data-to="urlservice"/>
+        <text x="430" y="258" class="conn-label" data-from="gateway" data-to="urlservice">gRPC</text>
+
+        <!-- API Gateway -> Analytics -->
+        <path d="M620 215 L700 300" class="conn-line" stroke="#7c3aed" marker-end="url(#arrowPurple)" data-from="gateway" data-to="analytics"/>
+        <text x="650" y="254" class="conn-label" data-from="gateway" data-to="analytics">async</text>
+
+        <!-- API Gateway -> Rate Limiter -->
+        <path d="M680 190 L830 190" class="conn-line" stroke="#4f6ef7" marker-end="url(#arrowBlue)" data-from="gateway" data-to="ratelimiter"/>
+        <text x="730" y="182" class="conn-label" data-from="gateway" data-to="ratelimiter">check</text>
+
+        <!-- URL Service -> Cache -->
+        <path d="M300 370 L300 430" class="conn-line" stroke="#16a34a" marker-end="url(#arrowGreen)" data-from="urlservice" data-to="cache"/>
+        <text x="308" y="403" class="conn-label" data-from="urlservice" data-to="cache">get/set</text>
+
+        <!-- URL Service -> DB -->
+        <path d="M300 370 L300 545" class="conn-line" stroke="#d97706" marker-end="url(#arrowOrange)" data-from="urlservice" data-to="db"/>
+
+        <!-- URL Service -> ID Generator -->
+        <path d="M400 340 L520 340" class="conn-line" stroke="#7c3aed" marker-end="url(#arrowPurple)" data-from="urlservice" data-to="idgen"/>
+        <text x="440" y="332" class="conn-label" data-from="urlservice" data-to="idgen">nextID</text>
+
+        <!-- Cache -> DB  -->
+        <path d="M300 480 L300 540" class="conn-line" stroke="#d97706" marker-end="url(#arrowOrange)" data-from="cache" data-to="db" stroke-dasharray="6,4"/>
+        <text x="308" y="514" class="conn-label" data-from="cache" data-to="db">miss</text>
+
+        <!-- Analytics -> Kafka -->
+        <path d="M745 370 L745 438" class="conn-line" stroke="#16a34a" marker-end="url(#arrowGreen)" data-from="analytics" data-to="kafka"/>
+        <text x="753" y="408" class="conn-label" data-from="analytics" data-to="kafka">pub</text>
+
+        <!-- Kafka -> Analytics DB -->
+        <path d="M810 470 L900 540" class="conn-line" stroke="#d97706" marker-end="url(#arrowOrange)" data-from="kafka" data-to="analyticsdb"/>
+        <text x="860" y="505" class="conn-label" data-from="kafka" data-to="analyticsdb">consume</text>
+
+        <!-- Rate Limiter -> Redis -->
+        <path d="M920 215 L530 438" class="conn-line" stroke="#16a34a" marker-end="url(#arrowGreen)" data-from="ratelimiter" data-to="cache" stroke-dasharray="6,4"/>
+
+        <!-- ===== COMPONENTS ===== -->
+
+        <!-- Client: Browser -->
+        <g class="comp-group" data-comp="client">
+          <rect class="comp-body" x="195" y="45" width="170" height="50" rx="10" fill="white" stroke="#c7cfe0" stroke-width="1.5"/>
+          <text x="280" y="67" text-anchor="middle" class="comp-label">Browser Client</text>
+          <text x="280" y="82" text-anchor="middle" class="comp-sublabel">React SPA</text>
+        </g>
+
+        <!-- Client: Mobile -->
+        <g class="comp-group" data-comp="mobile">
+          <rect class="comp-body" x="405" y="45" width="150" height="50" rx="10" fill="white" stroke="#c7cfe0" stroke-width="1.5"/>
+          <text x="480" y="67" text-anchor="middle" class="comp-label">Mobile App</text>
+          <text x="480" y="82" text-anchor="middle" class="comp-sublabel">iOS / Android</text>
+        </g>
+
+        <!-- Load Balancer -->
+        <g class="comp-group" data-comp="lb">
+          <polygon class="comp-body" points="280,155 345,180 345,210 280,235 215,210 215,180" fill="#4f6ef7" stroke="#3a54c4" stroke-width="1.5"/>
+          <text x="280" y="193" text-anchor="middle" class="comp-label" fill="white" font-size="12">Load Balancer</text>
+          <text x="280" y="208" text-anchor="middle" class="comp-sublabel" fill="rgba(255,255,255,0.8)" font-size="9.5">Nginx / AWS ALB</text>
+        </g>
+
+        <!-- API Gateway -->
+        <g class="comp-group" data-comp="gateway">
+          <rect class="comp-body" x="475" y="160" width="210" height="55" rx="12" fill="white" stroke="#4f6ef7" stroke-width="2"/>
+          <text x="580" y="184" text-anchor="middle" class="comp-label">API Gateway</text>
+          <text x="580" y="200" text-anchor="middle" class="comp-sublabel">Auth, Routing, Throttle</text>
+        </g>
+
+        <!-- Rate Limiter -->
+        <g class="comp-group" data-comp="ratelimiter">
+          <rect class="comp-body" x="830" y="163" width="170" height="50" rx="10" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
+          <text x="915" y="185" text-anchor="middle" class="comp-label" fill="#dc2626">Rate Limiter</text>
+          <text x="915" y="200" text-anchor="middle" class="comp-sublabel">Token Bucket</text>
+        </g>
+
+        <!-- URL Shortening Service -->
+        <g class="comp-group" data-comp="urlservice">
+          <rect class="comp-body" x="175" y="295" width="230" height="75" rx="12" fill="white" stroke="#7c3aed" stroke-width="2"/>
+          <text x="290" y="325" text-anchor="middle" class="comp-label">URL Service</text>
+          <text x="290" y="343" text-anchor="middle" class="comp-sublabel">Create / Resolve / Delete</text>
+          <text x="290" y="358" text-anchor="middle" class="comp-sublabel">Node.js / Go microservice</text>
+        </g>
+
+        <!-- ID Generator -->
+        <g class="comp-group" data-comp="idgen">
+          <rect class="comp-body" x="520" y="305" width="170" height="55" rx="12" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+          <text x="605" y="328" text-anchor="middle" class="comp-label" fill="#6d28d9">ID Generator</text>
+          <text x="605" y="346" text-anchor="middle" class="comp-sublabel">Base62 Encoding</text>
+        </g>
+
+        <!-- Analytics Service -->
+        <g class="comp-group" data-comp="analytics">
+          <rect class="comp-body" x="640" y="295" width="210" height="75" rx="12" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+          <text x="745" y="325" text-anchor="middle" class="comp-label">Analytics Service</text>
+          <text x="745" y="343" text-anchor="middle" class="comp-sublabel">Click tracking, Geo, Referrer</text>
+          <text x="745" y="358" text-anchor="middle" class="comp-sublabel">Async processing</text>
+        </g>
+
+        <!-- Redis Cache -->
+        <g class="comp-group" data-comp="cache">
+          <rect class="comp-body" x="195" y="430" width="200" height="50" rx="10" fill="#dcfce7" stroke="#22c55e" stroke-width="1.5"/>
+          <text x="295" y="453" text-anchor="middle" class="comp-label" fill="#166534">Redis Cache</text>
+          <text x="295" y="468" text-anchor="middle" class="comp-sublabel">Hot URLs + Rate Limits</text>
+        </g>
+
+        <!-- Kafka -->
+        <g class="comp-group" data-comp="kafka">
+          <path class="comp-body" d="M675,438 L815,438 L795,478 L655,478 Z" fill="#ccfbf1" stroke="#14b8a6" stroke-width="1.5"/>
+          <text x="735" y="458" text-anchor="middle" class="comp-label" fill="#0f766e" font-size="12">Message Queue</text>
+          <text x="735" y="472" text-anchor="middle" class="comp-sublabel">Kafka</text>
+        </g>
+
+        <!-- Primary DB -->
+        <g class="comp-group" data-comp="db">
+          <ellipse class="comp-body" cx="300" cy="548" rx="100" ry="16" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+          <rect class="comp-body" x="200" y="548" width="200" height="35" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+          <ellipse class="comp-body" cx="300" cy="583" rx="100" ry="16" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+          <line x1="200" y1="548" x2="200" y2="583" stroke="#f59e0b" stroke-width="1.5"/>
+          <line x1="400" y1="548" x2="400" y2="583" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="300" y="568" text-anchor="middle" class="comp-label" fill="#92400e">URL Database</text>
+          <text x="300" y="581" text-anchor="middle" class="comp-sublabel">Cassandra / DynamoDB</text>
+        </g>
+
+        <!-- Analytics DB -->
+        <g class="comp-group" data-comp="analyticsdb">
+          <ellipse class="comp-body" cx="920" cy="548" rx="90" ry="16" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+          <rect class="comp-body" x="830" y="548" width="180" height="35" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+          <ellipse class="comp-body" cx="920" cy="583" rx="90" ry="16" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+          <line x1="830" y1="548" x2="830" y2="583" stroke="#f59e0b" stroke-width="1.5"/>
+          <line x1="1010" y1="548" x2="1010" y2="583" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="920" y="568" text-anchor="middle" class="comp-label" fill="#92400e">Analytics DB</text>
+          <text x="920" y="581" text-anchor="middle" class="comp-sublabel">ClickHouse / TimescaleDB</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip element -->
+<div class="arch-tooltip" id="archTooltip"></div>
+
+<!-- ====== COMPONENT BREAKDOWN ====== -->
+<div class="section" id="components-section">
+  <h2 class="section-title fade-in">Component Breakdown</h2>
+  <p class="section-subtitle fade-in fade-in-d1">Deep dive into each component's responsibilities, technology choices, and scaling strategy.</p>
+
+  <div class="comp-grid">
+    <!-- Load Balancer -->
+    <div class="comp-card fade-in fade-in-d1" id="card-lb">
+      <div class="comp-card-icon" style="background:#e8ecff;color:#4f6ef7;">LB</div>
+      <h3>Load Balancer</h3>
+      <p class="purpose">Distributes incoming traffic across multiple API servers evenly.</p>
+      <div class="detail-label">Technology</div>
+      <div class="detail-value">
+        <span class="tech-pill">Nginx</span>
+        <span class="tech-pill">AWS ALB</span>
+      </div>
+      <div class="detail-label">Key Decisions</div>
+      <div class="detail-value">Round-robin with health checks. L7 load balancing to route /api/* vs static assets. SSL termination here to offload crypto from app servers.</div>
+      <div class="detail-label">Scaling</div>
+      <div class="detail-value">Horizontally scaled with DNS round-robin or AWS Global Accelerator for geo-routing. Active-passive failover for HA.</div>
+    </div>
+
+    <!-- API Gateway -->
+    <div class="comp-card fade-in fade-in-d2" id="card-gateway">
+      <div class="comp-card-icon" style="background:#e8ecff;color:#4f6ef7;">GW</div>
+      <h3>API Gateway</h3>
+      <p class="purpose">Single entry point handling authentication, routing, and request validation.</p>
+      <div class="detail-label">Technology</div>
+      <div class="detail-value">
+        <span class="tech-pill">Kong</span>
+        <span class="tech-pill">AWS API Gateway</span>
+      </div>
+      <div class="detail-label">Key Decisions</div>
+      <div class="detail-value">Validates API keys, enforces rate limits (via token bucket), and routes to the correct microservice. Strips sensitive headers before forwarding.</div>
+      <div class="detail-label">Scaling</div>
+      <div class="detail-value">Stateless — easily horizontally scaled. Rate limit counters stored in Redis (shared across instances).</div>
+    </div>
+
+    <!-- Rate Limiter -->
+    <div class="comp-card fade-in fade-in-d3" id="card-ratelimiter">
+      <div class="comp-card-icon" style="background:#fee2e2;color:#ef4444;">RL</div>
+      <h3>Rate Limiter</h3>
+      <p class="purpose">Prevents abuse by capping requests per user/IP within time windows.</p>
+      <div class="detail-label">Technology</div>
+      <div class="detail-value">
+        <span class="tech-pill">Redis</span>
+        <span class="tech-pill">Token Bucket</span>
+      </div>
+      <div class="detail-label">Key Decisions</div>
+      <div class="detail-value">Token bucket algorithm with per-user and per-IP limits. Free tier: 100 shortens/hour. Paid tier: 10K/hour. Returns 429 with Retry-After header.</div>
+      <div class="detail-label">Scaling</div>
+      <div class="detail-value">Redis cluster with consistent hashing. Sliding window counters for accuracy. <2ms lookup per request.</div>
+    </div>
+
+    <!-- URL Service -->
+    <div class="comp-card fade-in fade-in-d1" id="card-urlservice">
+      <div class="comp-card-icon" style="background:#ede9fe;color:#7c3aed;">US</div>
+      <h3>URL Shortening Service</h3>
+      <p class="purpose">Core business logic: creates short URLs, resolves them, handles 301/302 redirects.</p>
+      <div class="detail-label">Technology</div>
+      <div class="detail-value">
+        <span class="tech-pill">Go</span>
+        <span class="tech-pill">Node.js</span>
+      </div>
+      <div class="detail-label">Key Decisions</div>
+      <div class="detail-value">Uses Base62 encoding of a unique counter-based ID to generate 7-character short codes. Checks for collisions on custom aliases. Returns 301 (permanent) for SEO or 302 (temporary) for analytics tracking.</div>
+      <div class="detail-label">Scaling</div>
+      <div class="detail-value">Stateless workers behind LB. Each instance pre-fetches ID ranges from the counter service to avoid contention. Horizontal scaling with auto-scaling groups.</div>
+    </div>
+
+    <!-- ID Generator -->
+    <div class="comp-card fade-in fade-in-d2" id="card-idgen">
+      <div class="comp-card-icon" style="background:#ede9fe;color:#7c3aed;">ID</div>
+      <h3>ID Generator</h3>
+      <p class="purpose">Generates globally unique, monotonically increasing IDs for short URL encoding.</p>
+      <div class="detail-label">Technology</div>
+      <div class="detail-value">
+        <span class="tech-pill">Snowflake ID</span>
+        <span class="tech-pill">Counter Service</span>
+        <span class="tech-pill">ZooKeeper</span>
+      </div>
+      <div class="detail-label">Key Decisions</div>
+      <div class="detail-value">Range-based approach: a counter service allocates ranges (e.g., 1M IDs at a time) to each URL service instance. Eliminates single point of contention. IDs are Base62-encoded: 7 chars supports 62^7 = 3.5 trillion URLs.</div>
+      <div class="detail-label">Scaling</div>
+      <div class="detail-value">Counter service backed by ZooKeeper for coordination. Each app server has a local counter within its allocated range — no network call per URL creation.</div>
+    </div>
+
+    <!-- Redis Cache -->
+    <div class="comp-card fade-in fade-in-d3" id="card-cache">
+      <div class="comp-card-icon" style="background:#dcfce7;color:#22c55e;">RC</div>
+      <h3>Redis Cache</h3>
+      <p class="purpose">Caches hot URL mappings to serve redirects in sub-millisecond time.</p>
+      <div class="detail-label">Technology</div>
+      <div class="detail-value">
+        <span class="tech-pill">Redis Cluster</span>
+        <span class="tech-pill">LRU Eviction</span>
+      </div>
+      <div class="detail-label">Key Decisions</div>
+      <div class="detail-value">80/20 rule: 20% of URLs generate 80% of traffic. Cache the top 20% with a 24h TTL. LRU eviction when memory is full. Write-around strategy: new URLs go to DB first, cached on first read.</div>
+      <div class="detail-label">Scaling</div>
+      <div class="detail-value">Redis Cluster with 6+ nodes for sharding and replication. ~70GB memory caches ~350M mappings. Expected 90%+ hit rate.</div>
+    </div>
+
+    <!-- URL Database -->
+    <div class="comp-card fade-in fade-in-d1" id="card-db">
+      <div class="comp-card-icon" style="background:#fef3c7;color:#d97706;">DB</div>
+      <h3>URL Database</h3>
+      <p class="purpose">Persistent storage for all URL mappings with high write throughput.</p>
+      <div class="detail-label">Technology</div>
+      <div class="detail-value">
+        <span class="tech-pill">Cassandra</span>
+        <span class="tech-pill">DynamoDB</span>
+      </div>
+      <div class="detail-label">Key Decisions</div>
+      <div class="detail-value">NoSQL for horizontal scalability. Schema: {short_url (PK), long_url, user_id, created_at, expiry, click_count}. Partition key = short_url for even distribution. Eventual consistency is acceptable for analytics; strong consistency for redirects.</div>
+      <div class="detail-label">Scaling</div>
+      <div class="detail-value">Range-based sharding on the first character of short_url. Replication factor of 3. Auto-scaling read/write capacity. ~500 bytes per record, 365 billion records in 10 years = ~170 TB.</div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="comp-card fade-in fade-in-d2" id="card-analytics">
+      <div class="comp-card-icon" style="background:#fce7f3;color:#ec4899;">AN</div>
+      <h3>Analytics Service</h3>
+      <p class="purpose">Tracks clicks, geographic data, referrer sources, and device information.</p>
+      <div class="detail-label">Technology</div>
+      <div class="detail-value">
+        <span class="tech-pill">Kafka</span>
+        <span class="tech-pill">ClickHouse</span>
+        <span class="tech-pill">Flink</span>
+      </div>
+      <div class="detail-label">Key Decisions</div>
+      <div class="detail-value">Async pipeline: redirect fires a Kafka event, Flink processes in real-time and batches to ClickHouse. No impact on redirect latency. Captures: timestamp, geo (via IP), user-agent, referrer.</div>
+      <div class="detail-label">Scaling</div>
+      <div class="detail-value">Kafka partitioned by short_url hash for ordering. ClickHouse columnar storage is optimized for aggregation queries. 30-day hot storage, older data in S3/Glacier.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== SEQUENCE DIAGRAM ====== -->
+<div class="section" id="sequence-section">
+  <h2 class="section-title fade-in">Request Flow</h2>
+  <p class="section-subtitle fade-in fade-in-d1">Watch how requests flow through the system. Select a flow and press Play.</p>
+
+  <div class="seq-controls fade-in fade-in-d2">
+    <button class="seq-btn seq-btn-primary" id="seqPlayBtn" aria-label="Play animation">
+      <span id="seqPlayIcon">&#9654;</span> Play
+    </button>
+    <button class="seq-btn seq-btn-secondary" id="seqStepBtn" aria-label="Step forward">&#9193; Step</button>
+    <button class="seq-btn seq-btn-secondary" id="seqResetBtn" aria-label="Reset">&#8634; Reset</button>
+    <div style="border-left:1px solid var(--border);height:30px;margin:0 6px;"></div>
+    <button class="seq-btn seq-btn-secondary active" data-flow="write" id="flowWrite">Write Flow</button>
+    <button class="seq-btn seq-btn-secondary" data-flow="read-hit" id="flowReadHit">Read (Cache Hit)</button>
+    <button class="seq-btn seq-btn-secondary" data-flow="read-miss" id="flowReadMiss">Read (Cache Miss)</button>
+    <div class="seq-speed">
+      Speed: <input type="range" min="1" max="5" value="3" id="seqSpeedSlider" aria-label="Animation speed">
+    </div>
+  </div>
+
+  <div class="seq-diagram-wrap fade-in fade-in-d3">
+    <svg id="seqSvg" viewBox="0 0 1050 420" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+  <div class="seq-narration" id="seqNarration">Select a flow and press Play to begin the animation.</div>
+  <div class="seq-step-counter" id="seqStepCounter"></div>
+</div>
+
+<!-- ====== SCALING & TRADE-OFFS ====== -->
+<div class="section" id="scaling-section">
+  <h2 class="section-title fade-in">Scaling & Trade-offs</h2>
+  <p class="section-subtitle fade-in fade-in-d1">Back-of-envelope estimates, growth strategies, and failure analysis.</p>
+
+  <div class="scaling-grid">
+    <!-- Capacity Estimation -->
+    <div class="scale-card fade-in fade-in-d1">
+      <h3><span class="icon" style="background:#e8ecff;color:#4f6ef7;">&#128202;</span> Capacity Estimation</h3>
+      <div class="est-row"><span class="est-label">New URLs/month</span><span class="est-value">100M</span></div>
+      <div class="est-row"><span class="est-label">URL Redirects/month</span><span class="est-value">10B</span></div>
+      <div class="est-row"><span class="est-label">Write QPS (avg)</span><span class="est-value">~40 /sec</span></div>
+      <div class="est-row"><span class="est-label">Read QPS (avg)</span><span class="est-value">~4,000 /sec</span></div>
+      <div class="est-row"><span class="est-label">Read QPS (peak)</span><span class="est-value">~20,000 /sec</span></div>
+      <div class="est-row"><span class="est-label">Storage/year</span><span class="est-value">~60 GB</span></div>
+      <div class="est-row"><span class="est-label">Storage in 5 years</span><span class="est-value">~300 GB</span></div>
+      <div class="est-row"><span class="est-label">Cache memory (20%)</span><span class="est-value">~70 GB</span></div>
+      <div class="est-row"><span class="est-label">Bandwidth (reads)</span><span class="est-value">~4 MB/s</span></div>
+    </div>
+
+    <!-- Scaling Strategies -->
+    <div class="scale-card fade-in fade-in-d2">
+      <h3><span class="icon" style="background:#dcfce7;color:#22c55e;">&#128640;</span> Growth Strategy</h3>
+      <table class="growth-table">
+        <thead><tr><th>Scale</th><th>Strategy</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1x</strong></td><td>Single region, 3 app servers, 1 Redis cluster, 3-node Cassandra</td></tr>
+          <tr><td><strong>10x</strong></td><td>Auto-scaling groups, read replicas, larger Redis cluster, CDN for static</td></tr>
+          <tr><td><strong>100x</strong></td><td>Multi-region active-active, geo-DNS routing, database sharding, edge caching at CDN POPs</td></tr>
+          <tr><td><strong>1000x</strong></td><td>Dedicated ID generator per region, Kafka tiered storage, custom bloom filters for collision detection</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Trade-offs -->
+    <div class="scale-card fade-in fade-in-d3">
+      <h3><span class="icon" style="background:#ede9fe;color:#7c3aed;">&#9878;</span> Trade-off Analysis</h3>
+      <div class="tradeoff-item">
+        <div class="tradeoff-title">301 vs 302 Redirects</div>
+        <div class="tradeoff-desc">301 (permanent) is faster for users and better for SEO, but browsers cache it — making analytics inaccurate. 302 (temporary) ensures every click is trackable. We use 302 for analytics-enabled links, 301 for SEO-optimized ones.</div>
+      </div>
+      <div class="tradeoff-item">
+        <div class="tradeoff-title">Consistency vs Availability</div>
+        <div class="tradeoff-desc">We favor availability (AP in CAP). A short URL that resolves 50ms late is better than one that errors out. Eventual consistency is fine for click counts; strong consistency only needed during URL creation to prevent duplicate short codes.</div>
+      </div>
+      <div class="tradeoff-item">
+        <div class="tradeoff-title">Counter vs Hash-based IDs</div>
+        <div class="tradeoff-desc">Counter-based IDs are shorter and sequential but reveal volume. Hash-based (MD5/SHA) are random but may collide. We chose counter + Base62 for minimal length with range partitioning to eliminate contention.</div>
+      </div>
+      <div class="tradeoff-item">
+        <div class="tradeoff-title">SQL vs NoSQL</div>
+        <div class="tradeoff-desc">URL mappings are simple key-value lookups with massive scale. NoSQL (Cassandra/DynamoDB) excels here: no joins needed, linear horizontal scaling, tunable consistency. SQL would require manual sharding at this scale.</div>
+      </div>
+    </div>
+
+    <!-- Failure Scenarios -->
+    <div class="scale-card fade-in fade-in-d4">
+      <h3><span class="icon" style="background:#fee2e2;color:#ef4444;">&#9888;</span> Failure Scenarios</h3>
+      <div class="failure-item">
+        <div class="failure-badge" style="background:#fee2e2;color:#ef4444;">1</div>
+        <div class="failure-text">
+          <strong>Cache (Redis) goes down</strong>
+          <p>All reads hit the database directly. Latency increases from ~2ms to ~20ms. DB handles it with read replicas. Cache rebuilds automatically on restart via read-through pattern.</p>
+        </div>
+      </div>
+      <div class="failure-item">
+        <div class="failure-badge" style="background:#fef3c7;color:#d97706;">2</div>
+        <div class="failure-text">
+          <strong>Database node failure</strong>
+          <p>Cassandra replication factor 3 means any 1 node failure is transparent. Cluster self-heals via hinted handoff. If multiple nodes fail in same partition, reads degrade but don't fail entirely.</p>
+        </div>
+      </div>
+      <div class="failure-item">
+        <div class="failure-badge" style="background:#ede9fe;color:#7c3aed;">3</div>
+        <div class="failure-text">
+          <strong>ID Generator service down</strong>
+          <p>URL service nodes have pre-fetched ranges (1M IDs each). Can continue creating URLs for hours without the counter service. Fallback: UUID-based generation with collision checking.</p>
+        </div>
+      </div>
+      <div class="failure-item">
+        <div class="failure-badge" style="background:#dcfce7;color:#16a34a;">4</div>
+        <div class="failure-text">
+          <strong>Entire region outage</strong>
+          <p>Global DNS failover routes to secondary region in <60 seconds. Active-active setup means secondary already has replicated data. RPO near zero, RTO < 1 minute.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center;padding:30px;color:var(--text-tertiary);font-size:0.82rem;">
+  URL Shortener System Design Visualizer &mdash; Interactive Architecture Document
+</div>
+
+<script>
+// ==========================================
+// NAV TAB SWITCHING
+// ==========================================
+const navTabs = document.querySelectorAll('.nav-tab');
+navTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    navTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const target = document.getElementById(tab.dataset.target);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+// Highlight active tab on scroll
+const sections = ['architecture-section', 'components-section', 'sequence-section', 'scaling-section'];
+window.addEventListener('scroll', () => {
+  const scrollY = window.scrollY + 120;
+  let current = sections[0];
+  for (const id of sections) {
+    const el = document.getElementById(id);
+    if (el && el.offsetTop <= scrollY) current = id;
+  }
+  navTabs.forEach(t => {
+    t.classList.toggle('active', t.dataset.target === current);
+  });
+});
+
+// ==========================================
+// ARCHITECTURE DIAGRAM INTERACTIONS
+// ==========================================
+const tooltip = document.getElementById('archTooltip');
+const compInfo = {
+  client: { title: 'Browser Client', desc: 'React single-page application that provides the user interface for creating, managing, and viewing analytics for shortened URLs. Communicates with the API Gateway over HTTPS.' },
+  mobile: { title: 'Mobile App', desc: 'Native iOS/Android apps providing URL shortening on mobile. Uses the same REST API as the browser client.' },
+  lb: { title: 'Load Balancer', desc: 'Nginx or AWS ALB distributing traffic across API servers using round-robin with health checks. Handles SSL termination and routes to healthy instances.' },
+  gateway: { title: 'API Gateway', desc: 'Central entry point that authenticates requests, enforces rate limits, validates input, and routes to the appropriate microservice. Stateless and horizontally scalable.' },
+  ratelimiter: { title: 'Rate Limiter', desc: 'Token bucket algorithm backed by Redis. Prevents abuse with per-user and per-IP limits. Returns HTTP 429 with Retry-After header when exceeded.' },
+  urlservice: { title: 'URL Shortening Service', desc: 'Core service handling three operations: (1) Create short URL from long URL, (2) Resolve short URL to long URL for redirect, (3) Delete/expire URLs. Stateless workers.' },
+  idgen: { title: 'ID Generator', desc: 'Generates unique IDs using a range-based counter service. Each URL service instance pre-fetches a range of 1M IDs. IDs are Base62-encoded to produce 7-character short codes.' },
+  analytics: { title: 'Analytics Service', desc: 'Async click tracking pipeline. Captures timestamp, geo location (IP), user-agent, referrer on every redirect. Publishes events to Kafka, processed by Flink into ClickHouse.' },
+  cache: { title: 'Redis Cache', desc: 'Caches the hottest 20% of URL mappings with 24h TTL and LRU eviction. Expected 90%+ cache hit rate. Also stores rate limiter counters. Redis Cluster with 6+ nodes.' },
+  kafka: { title: 'Message Queue (Kafka)', desc: 'Decouples the redirect path from analytics processing. Click events are published asynchronously so redirect latency is not impacted. Partitioned by short_url hash.' },
+  db: { title: 'URL Database', desc: 'Cassandra or DynamoDB storing all URL mappings. Schema: short_url (PK), long_url, user_id, created_at, expiry. Replication factor 3, range-based sharding.' },
+  analyticsdb: { title: 'Analytics Database', desc: 'ClickHouse or TimescaleDB for storing and querying click analytics. Columnar storage optimized for aggregation queries. 30-day hot storage, older data archived to S3.' }
+};
+
+// Connection map: which connections belong to which component
+const connMap = {};
+document.querySelectorAll('.conn-line, .conn-label').forEach(el => {
+  const from = el.dataset.from;
+  const to = el.dataset.to;
+  if (from) {
+    if (!connMap[from]) connMap[from] = [];
+    connMap[from].push(el);
+  }
+  if (to) {
+    if (!connMap[to]) connMap[to] = [];
+    connMap[to].push(el);
+  }
+});
+
+document.querySelectorAll('.comp-group').forEach(group => {
+  const comp = group.dataset.comp;
+
+  group.addEventListener('mouseenter', (e) => {
+    // Highlight connections
+    const conns = connMap[comp] || [];
+    conns.forEach(c => c.classList.add('highlighted'));
+
+    // Show tooltip
+    const info = compInfo[comp];
+    if (info) {
+      tooltip.innerHTML = `<h4>${info.title}</h4><p>${info.desc}</p>`;
+      tooltip.classList.add('visible');
+    }
+  });
+
+  group.addEventListener('mousemove', (e) => {
+    const x = Math.min(e.clientX + 16, window.innerWidth - 300);
+    const y = Math.min(e.clientY + 16, window.innerHeight - 200);
+    tooltip.style.left = x + 'px';
+    tooltip.style.top = y + 'px';
+  });
+
+  group.addEventListener('mouseleave', () => {
+    document.querySelectorAll('.conn-line, .conn-label').forEach(c => c.classList.remove('highlighted'));
+    tooltip.classList.remove('visible');
+  });
+
+  // Click to scroll to component card
+  group.addEventListener('click', () => {
+    const card = document.getElementById('card-' + comp);
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.style.boxShadow = '0 0 0 3px var(--accent), var(--shadow-lg)';
+      setTimeout(() => { card.style.boxShadow = ''; }, 2000);
+    }
+  });
+});
+
+// ==========================================
+// SEQUENCE DIAGRAM
+// ==========================================
+const seqSvg = document.getElementById('seqSvg');
+const seqNarration = document.getElementById('seqNarration');
+const seqStepCounter = document.getElementById('seqStepCounter');
+const seqPlayBtn = document.getElementById('seqPlayBtn');
+const seqPlayIcon = document.getElementById('seqPlayIcon');
+const seqStepBtn = document.getElementById('seqStepBtn');
+const seqResetBtn = document.getElementById('seqResetBtn');
+const seqSpeedSlider = document.getElementById('seqSpeedSlider');
+
+const actors = [
+  { id: 'client', label: 'Client', x: 80, color: '#64748b' },
+  { id: 'lb', label: 'Load\nBalancer', x: 230, color: '#4f6ef7' },
+  { id: 'gateway', label: 'API\nGateway', x: 380, color: '#4f6ef7' },
+  { id: 'urlsvc', label: 'URL\nService', x: 530, color: '#7c3aed' },
+  { id: 'cache', label: 'Redis\nCache', x: 680, color: '#22c55e' },
+  { id: 'db', label: 'Database', x: 830, color: '#d97706' },
+  { id: 'kafka', label: 'Kafka', x: 960, color: '#14b8a6' },
+];
+
+const flows = {
+  write: [
+    { from: 'client', to: 'lb', label: 'POST /api/shorten', desc: 'Client sends POST request with the long URL to shorten.', color: '#4f6ef7' },
+    { from: 'lb', to: 'gateway', label: 'forward', desc: 'Load balancer forwards request to an available API Gateway instance.', color: '#4f6ef7' },
+    { from: 'gateway', to: 'gateway', label: 'auth + rate check', desc: 'API Gateway authenticates the request and checks rate limits via Redis.', color: '#ef4444', self: true },
+    { from: 'gateway', to: 'urlsvc', label: 'createURL(longUrl)', desc: 'Gateway calls URL Service with the validated long URL.', color: '#7c3aed' },
+    { from: 'urlsvc', to: 'urlsvc', label: 'generateID()', desc: 'URL Service generates a unique ID using its pre-fetched range and Base62-encodes it.', color: '#7c3aed', self: true },
+    { from: 'urlsvc', to: 'db', label: 'INSERT mapping', desc: 'URL Service writes the {shortUrl, longUrl} mapping to the database.', color: '#d97706' },
+    { from: 'db', to: 'urlsvc', label: 'ACK', desc: 'Database confirms the write was successful.', color: '#d97706', reverse: true },
+    { from: 'urlsvc', to: 'gateway', label: 'shortUrl', desc: 'URL Service returns the generated short URL to the API Gateway.', color: '#7c3aed', reverse: true },
+    { from: 'gateway', to: 'lb', label: 'response', desc: 'API Gateway returns the short URL response.', color: '#4f6ef7', reverse: true },
+    { from: 'lb', to: 'client', label: '201 Created', desc: 'Client receives the short URL: https://short.ly/abc1234', color: '#4f6ef7', reverse: true },
+  ],
+  'read-hit': [
+    { from: 'client', to: 'lb', label: 'GET /abc1234', desc: 'User clicks the short URL. Browser sends GET request.', color: '#4f6ef7' },
+    { from: 'lb', to: 'gateway', label: 'forward', desc: 'Load balancer routes to an API Gateway instance.', color: '#4f6ef7' },
+    { from: 'gateway', to: 'urlsvc', label: 'resolve(abc1234)', desc: 'Gateway calls URL Service to resolve the short code.', color: '#7c3aed' },
+    { from: 'urlsvc', to: 'cache', label: 'GET abc1234', desc: 'URL Service checks Redis cache first for the mapping.', color: '#22c55e' },
+    { from: 'cache', to: 'urlsvc', label: 'HIT: longUrl', desc: 'Cache hit! Redis returns the long URL in <1ms.', color: '#22c55e', reverse: true },
+    { from: 'urlsvc', to: 'kafka', label: 'click event', desc: 'URL Service publishes an async click event to Kafka for analytics.', color: '#14b8a6' },
+    { from: 'urlsvc', to: 'gateway', label: 'longUrl', desc: 'URL Service returns the long URL to the Gateway.', color: '#7c3aed', reverse: true },
+    { from: 'gateway', to: 'lb', label: '302 Redirect', desc: 'Gateway returns HTTP 302 with Location header set to the long URL.', color: '#4f6ef7', reverse: true },
+    { from: 'lb', to: 'client', label: 'Location: longUrl', desc: 'Client receives 302 redirect and browser navigates to the original URL. Total latency: ~5ms.', color: '#4f6ef7', reverse: true },
+  ],
+  'read-miss': [
+    { from: 'client', to: 'lb', label: 'GET /xyz9876', desc: 'User clicks a short URL that is not in cache (first access or evicted).', color: '#4f6ef7' },
+    { from: 'lb', to: 'gateway', label: 'forward', desc: 'Load balancer routes to API Gateway.', color: '#4f6ef7' },
+    { from: 'gateway', to: 'urlsvc', label: 'resolve(xyz9876)', desc: 'Gateway calls URL Service to resolve the short code.', color: '#7c3aed' },
+    { from: 'urlsvc', to: 'cache', label: 'GET xyz9876', desc: 'URL Service checks Redis cache first.', color: '#22c55e' },
+    { from: 'cache', to: 'urlsvc', label: 'MISS', desc: 'Cache miss! The URL is not in Redis.', color: '#ef4444', reverse: true },
+    { from: 'urlsvc', to: 'db', label: 'SELECT longUrl', desc: 'URL Service falls back to database lookup.', color: '#d97706' },
+    { from: 'db', to: 'urlsvc', label: 'longUrl', desc: 'Database returns the long URL mapping.', color: '#d97706', reverse: true },
+    { from: 'urlsvc', to: 'cache', label: 'SET xyz9876', desc: 'URL Service writes the mapping back to cache (read-through pattern) for future requests.', color: '#22c55e' },
+    { from: 'urlsvc', to: 'kafka', label: 'click event', desc: 'Publishes async click event to Kafka for analytics.', color: '#14b8a6' },
+    { from: 'urlsvc', to: 'gateway', label: 'longUrl', desc: 'URL Service returns long URL to Gateway.', color: '#7c3aed', reverse: true },
+    { from: 'gateway', to: 'lb', label: '302 Redirect', desc: 'Gateway returns 302 redirect.', color: '#4f6ef7', reverse: true },
+    { from: 'lb', to: 'client', label: 'Location: longUrl', desc: 'Client receives 302 redirect. Total latency: ~20ms (cache miss adds DB round-trip).', color: '#4f6ef7', reverse: true },
+  ]
+};
+
+let currentFlow = 'write';
+let currentStep = -1;
+let isPlaying = false;
+let playTimer = null;
+
+function getActorX(id) {
+  const a = actors.find(a => a.id === id);
+  return a ? a.x : 0;
+}
+
+function drawSequenceBase() {
+  const headerY = 30;
+  const lineStart = 60;
+  const lineEnd = 400;
+
+  let svg = '';
+
+  // Actor headers and lifelines
+  actors.forEach(a => {
+    // Header box
+    svg += `<rect x="${a.x - 50}" y="${headerY - 18}" width="100" height="42" rx="8" fill="${a.color}" opacity="0.12" stroke="${a.color}" stroke-width="1.5"/>`;
+    const lines = a.label.split('\n');
+    lines.forEach((line, i) => {
+      svg += `<text x="${a.x}" y="${headerY + i * 14}" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" fill="${a.color}">${line}</text>`;
+    });
+
+    // Lifeline
+    svg += `<line x1="${a.x}" y1="${lineStart}" x2="${a.x}" y2="${lineEnd}" stroke="${a.color}" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.3"/>`;
+  });
+
+  return svg;
+}
+
+function drawSequenceStep(flow, stepIndex) {
+  const steps = flows[flow];
+  const baseY = 78;
+  const stepH = 30;
+  let svg = '';
+
+  for (let i = 0; i <= stepIndex && i < steps.length; i++) {
+    const step = steps[i];
+    const fromX = getActorX(step.from);
+    const toX = step.self ? fromX + 40 : getActorX(step.to);
+    const y = baseY + i * stepH;
+    const isActive = i === stepIndex;
+    const opacity = isActive ? 1 : 0.45;
+    const strokeWidth = isActive ? 2.5 : 1.5;
+
+    if (step.self) {
+      // Self-referencing arrow
+      svg += `<path d="M${fromX} ${y} Q${fromX + 55} ${y} ${fromX + 55} ${y + 14} Q${fromX + 55} ${y + 28} ${fromX + 6} ${y + 18}" fill="none" stroke="${step.color}" stroke-width="${strokeWidth}" opacity="${opacity}" marker-end="url(#seqArrow${i})"/>`;
+      svg += `<text x="${fromX + 60}" y="${y + 12}" font-family="Segoe UI, sans-serif" font-size="10" fill="${step.color}" opacity="${opacity}" font-weight="${isActive ? '700' : '400'}">${step.label}</text>`;
+    } else {
+      const dir = toX > fromX ? 1 : -1;
+      const startX = fromX + dir * 4;
+      const endX = toX - dir * 4;
+      svg += `<line x1="${startX}" y1="${y}" x2="${endX}" y2="${y}" stroke="${step.color}" stroke-width="${strokeWidth}" opacity="${opacity}" marker-end="url(#seqArrow${i})"/>`;
+      const labelX = (startX + endX) / 2;
+      svg += `<text x="${labelX}" y="${y - 6}" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="${step.color}" opacity="${opacity}" font-weight="${isActive ? '700' : '400'}">${step.label}</text>`;
+    }
+
+    // Arrow marker
+    svg += `<defs><marker id="seqArrow${i}" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="${step.color}" opacity="${opacity}"/></marker></defs>`;
+  }
+
+  return svg;
+}
+
+function renderSequence() {
+  const base = drawSequenceBase();
+  const steps = currentStep >= 0 ? drawSequenceStep(currentFlow, currentStep) : '';
+  seqSvg.innerHTML = base + steps;
+
+  // Update narration
+  if (currentStep >= 0 && currentStep < flows[currentFlow].length) {
+    const step = flows[currentFlow][currentStep];
+    seqNarration.textContent = step.desc;
+    seqStepCounter.textContent = `Step ${currentStep + 1} of ${flows[currentFlow].length}`;
+  } else if (currentStep < 0) {
+    seqNarration.textContent = 'Select a flow and press Play to begin the animation.';
+    seqStepCounter.textContent = '';
+  }
+}
+
+function stopPlaying() {
+  isPlaying = false;
+  clearInterval(playTimer);
+  seqPlayIcon.textContent = '\u25B6';
+  seqPlayBtn.querySelector('span').nextSibling.textContent = ' Play';
+}
+
+function startPlaying() {
+  if (currentStep >= flows[currentFlow].length - 1) {
+    currentStep = -1;
+  }
+  isPlaying = true;
+  seqPlayIcon.textContent = '\u23F8';
+  const speeds = [2000, 1500, 1000, 600, 350];
+  const speed = speeds[parseInt(seqSpeedSlider.value) - 1];
+
+  playTimer = setInterval(() => {
+    currentStep++;
+    if (currentStep >= flows[currentFlow].length) {
+      stopPlaying();
+      return;
+    }
+    renderSequence();
+  }, speed);
+
+  // Immediately advance one step
+  currentStep++;
+  renderSequence();
+}
+
+seqPlayBtn.addEventListener('click', () => {
+  if (isPlaying) {
+    stopPlaying();
+  } else {
+    startPlaying();
+  }
+});
+
+seqStepBtn.addEventListener('click', () => {
+  stopPlaying();
+  if (currentStep < flows[currentFlow].length - 1) {
+    currentStep++;
+    renderSequence();
+  }
+});
+
+seqResetBtn.addEventListener('click', () => {
+  stopPlaying();
+  currentStep = -1;
+  renderSequence();
+});
+
+seqSpeedSlider.addEventListener('input', () => {
+  if (isPlaying) {
+    stopPlaying();
+    startPlaying();
+  }
+});
+
+// Flow buttons
+document.querySelectorAll('[data-flow]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-flow]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFlow = btn.dataset.flow;
+    currentStep = -1;
+    stopPlaying();
+    renderSequence();
+  });
+});
+
+// Keyboard controls
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    seqPlayBtn.click();
+  } else if (e.code === 'ArrowRight') {
+    e.preventDefault();
+    seqStepBtn.click();
+  } else if (e.code === 'KeyR') {
+    seqResetBtn.click();
+  }
+});
+
+// Initial render
+renderSequence();
+
+// ==========================================
+// FADE-IN ON SCROLL
+// ==========================================
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.animationPlayState = 'running';
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.fade-in').forEach(el => {
+  el.style.animationPlayState = 'paused';
+  observer.observe(el);
+});
+
+// ==========================================
+// ANIMATE SVG CONNECTIONS ON LOAD
+// ==========================================
+document.querySelectorAll('.conn-line').forEach(line => {
+  const length = line.getTotalLength ? line.getTotalLength() : 200;
+  line.style.strokeDasharray = length;
+  line.style.strokeDashoffset = length;
+  line.style.animation = `drawLine 1.2s ease forwards`;
+  line.style.animationDelay = `${Math.random() * 0.8 + 0.3}s`;
+});
+</script>
+</body>
+</html>

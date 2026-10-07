@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Two Sum — Visualizer</title>
+  <style>
+    :root {
+      --bg: #0b0b10;
+      --surface: #14141f;
+      --surface-2: #1c1c2e;
+      --surface-3: #24243a;
+      --border: #2a2a44;
+      --text: #e2e2f0;
+      --text-muted: #8888aa;
+      --text-dim: #5c5c7a;
+      --accent: #6c63ff;
+      --accent-glow: rgba(108, 99, 255, 0.25);
+      --green: #34d399;
+      --green-glow: rgba(52, 211, 153, 0.2);
+      --orange: #fb923c;
+      --orange-glow: rgba(251, 146, 60, 0.2);
+      --red: #f87171;
+      --red-glow: rgba(248, 113, 113, 0.15);
+      --cyan: #22d3ee;
+      --cyan-glow: rgba(34, 211, 238, 0.15);
+      --yellow: #facc15;
+      --font-mono: 'Courier New', Consolas, monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --radius: 10px;
+      --radius-sm: 6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Subtle background pattern */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(108,99,255,0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(34,211,238,0.05), transparent);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      padding: 48px 0 32px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+
+    header .problem-number {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+
+    header h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #fff 0%, #c4c0ff 50%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+
+    header .subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ===== SECTION TITLES ===== */
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .section-label::before {
+      content: '';
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 24px;
+    }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+      transition: border-color 0.3s;
+    }
+
+    .card:hover { border-color: rgba(108,99,255,0.3); }
+
+    /* ===== SECTION 1: VISUAL EXPLANATION ===== */
+    #explanation { margin-bottom: 64px; }
+
+    .problem-statement {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 768px) {
+      .problem-statement { grid-template-columns: 1fr; }
+    }
+
+    .problem-text h3 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+      color: #fff;
+    }
+
+    .problem-text p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    .problem-example {
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      line-height: 1.8;
+      color: var(--cyan);
+    }
+
+    .problem-example .label {
+      color: var(--text-dim);
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .problem-example .output-val {
+      color: var(--green);
+    }
+
+    /* Key insight callout */
+    .insight-box {
+      background: linear-gradient(135deg, rgba(108,99,255,0.1), rgba(139,92,246,0.05));
+      border: 1px solid rgba(108,99,255,0.25);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 20px 24px;
+      margin-bottom: 28px;
+    }
+
+    .insight-box h3 {
+      color: var(--accent);
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .insight-box p {
+      color: var(--text);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    /* Approach overview */
+    .approach-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 768px) {
+      .approach-grid { grid-template-columns: 1fr; }
+    }
+
+    .approach-card {
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      border: 1px solid transparent;
+      transition: border-color 0.3s;
+    }
+
+    .approach-card.optimal { border-color: rgba(52,211,153,0.3); }
+
+    .approach-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .approach-card .tag {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .approach-card .tag.brute { background: var(--red-glow); color: var(--red); }
+    .approach-card .tag.optimal { background: var(--green-glow); color: var(--green); }
+
+    .approach-card p {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+
+    /* Complexity badges */
+    .complexity-badges {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 8px 18px;
+      font-size: 0.88rem;
+    }
+
+    .badge .badge-label {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge code {
+      font-family: var(--font-mono);
+      color: var(--green);
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    /* ===== HASH MAP DIAGRAM ===== */
+    .hashmap-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 40px;
+      padding: 32px 20px;
+      flex-wrap: wrap;
+    }
+
+    .diagram-array {
+      display: flex;
+      gap: 4px;
+    }
+
+    .diagram-cell {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+      position: relative;
+    }
+
+    .diagram-cell .idx {
+      position: absolute;
+      bottom: -20px;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    .diagram-arrow {
+      color: var(--accent);
+      font-size: 1.5rem;
+      animation: pulseArrow 2s ease-in-out infinite;
+    }
+
+    @keyframes pulseArrow {
+      0%, 100% { opacity: 0.5; transform: translateX(0); }
+      50% { opacity: 1; transform: translateX(4px); }
+    }
+
+    .diagram-map {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.8;
+    }
+
+    .diagram-map .map-title {
+      color: var(--accent);
+      font-family: var(--font-sans);
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .map-entry { color: var(--text-muted); }
+    .map-entry .key { color: var(--cyan); }
+    .map-entry .val { color: var(--orange); }
+
+    /* ===== SECTION 2: ANIMATION ===== */
+    #animation { margin-bottom: 64px; }
+
+    .animation-wrapper {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    /* Controls bar */
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 24px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .ctrl-btn {
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      font-size: 1rem;
+    }
+
+    .ctrl-btn:hover { border-color: var(--accent); background: rgba(108,99,255,0.1); }
+    .ctrl-btn:active { transform: scale(0.95); }
+    .ctrl-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .speed-control label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100px;
+      height: 4px;
+      background: var(--surface-3);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+    .step-indicator {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      min-width: 70px;
+      text-align: center;
+    }
+
+    /* Animation display area */
+    .animation-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 420px;
+    }
+
+    @media (max-width: 860px) {
+      .animation-body { grid-template-columns: 1fr; }
+    }
+
+    .visual-panel {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      border-right: 1px solid var(--border);
+    }
+
+    @media (max-width: 860px) {
+      .visual-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+
+    /* Array visualization */
+    .array-vis {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .arr-cell {
+      width: 56px;
+      height: 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-2);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.1rem;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .arr-cell .cell-idx {
+      position: absolute;
+      bottom: -22px;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    .arr-cell.current {
+      border-color: var(--orange);
+      background: var(--orange-glow);
+      color: var(--orange);
+      box-shadow: 0 0 16px rgba(251,146,60,0.2);
+      transform: scale(1.08);
+    }
+
+    .arr-cell.checking {
+      border-color: var(--cyan);
+      background: var(--cyan-glow);
+      color: var(--cyan);
+      box-shadow: 0 0 16px rgba(34,211,238,0.15);
+    }
+
+    .arr-cell.found {
+      border-color: var(--green);
+      background: var(--green-glow);
+      color: var(--green);
+      box-shadow: 0 0 20px rgba(52,211,153,0.25);
+      transform: scale(1.12);
+    }
+
+    .arr-cell.visited {
+      border-color: var(--surface-3);
+      background: var(--surface-3);
+      color: var(--text-dim);
+    }
+
+    /* Pointer labels above cells */
+    .pointer-label {
+      position: absolute;
+      top: -26px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .pointer-label.i-ptr { background: var(--orange-glow); color: var(--orange); }
+    .pointer-label.comp-ptr { background: var(--cyan-glow); color: var(--cyan); }
+
+    /* HashMap visualization */
+    .hashmap-vis {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      min-height: 90px;
+    }
+
+    .hashmap-vis h4 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+
+    .map-entries {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .map-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      transition: all 0.3s;
+      animation: chipIn 0.3s ease-out;
+    }
+
+    @keyframes chipIn {
+      from { opacity: 0; transform: scale(0.8) translateY(6px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .map-chip.highlight {
+      border-color: var(--green);
+      background: var(--green-glow);
+    }
+
+    .map-chip .chip-key { color: var(--cyan); }
+    .map-chip .chip-arrow { color: var(--text-dim); font-size: 0.7rem; }
+    .map-chip .chip-val { color: var(--orange); }
+
+    /* Narration */
+    .narration {
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 50px;
+      border-left: 3px solid var(--accent);
+    }
+
+    /* Target display */
+    .target-display {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .target-display strong {
+      color: var(--yellow);
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+    }
+
+    /* Code panel */
+    .code-panel {
+      padding: 24px;
+      overflow: auto;
+      background: var(--bg);
+    }
+
+    .code-panel h4 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+    }
+
+    .code-block {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 2;
+    }
+
+    .code-line {
+      display: block;
+      padding: 0 12px;
+      border-radius: 4px;
+      transition: all 0.3s;
+      white-space: pre;
+      color: var(--text-muted);
+    }
+
+    .code-line.active {
+      background: rgba(108,99,255,0.15);
+      color: #fff;
+      border-left: 3px solid var(--accent);
+      padding-left: 9px;
+    }
+
+    .code-line .kw { color: #c084fc; }
+    .code-line .fn { color: #60a5fa; }
+    .code-line .str { color: var(--green); }
+    .code-line .num { color: var(--orange); }
+    .code-line .cm { color: var(--text-dim); font-style: italic; }
+    .code-line .op { color: var(--cyan); }
+
+    /* ===== SECTION 3: PLAYGROUND ===== */
+    #playground { margin-bottom: 80px; }
+
+    .playground-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .playground-content { grid-template-columns: 1fr; }
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .input-group input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.92rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus { border-color: var(--accent); }
+
+    .input-group input::placeholder { color: var(--text-dim); }
+
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .preset-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-mono);
+    }
+
+    .preset-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(108,99,255,0.08); }
+
+    .run-btn {
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 12px 32px;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+
+    .run-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--accent-glow); }
+    .run-btn:active { transform: translateY(0); }
+
+    .result-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .result-box .result-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .result-box .result-value {
+      font-family: var(--font-mono);
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .result-box .result-value.error { color: var(--red); font-size: 0.95rem; }
+
+    .result-steps {
+      margin-top: 16px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .playground-array-vis {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .pg-cell {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-3);
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1rem;
+      position: relative;
+      transition: all 0.4s;
+    }
+
+    .pg-cell .cell-idx {
+      position: absolute;
+      bottom: -18px;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+    }
+
+    .pg-cell.found {
+      border-color: var(--green);
+      background: var(--green-glow);
+      color: var(--green);
+      box-shadow: 0 0 16px rgba(52,211,153,0.2);
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 32px 0;
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border); }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in-up {
+      animation: fadeInUp 0.5s ease-out both;
+    }
+
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- ===== HEADER ===== -->
+    <header class="fade-in-up">
+      <div class="problem-number">LeetCode #1</div>
+      <h1>Two Sum</h1>
+      <p class="subtitle">Given an array of integers and a target, find two numbers that add up to the target. Return their indices.</p>
+    </header>
+
+    <!-- ===== SECTION 1: VISUAL EXPLANATION ===== -->
+    <section id="explanation">
+      <div class="section-label fade-in-up">Section 1</div>
+      <h2 class="section-title fade-in-up">Visual Explanation</h2>
+
+      <div class="card problem-statement fade-in-up delay-1">
+        <div class="problem-text">
+          <h3>Problem Statement</h3>
+          <p>Given an array of integers <code>nums</code> and an integer <code>target</code>, return the <strong>indices</strong> of the two numbers such that they add up to the target.</p>
+          <p style="margin-top:8px;">You may assume that each input has <strong>exactly one solution</strong>, and you may not use the same element twice.</p>
+        </div>
+        <div class="problem-example">
+          <div class="label">Example</div>
+          <div>nums = [2, 7, 11, 15]</div>
+          <div>target = 9</div>
+          <br>
+          <div class="label">Output</div>
+          <div class="output-val">[0, 1]</div>
+          <div style="color:var(--text-dim);margin-top:4px;font-size:0.8rem;">Because nums[0] + nums[1] = 2 + 7 = 9</div>
+        </div>
+      </div>
+
+      <div class="insight-box fade-in-up delay-2">
+        <h3>&#9889; Key Insight</h3>
+        <p>Instead of checking every pair (O(n<sup>2</sup>)), use a <strong>hash map</strong> to remember numbers you have already seen. For each number, compute its <strong>complement</strong> (target - current) and check if that complement is already in the map. This gives a one-pass O(n) solution.</p>
+      </div>
+
+      <div class="approach-grid fade-in-up delay-3">
+        <div class="approach-card">
+          <h4>Brute Force <span class="tag brute">Slow</span></h4>
+          <p>Check every pair of elements with two nested loops. If their sum equals the target, return those indices.</p>
+          <div class="complexity-badges" style="margin-top:12px;">
+            <div class="badge"><span class="badge-label">Time</span> <code>O(n<sup>2</sup>)</code></div>
+            <div class="badge"><span class="badge-label">Space</span> <code>O(1)</code></div>
+          </div>
+        </div>
+        <div class="approach-card optimal">
+          <h4>Hash Map <span class="tag optimal">Optimal</span></h4>
+          <p>Iterate once. For each element, check if its complement exists in a hash map. If not, store the element and its index.</p>
+          <div class="complexity-badges" style="margin-top:12px;">
+            <div class="badge"><span class="badge-label">Time</span> <code>O(n)</code></div>
+            <div class="badge"><span class="badge-label">Space</span> <code>O(n)</code></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card fade-in-up delay-4" style="text-align:center;">
+        <div class="section-label" style="justify-content:center;">How It Works</div>
+        <div class="hashmap-diagram">
+          <div>
+            <div class="diagram-array">
+              <div class="diagram-cell">2<span class="idx">0</span></div>
+              <div class="diagram-cell">7<span class="idx">1</span></div>
+              <div class="diagram-cell">11<span class="idx">2</span></div>
+              <div class="diagram-cell">15<span class="idx">3</span></div>
+            </div>
+            <div style="color:var(--text-dim);font-size:0.78rem;margin-top:28px;">Input Array</div>
+          </div>
+          <div class="diagram-arrow">&#10132;</div>
+          <div class="diagram-map">
+            <div class="map-title">Hash Map</div>
+            <div class="map-entry"><span class="key">value</span> <span class="val">&#8594; index</span></div>
+            <div class="map-entry"><span class="key">2</span> <span class="val">&#8594; 0</span></div>
+            <div class="map-entry"><span class="key">7</span> <span class="val">&#8594; 1</span> &#9989;</div>
+          </div>
+        </div>
+        <div style="color:var(--text-muted);font-size:0.85rem;margin-top:8px;">At index 1: complement = 9 - 7 = 2. Found 2 in map at index 0. Return [0, 1].</div>
+      </div>
+    </section>
+
+    <!-- ===== SECTION 2: STEP-BY-STEP ANIMATION ===== -->
+    <section id="animation">
+      <div class="section-label fade-in-up">Section 2</div>
+      <h2 class="section-title fade-in-up">Step-by-Step Animation</h2>
+
+      <div class="animation-wrapper fade-in-up delay-1">
+        <!-- Controls -->
+        <div class="controls-bar">
+          <button class="ctrl-btn" id="btn-reset" title="Reset" aria-label="Reset animation">&#8634;</button>
+          <button class="ctrl-btn" id="btn-prev" title="Previous step" aria-label="Previous step">&#9664;</button>
+          <button class="ctrl-btn" id="btn-play" title="Play / Pause" aria-label="Play or pause animation">&#9654;</button>
+          <button class="ctrl-btn" id="btn-next" title="Next step" aria-label="Next step">&#9654;&#124;</button>
+          <span class="step-indicator" id="step-indicator">0 / 0</span>
+          <div class="speed-control">
+            <label for="speed-slider">Speed</label>
+            <input type="range" id="speed-slider" min="1" max="10" value="5" aria-label="Animation speed">
+          </div>
+        </div>
+
+        <div class="animation-body">
+          <!-- Visual panel -->
+          <div class="visual-panel">
+            <div class="target-display">Target: <strong id="anim-target">9</strong></div>
+            <div class="array-vis" id="anim-array"></div>
+            <div class="hashmap-vis">
+              <h4>Hash Map { value &#8594; index }</h4>
+              <div class="map-entries" id="anim-map"></div>
+            </div>
+            <div class="narration" id="anim-narration">Press play or step forward to begin the animation.</div>
+          </div>
+
+          <!-- Code panel -->
+          <div class="code-panel">
+            <h4>Algorithm</h4>
+            <div class="code-block" id="code-block">
+              <span class="code-line" data-line="0"><span class="kw">function</span> <span class="fn">twoSum</span>(nums, target) {</span>
+              <span class="code-line" data-line="1">  <span class="kw">const</span> map <span class="op">=</span> <span class="kw">new</span> <span class="fn">Map</span>();</span>
+              <span class="code-line" data-line="2">  <span class="kw">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="num">0</span>; i <span class="op">&lt;</span> nums.length; i<span class="op">++</span>) {</span>
+              <span class="code-line" data-line="3">    <span class="kw">const</span> complement <span class="op">=</span> target <span class="op">-</span> nums[i];</span>
+              <span class="code-line" data-line="4">    <span class="kw">if</span> (map.<span class="fn">has</span>(complement)) {</span>
+              <span class="code-line" data-line="5">      <span class="kw">return</span> [map.<span class="fn">get</span>(complement), i];</span>
+              <span class="code-line" data-line="6">    }</span>
+              <span class="code-line" data-line="7">    map.<span class="fn">set</span>(nums[i], i);</span>
+              <span class="code-line" data-line="8">  }</span>
+              <span class="code-line" data-line="9">}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SECTION 3: INTERACTIVE PLAYGROUND ===== -->
+    <section id="playground">
+      <div class="section-label fade-in-up">Section 3</div>
+      <h2 class="section-title fade-in-up">Interactive Playground</h2>
+
+      <div class="playground-content fade-in-up delay-1">
+        <div class="card">
+          <div class="input-group">
+            <label>Array (comma-separated)</label>
+            <input type="text" id="pg-input-array" placeholder="e.g. 2, 7, 11, 15" value="2, 7, 11, 15">
+          </div>
+          <div class="input-group">
+            <label>Target</label>
+            <input type="text" id="pg-input-target" placeholder="e.g. 9" value="9">
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:8px;">Presets</label>
+            <div class="presets">
+              <button class="preset-btn" data-arr="2,7,11,15" data-target="9">[2,7,11,15] t=9</button>
+              <button class="preset-btn" data-arr="3,2,4" data-target="6">[3,2,4] t=6</button>
+              <button class="preset-btn" data-arr="3,3" data-target="6">[3,3] t=6</button>
+              <button class="preset-btn" data-arr="1,5,3,7,8,2,4" data-target="10">[1,5,3,7,8,2,4] t=10</button>
+              <button class="preset-btn" data-arr="-1,-2,-3,-4,-5" data-target="-8">[-1,-2,-3,-4,-5] t=-8</button>
+              <button class="preset-btn" data-arr="0,4,3,0" data-target="0">[0,4,3,0] t=0</button>
+            </div>
+          </div>
+
+          <button class="run-btn" id="pg-run">Run Algorithm</button>
+        </div>
+
+        <div class="card">
+          <div class="playground-array-vis" id="pg-array-vis"></div>
+          <div class="result-box" id="pg-result">
+            <div class="result-label">Result</div>
+            <div class="result-value" id="pg-result-value">--</div>
+          </div>
+          <div class="result-steps" id="pg-steps"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Two Sum Visualizer -- Built with vanilla HTML, CSS, and JavaScript. No external dependencies.
+    </footer>
+
+  </div>
+
+  <script>
+    // ============================================================
+    // SECTION 2: STEP-BY-STEP ANIMATION ENGINE
+    // ============================================================
+
+    const ANIM_NUMS = [2, 7, 11, 15];
+    const ANIM_TARGET = 9;
+
+    // Pre-compute all animation steps
+    function computeSteps(nums, target) {
+      const steps = [];
+      const map = {};
+
+      steps.push({
+        codeLine: 1,
+        narration: 'Initialize an empty hash map to store values and their indices.',
+        array: nums.map((v, i) => ({ value: v, state: 'default' })),
+        mapState: {},
+        highlightMapKey: null
+      });
+
+      for (let i = 0; i < nums.length; i++) {
+        const complement = target - nums[i];
+
+        // Step: compute complement
+        const arrState1 = nums.map((v, j) => ({
+          value: v,
+          state: j < i ? 'visited' : j === i ? 'current' : 'default',
+          pointer: j === i ? 'i' : null
+        }));
+        steps.push({
+          codeLine: 3,
+          narration: `i = ${i}: Looking at nums[${i}] = ${nums[i]}. Complement = ${target} - ${nums[i]} = ${complement}.`,
+          array: arrState1,
+          mapState: { ...map },
+          highlightMapKey: null
+        });
+
+        // Step: check map
+        if (map.hasOwnProperty(complement)) {
+          const foundIdx = map[complement];
+          const arrState2 = nums.map((v, j) => ({
+            value: v,
+            state: j === foundIdx || j === i ? 'found' : j < i ? 'visited' : 'default',
+            pointer: j === i ? 'i' : j === foundIdx ? 'comp' : null
+          }));
+          steps.push({
+            codeLine: 5,
+            narration: `Found complement ${complement} in the map at index ${foundIdx}. Return [${foundIdx}, ${i}].`,
+            array: arrState2,
+            mapState: { ...map },
+            highlightMapKey: complement
+          });
+          return steps;
+        } else {
+          const arrState2 = nums.map((v, j) => ({
+            value: v,
+            state: j < i ? 'visited' : j === i ? 'checking' : 'default',
+            pointer: j === i ? 'i' : null
+          }));
+          steps.push({
+            codeLine: 4,
+            narration: `Complement ${complement} is NOT in the map. Continue.`,
+            array: arrState2,
+            mapState: { ...map },
+            highlightMapKey: null
+          });
+        }
+
+        // Step: add to map
+        map[nums[i]] = i;
+        const arrState3 = nums.map((v, j) => ({
+          value: v,
+          state: j <= i ? 'visited' : 'default',
+          pointer: null
+        }));
+        steps.push({
+          codeLine: 7,
+          narration: `Store nums[${i}] = ${nums[i]} in the map with index ${i}. Map now has ${Object.keys(map).length} entr${Object.keys(map).length === 1 ? 'y' : 'ies'}.`,
+          array: arrState3,
+          mapState: { ...map },
+          highlightMapKey: nums[i]
+        });
+      }
+
+      return steps;
+    }
+
+    let steps = computeSteps(ANIM_NUMS, ANIM_TARGET);
+    let currentStep = -1;
+    let playing = false;
+    let playTimer = null;
+
+    const animArray = document.getElementById('anim-array');
+    const animMap = document.getElementById('anim-map');
+    const animNarration = document.getElementById('anim-narration');
+    const stepIndicator = document.getElementById('step-indicator');
+    const codeBlock = document.getElementById('code-block');
+    const btnPlay = document.getElementById('btn-play');
+    const btnNext = document.getElementById('btn-next');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnReset = document.getElementById('btn-reset');
+    const speedSlider = document.getElementById('speed-slider');
+
+    function getSpeed() {
+      return 1600 - (speedSlider.value * 140);
+    }
+
+    function buildArrayHTML(nums) {
+      animArray.innerHTML = '';
+      nums.forEach((item, i) => {
+        const cell = document.createElement('div');
+        cell.className = 'arr-cell';
+        cell.textContent = item.value;
+
+        const idx = document.createElement('span');
+        idx.className = 'cell-idx';
+        idx.textContent = i;
+        cell.appendChild(idx);
+
+        if (item.pointer) {
+          const ptr = document.createElement('span');
+          ptr.className = item.pointer === 'i' ? 'pointer-label i-ptr' : 'pointer-label comp-ptr';
+          ptr.textContent = item.pointer === 'i' ? 'i' : 'comp';
+          cell.appendChild(ptr);
+        }
+
+        if (item.state && item.state !== 'default') {
+          cell.classList.add(item.state);
+        }
+
+        animArray.appendChild(cell);
+      });
+    }
+
+    function buildMapHTML(mapState, highlightKey) {
+      animMap.innerHTML = '';
+      const keys = Object.keys(mapState);
+      if (keys.length === 0) {
+        animMap.innerHTML = '<span style="color:var(--text-dim);font-size:0.82rem;font-style:italic;">empty</span>';
+        return;
+      }
+      keys.forEach(k => {
+        const chip = document.createElement('span');
+        chip.className = 'map-chip';
+        if (highlightKey !== null && String(k) === String(highlightKey)) {
+          chip.classList.add('highlight');
+        }
+        chip.innerHTML = `<span class="chip-key">${k}</span><span class="chip-arrow">&#8594;</span><span class="chip-val">${mapState[k]}</span>`;
+        animMap.appendChild(chip);
+      });
+    }
+
+    function highlightCodeLine(lineNum) {
+      const lines = codeBlock.querySelectorAll('.code-line');
+      lines.forEach(l => l.classList.remove('active'));
+      if (lineNum !== null && lineNum !== undefined) {
+        const target = codeBlock.querySelector(`.code-line[data-line="${lineNum}"]`);
+        if (target) target.classList.add('active');
+      }
+    }
+
+    function renderStep(idx) {
+      if (idx < 0 || idx >= steps.length) return;
+      const step = steps[idx];
+      buildArrayHTML(step.array);
+      buildMapHTML(step.mapState, step.highlightMapKey);
+      animNarration.textContent = step.narration;
+      highlightCodeLine(step.codeLine);
+      stepIndicator.textContent = `${idx + 1} / ${steps.length}`;
+    }
+
+    function renderInitial() {
+      const initArr = ANIM_NUMS.map((v, i) => ({ value: v, state: 'default' }));
+      buildArrayHTML(initArr);
+      buildMapHTML({}, null);
+      animNarration.textContent = 'Press play or step forward to begin the animation.';
+      highlightCodeLine(null);
+      stepIndicator.textContent = `0 / ${steps.length}`;
+    }
+
+    function stopPlaying() {
+      playing = false;
+      if (playTimer) { clearTimeout(playTimer); playTimer = null; }
+      btnPlay.innerHTML = '&#9654;';
+      btnPlay.classList.remove('active');
+    }
+
+    function startPlaying() {
+      playing = true;
+      btnPlay.innerHTML = '&#10074;&#10074;';
+      btnPlay.classList.add('active');
+      playNext();
+    }
+
+    function playNext() {
+      if (!playing) return;
+      if (currentStep < steps.length - 1) {
+        currentStep++;
+        renderStep(currentStep);
+        playTimer = setTimeout(playNext, getSpeed());
+      } else {
+        stopPlaying();
+      }
+    }
+
+    btnPlay.addEventListener('click', () => {
+      if (playing) {
+        stopPlaying();
+      } else {
+        if (currentStep >= steps.length - 1) {
+          currentStep = -1;
+          renderInitial();
+        }
+        startPlaying();
+      }
+    });
+
+    btnNext.addEventListener('click', () => {
+      stopPlaying();
+      if (currentStep < steps.length - 1) {
+        currentStep++;
+        renderStep(currentStep);
+      }
+    });
+
+    btnPrev.addEventListener('click', () => {
+      stopPlaying();
+      if (currentStep > 0) {
+        currentStep--;
+        renderStep(currentStep);
+      } else if (currentStep === 0) {
+        currentStep = -1;
+        renderInitial();
+      }
+    });
+
+    btnReset.addEventListener('click', () => {
+      stopPlaying();
+      currentStep = -1;
+      renderInitial();
+    });
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        btnPlay.click();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        btnNext.click();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        btnPrev.click();
+      } else if (e.code === 'KeyR') {
+        e.preventDefault();
+        btnReset.click();
+      }
+    });
+
+    renderInitial();
+
+
+    // ============================================================
+    // SECTION 3: INTERACTIVE PLAYGROUND
+    // ============================================================
+
+    const pgInputArray = document.getElementById('pg-input-array');
+    const pgInputTarget = document.getElementById('pg-input-target');
+    const pgRun = document.getElementById('pg-run');
+    const pgResultValue = document.getElementById('pg-result-value');
+    const pgSteps = document.getElementById('pg-steps');
+    const pgArrayVis = document.getElementById('pg-array-vis');
+
+    // Presets
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        pgInputArray.value = btn.dataset.arr;
+        pgInputTarget.value = btn.dataset.target;
+      });
+    });
+
+    function parseArray(str) {
+      return str.split(',').map(s => {
+        const n = parseInt(s.trim(), 10);
+        if (isNaN(n)) throw new Error(`Invalid number: "${s.trim()}"`);
+        return n;
+      });
+    }
+
+    function runPlayground() {
+      try {
+        const nums = parseArray(pgInputArray.value);
+        const target = parseInt(pgInputTarget.value.trim(), 10);
+
+        if (isNaN(target)) throw new Error('Target must be a valid integer.');
+        if (nums.length < 2) throw new Error('Array must have at least 2 elements.');
+        if (nums.length > 50) throw new Error('Array too large. Keep it under 50 elements.');
+
+        // Run two sum and collect trace
+        const map = {};
+        const trace = [];
+        let result = null;
+
+        for (let i = 0; i < nums.length; i++) {
+          const complement = target - nums[i];
+          if (map.hasOwnProperty(complement)) {
+            trace.push(`i=${i}: nums[${i}]=${nums[i]}, complement=${complement}. Found in map at index ${map[complement]}!`);
+            result = [map[complement], i];
+            break;
+          }
+          trace.push(`i=${i}: nums[${i}]=${nums[i]}, complement=${complement}. Not in map. Store ${nums[i]} -> ${i}.`);
+          map[nums[i]] = i;
+        }
+
+        // Show array visualization
+        pgArrayVis.innerHTML = '';
+        nums.forEach((v, i) => {
+          const cell = document.createElement('div');
+          cell.className = 'pg-cell';
+          cell.textContent = v;
+          const idx = document.createElement('span');
+          idx.className = 'cell-idx';
+          idx.textContent = i;
+          cell.appendChild(idx);
+          if (result && (i === result[0] || i === result[1])) {
+            cell.classList.add('found');
+          }
+          pgArrayVis.appendChild(cell);
+        });
+
+        if (result) {
+          pgResultValue.className = 'result-value';
+          pgResultValue.textContent = `[${result[0]}, ${result[1]}]`;
+        } else {
+          pgResultValue.className = 'result-value error';
+          pgResultValue.textContent = 'No solution found.';
+        }
+
+        pgSteps.innerHTML = '<strong style="color:var(--text);">Trace:</strong><br>' + trace.map(t => `<span style="display:block;padding:2px 0;">${t}</span>`).join('');
+
+      } catch (e) {
+        pgArrayVis.innerHTML = '';
+        pgResultValue.className = 'result-value error';
+        pgResultValue.textContent = e.message;
+        pgSteps.innerHTML = '';
+      }
+    }
+
+    pgRun.addEventListener('click', runPlayground);
+
+    // Run on Enter key in inputs
+    pgInputArray.addEventListener('keydown', (e) => { if (e.key === 'Enter') runPlayground(); });
+    pgInputTarget.addEventListener('keydown', (e) => { if (e.key === 'Enter') runPlayground(); });
+
+    // Run once on load with defaults
+    runPlayground();
+  </script>
+
+</body>
+</html>

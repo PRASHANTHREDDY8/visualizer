@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS Kinesis — System Design Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f4f6f9;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --accent: #e47911;
+      --accent-light: #fff3e0;
+      --blue: #2563eb;
+      --blue-light: #dbeafe;
+      --green: #16a34a;
+      --green-light: #dcfce7;
+      --red: #dc2626;
+      --red-light: #fee2e2;
+      --purple: #7c3aed;
+      --purple-light: #ede9fe;
+      --teal: #0d9488;
+      --teal-light: #ccfbf1;
+      --amber: #d97706;
+      --amber-light: #fef3c7;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* Navigation */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+
+    .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      height: 60px;
+      overflow-x: auto;
+    }
+
+    .nav-brand {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--accent);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-brand svg { width: 24px; height: 24px; }
+
+    .nav-links {
+      display: flex;
+      gap: 0.25rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      padding: 0.5rem 0.85rem;
+      border-radius: 6px;
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #232f3e 0%, #131a22 100%);
+      color: white;
+      padding: 3.5rem 2rem;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .hero h1 span { color: var(--accent); }
+
+    .hero p {
+      font-size: 1.15rem;
+      opacity: 0.85;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .hero-badges {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .hero-badge {
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    /* Sections */
+    .section {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+
+    .section-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .section-subtitle {
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+      font-size: 1.05rem;
+    }
+
+    /* Architecture Diagram */
+    .arch-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow-md);
+      overflow-x: auto;
+    }
+
+    .arch-svg {
+      width: 100%;
+      min-height: 500px;
+    }
+
+    .arch-svg text {
+      font-family: var(--font);
+    }
+
+    .arch-component {
+      cursor: pointer;
+      transition: transform 0.2s, filter 0.2s;
+    }
+
+    .arch-component:hover {
+      filter: brightness(1.05);
+      transform: translateY(-2px);
+    }
+
+    .arch-tooltip {
+      position: absolute;
+      background: var(--text);
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      max-width: 280px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 50;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .arch-tooltip.visible { opacity: 1; }
+
+    /* Component Cards */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      font-size: 1.3rem;
+    }
+
+    .card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .card-tag {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 0.75rem;
+      margin-right: 0.4rem;
+    }
+
+    /* Sequence Diagram */
+    .sequence-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    .sequence-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .seq-btn {
+      padding: 0.5rem 1.2rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .seq-btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .seq-btn-primary:hover { background: #c96a0f; }
+
+    .seq-btn-secondary {
+      background: var(--surface-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .seq-btn-secondary:hover { background: var(--border); }
+
+    .seq-btn-secondary.active {
+      background: var(--blue-light);
+      color: var(--blue);
+      border-color: var(--blue);
+    }
+
+    .sequence-narration {
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .narration-step {
+      background: var(--accent);
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .sequence-svg {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    /* Comparison Table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      font-size: 0.9rem;
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr:last-child td { border-bottom: none; }
+
+    .comparison-table tr.chosen {
+      background: var(--accent-light);
+    }
+
+    .chosen-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-left: 0.5rem;
+    }
+
+    /* Pitfalls */
+    .pitfall-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--amber);
+      border-radius: var(--radius-sm);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .pitfall-header {
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .pitfall-header:hover { background: var(--surface-alt); }
+
+    .pitfall-body {
+      padding: 0 1.5rem 1.25rem;
+      display: none;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .pitfall-body.open { display: block; }
+
+    .pitfall-label {
+      font-weight: 600;
+      color: var(--text);
+      display: block;
+      margin-top: 0.75rem;
+    }
+
+    /* Best Practices */
+    .practice-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--green);
+      border-radius: var(--radius-sm);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .practice-header {
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .practice-header:hover { background: var(--surface-alt); }
+
+    .practice-body {
+      padding: 0 1.5rem 1.25rem;
+      display: none;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .practice-body.open { display: block; }
+
+    .practice-body ul {
+      list-style: none;
+      margin-top: 0.5rem;
+    }
+
+    .practice-body li {
+      padding: 0.4rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+
+    .practice-body li::before {
+      content: '\\2713';
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    /* Scaling */
+    .scaling-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .scaling-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .scaling-card h4 {
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .metric:last-child { border-bottom: none; }
+
+    .metric-value {
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    /* Use Cases */
+    .usecase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .usecase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+    }
+
+    .usecase-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .usecase-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .anti-usecase {
+      border-left: 3px solid var(--red);
+    }
+
+    /* Chevron */
+    .chevron {
+      transition: transform 0.2s;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .chevron.open { transform: rotate(90deg); }
+
+    /* Speed Slider */
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .speed-control input[type="range"] {
+      width: 80px;
+      accent-color: var(--accent);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      .section { padding: 2rem 1rem; }
+      .nav-inner { padding: 0 1rem; }
+      .cards-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Code block */
+    .code-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1.25rem;
+      border-radius: var(--radius-sm);
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      overflow-x: auto;
+      margin-top: 0.75rem;
+      line-height: 1.7;
+    }
+
+    .code-keyword { color: #c084fc; }
+    .code-string { color: #86efac; }
+    .code-comment { color: #64748b; }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+      AWS Kinesis
+    </div>
+    <ul class="nav-links">
+      <li><a href="#architecture" class="active">Architecture</a></li>
+      <li><a href="#components">Components</a></li>
+      <li><a href="#flow">Request Flow</a></li>
+      <li><a href="#comparison">Comparisons</a></li>
+      <li><a href="#usecases">Use Cases</a></li>
+      <li><a href="#pitfalls">Pitfalls</a></li>
+      <li><a href="#practices">Best Practices</a></li>
+      <li><a href="#scaling">Scaling</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- Hero -->
+<header class="hero">
+  <h1>AWS <span>Kinesis</span></h1>
+  <p>Real-time data streaming at any scale. Collect, process, and analyze streaming data with sub-second latency for instant insights.</p>
+  <div class="hero-badges">
+    <span class="hero-badge">Real-Time Streaming</span>
+    <span class="hero-badge">Serverless Option</span>
+    <span class="hero-badge">1 MB/s per shard write</span>
+    <span class="hero-badge">2 MB/s per shard read</span>
+    <span class="hero-badge">Up to 7 days retention</span>
+  </div>
+</header>
+
+<!-- Section 1: Architecture -->
+<section class="section" id="architecture">
+  <h2 class="section-title">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Architecture Diagram
+  </h2>
+  <p class="section-subtitle">Interactive overview of AWS Kinesis ecosystem — hover to explore, click for details.</p>
+
+  <div class="arch-container">
+    <svg class="arch-svg" viewBox="0 0 1100 540" xmlns="http://www.w3.org/2000/svg">
+      <!-- Connection Lines -->
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/>
+        </marker>
+        <marker id="arrowOrange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#e47911"/>
+        </marker>
+      </defs>
+
+      <!-- Grouping backgrounds -->
+      <rect x="20" y="30" width="220" height="480" rx="12" fill="#f0fdf4" stroke="#bbf7d0" stroke-dasharray="4"/>
+      <text x="130" y="55" text-anchor="middle" font-size="11" fill="#16a34a" font-weight="600">PRODUCERS</text>
+
+      <rect x="280" y="30" width="540" height="480" rx="12" fill="#fff7ed" stroke="#fed7aa" stroke-dasharray="4"/>
+      <text x="550" y="55" text-anchor="middle" font-size="11" fill="#e47911" font-weight="600">AWS KINESIS SERVICES</text>
+
+      <rect x="860" y="30" width="220" height="480" rx="12" fill="#ede9fe" stroke="#c4b5fd" stroke-dasharray="4"/>
+      <text x="970" y="55" text-anchor="middle" font-size="11" fill="#7c3aed" font-weight="600">CONSUMERS / SINKS</text>
+
+      <!-- Producers -->
+      <g class="arch-component" data-component="producers" onclick="scrollToSection('components')">
+        <rect x="50" y="90" width="160" height="60" rx="8" fill="#ffffff" stroke="#86efac" stroke-width="2"/>
+        <text x="130" y="118" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">IoT Devices</text>
+        <text x="130" y="135" text-anchor="middle" font-size="10" fill="#64748b">Sensors, Telemetry</text>
+      </g>
+
+      <g class="arch-component" data-component="producers" onclick="scrollToSection('components')">
+        <rect x="50" y="170" width="160" height="60" rx="8" fill="#ffffff" stroke="#86efac" stroke-width="2"/>
+        <text x="130" y="198" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">Application Logs</text>
+        <text x="130" y="215" text-anchor="middle" font-size="10" fill="#64748b">CloudWatch, Fluentd</text>
+      </g>
+
+      <g class="arch-component" data-component="producers" onclick="scrollToSection('components')">
+        <rect x="50" y="250" width="160" height="60" rx="8" fill="#ffffff" stroke="#86efac" stroke-width="2"/>
+        <text x="130" y="278" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">Clickstream</text>
+        <text x="130" y="295" text-anchor="middle" font-size="10" fill="#64748b">Web/Mobile Events</text>
+      </g>
+
+      <g class="arch-component" data-component="kpl" onclick="scrollToSection('components')">
+        <rect x="50" y="340" width="160" height="60" rx="8" fill="#ffffff" stroke="#86efac" stroke-width="2"/>
+        <text x="130" y="363" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">KPL / SDK</text>
+        <text x="130" y="380" text-anchor="middle" font-size="10" fill="#64748b">Kinesis Producer Library</text>
+      </g>
+
+      <g class="arch-component" data-component="agent" onclick="scrollToSection('components')">
+        <rect x="50" y="420" width="160" height="60" rx="8" fill="#ffffff" stroke="#86efac" stroke-width="2"/>
+        <text x="130" y="448" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">Kinesis Agent</text>
+        <text x="130" y="465" text-anchor="middle" font-size="10" fill="#64748b">File-based Ingestion</text>
+      </g>
+
+      <!-- Arrows from Producers -->
+      <line x1="210" y1="120" x2="310" y2="180" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="210" y1="200" x2="310" y2="195" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="210" y1="280" x2="310" y2="210" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="210" y1="370" x2="310" y2="215" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="210" y1="450" x2="350" y2="370" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+      <!-- Kinesis Data Streams -->
+      <g class="arch-component" data-component="streams" onclick="scrollToSection('components')">
+        <rect x="310" y="100" width="200" height="140" rx="10" fill="#fff" stroke="#e47911" stroke-width="2.5"/>
+        <text x="410" y="135" text-anchor="middle" font-size="13" font-weight="700" fill="#e47911">Kinesis Data</text>
+        <text x="410" y="155" text-anchor="middle" font-size="13" font-weight="700" fill="#e47911">Streams</text>
+        <text x="410" y="180" text-anchor="middle" font-size="10" fill="#64748b">Shard-based streaming</text>
+        <text x="410" y="195" text-anchor="middle" font-size="10" fill="#64748b">1 MB/s write per shard</text>
+        <text x="410" y="210" text-anchor="middle" font-size="10" fill="#64748b">2 MB/s read per shard</text>
+        <!-- Shard visual -->
+        <rect x="330" y="218" width="40" height="10" rx="3" fill="#fed7aa"/>
+        <rect x="375" y="218" width="40" height="10" rx="3" fill="#fdba74"/>
+        <rect x="420" y="218" width="40" height="10" rx="3" fill="#fb923c"/>
+        <rect x="465" y="218" width="40" height="10" rx="3" fill="#f97316"/>
+      </g>
+
+      <!-- Kinesis Data Firehose -->
+      <g class="arch-component" data-component="firehose" onclick="scrollToSection('components')">
+        <rect x="310" y="280" width="200" height="100" rx="10" fill="#fff" stroke="#e47911" stroke-width="2.5"/>
+        <text x="410" y="315" text-anchor="middle" font-size="13" font-weight="700" fill="#e47911">Kinesis Data</text>
+        <text x="410" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#e47911">Firehose</text>
+        <text x="410" y="360" text-anchor="middle" font-size="10" fill="#64748b">Fully managed delivery</text>
+      </g>
+
+      <!-- Kinesis Data Analytics -->
+      <g class="arch-component" data-component="analytics" onclick="scrollToSection('components')">
+        <rect x="580" y="100" width="200" height="100" rx="10" fill="#fff" stroke="#e47911" stroke-width="2.5"/>
+        <text x="680" y="135" text-anchor="middle" font-size="13" font-weight="700" fill="#e47911">Kinesis Data</text>
+        <text x="680" y="155" text-anchor="middle" font-size="13" font-weight="700" fill="#e47911">Analytics</text>
+        <text x="680" y="180" text-anchor="middle" font-size="10" fill="#64748b">SQL / Apache Flink</text>
+      </g>
+
+      <!-- Kinesis Video Streams -->
+      <g class="arch-component" data-component="video" onclick="scrollToSection('components')">
+        <rect x="580" y="230" width="200" height="100" rx="10" fill="#fff" stroke="#e47911" stroke-width="2.5"/>
+        <text x="680" y="265" text-anchor="middle" font-size="13" font-weight="700" fill="#e47911">Kinesis Video</text>
+        <text x="680" y="285" text-anchor="middle" font-size="13" font-weight="700" fill="#e47911">Streams</text>
+        <text x="680" y="310" text-anchor="middle" font-size="10" fill="#64748b">Media streaming</text>
+      </g>
+
+      <!-- Enhanced Fan-Out -->
+      <g class="arch-component" data-component="fanout" onclick="scrollToSection('components')">
+        <rect x="580" y="360" width="200" height="80" rx="10" fill="#fff" stroke="#7c3aed" stroke-width="2"/>
+        <text x="680" y="393" text-anchor="middle" font-size="12" font-weight="600" fill="#7c3aed">Enhanced Fan-Out</text>
+        <text x="680" y="413" text-anchor="middle" font-size="10" fill="#64748b">2 MB/s per consumer</text>
+        <text x="680" y="428" text-anchor="middle" font-size="10" fill="#64748b">HTTP/2 push</text>
+      </g>
+
+      <!-- Arrows between Kinesis services -->
+      <line x1="510" y1="170" x2="580" y2="150" stroke="#e47911" stroke-width="1.5" marker-end="url(#arrowOrange)"/>
+      <line x1="510" y1="200" x2="580" y2="390" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrowhead)"/>
+      <line x1="410" y1="240" x2="410" y2="280" stroke="#e47911" stroke-width="1.5" marker-end="url(#arrowOrange)"/>
+
+      <!-- Consumers -->
+      <g class="arch-component" data-component="lambda" onclick="scrollToSection('components')">
+        <rect x="890" y="80" width="160" height="55" rx="8" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+        <text x="970" y="105" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">AWS Lambda</text>
+        <text x="970" y="122" text-anchor="middle" font-size="10" fill="#64748b">Serverless processing</text>
+      </g>
+
+      <g class="arch-component" data-component="kcl" onclick="scrollToSection('components')">
+        <rect x="890" y="150" width="160" height="55" rx="8" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+        <text x="970" y="175" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">KCL Application</text>
+        <text x="970" y="192" text-anchor="middle" font-size="10" fill="#64748b">EC2/ECS consumer</text>
+      </g>
+
+      <g class="arch-component" data-component="s3" onclick="scrollToSection('components')">
+        <rect x="890" y="230" width="160" height="55" rx="8" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+        <text x="970" y="255" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">Amazon S3</text>
+        <text x="970" y="272" text-anchor="middle" font-size="10" fill="#64748b">Data lake storage</text>
+      </g>
+
+      <g class="arch-component" data-component="redshift" onclick="scrollToSection('components')">
+        <rect x="890" y="300" width="160" height="55" rx="8" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+        <text x="970" y="325" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">Amazon Redshift</text>
+        <text x="970" y="342" text-anchor="middle" font-size="10" fill="#64748b">Data warehouse</text>
+      </g>
+
+      <g class="arch-component" data-component="elasticsearch" onclick="scrollToSection('components')">
+        <rect x="890" y="370" width="160" height="55" rx="8" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+        <text x="970" y="395" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">OpenSearch</text>
+        <text x="970" y="412" text-anchor="middle" font-size="10" fill="#64748b">Search & analytics</text>
+      </g>
+
+      <g class="arch-component" data-component="custom" onclick="scrollToSection('components')">
+        <rect x="890" y="440" width="160" height="55" rx="8" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+        <text x="970" y="465" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">Custom Apps</text>
+        <text x="970" y="482" text-anchor="middle" font-size="10" fill="#64748b">Spark, Flink, etc.</text>
+      </g>
+
+      <!-- Arrows to Consumers -->
+      <line x1="780" y1="150" x2="890" y2="107" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="780" y1="400" x2="890" y2="177" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="510" y1="330" x2="890" y2="257" stroke="#e47911" stroke-width="1.5" marker-end="url(#arrowOrange)"/>
+      <line x1="510" y1="340" x2="890" y2="327" stroke="#e47911" stroke-width="1.5" marker-end="url(#arrowOrange)"/>
+      <line x1="510" y1="350" x2="890" y2="397" stroke="#e47911" stroke-width="1.5" marker-end="url(#arrowOrange)"/>
+      <line x1="780" y1="400" x2="890" y2="467" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    </svg>
+  </div>
+  <div class="arch-tooltip" id="archTooltip"></div>
+</section>
+
+<!-- Section 2: Component Breakdown -->
+<section class="section" id="components">
+  <h2 class="section-title">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+    Component Breakdown
+  </h2>
+  <p class="section-subtitle">Deep dive into each Kinesis service and its role in the streaming architecture.</p>
+
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-icon" style="background:var(--accent-light); color:var(--accent);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </div>
+      <h3>Kinesis Data Streams</h3>
+      <p>The core streaming service. Data is ingested into shards — each shard supports 1 MB/s writes and 2 MB/s reads. Records are stored for 24 hours by default (up to 365 days). Partition keys determine shard routing via MD5 hashing.</p>
+      <span class="card-tag" style="background:var(--accent-light); color:var(--accent);">Core Service</span>
+      <span class="card-tag" style="background:var(--blue-light); color:var(--blue);">Provisioned or On-Demand</span>
+    </div>
+
+    <div class="card">
+      <div class="card-icon" style="background:var(--red-light); color:var(--red);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <h3>Kinesis Data Firehose</h3>
+      <p>Fully managed delivery pipeline. Automatically batches, compresses, transforms (via Lambda), and delivers data to S3, Redshift, OpenSearch, or HTTP endpoints. Near real-time with 60-900 second buffering.</p>
+      <span class="card-tag" style="background:var(--green-light); color:var(--green);">Fully Managed</span>
+      <span class="card-tag" style="background:var(--purple-light); color:var(--purple);">No Shards to Manage</span>
+    </div>
+
+    <div class="card">
+      <div class="card-icon" style="background:var(--purple-light); color:var(--purple);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM9 9h6v6H9z"/><path d="M9 3v6M15 3v6M9 15v6M15 15v6M3 9h6M3 15h6M15 9h6M15 15h6"/></svg>
+      </div>
+      <h3>Kinesis Data Analytics</h3>
+      <p>Run SQL queries or Apache Flink applications on streaming data in real-time. Supports windowed aggregations, anomaly detection, and stream-to-stream joins. Auto-scales processing capacity.</p>
+      <span class="card-tag" style="background:var(--teal-light); color:var(--teal);">SQL or Flink</span>
+      <span class="card-tag" style="background:var(--amber-light); color:var(--amber);">Real-time Analytics</span>
+    </div>
+
+    <div class="card">
+      <div class="card-icon" style="background:var(--teal-light); color:var(--teal);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      </div>
+      <h3>Kinesis Video Streams</h3>
+      <p>Capture, process, and store media streams from cameras and audio devices. Supports WebRTC for real-time two-way communication. Integrates with Rekognition for video analytics.</p>
+      <span class="card-tag" style="background:var(--blue-light); color:var(--blue);">Media Streaming</span>
+      <span class="card-tag" style="background:var(--green-light); color:var(--green);">WebRTC</span>
+    </div>
+
+    <div class="card">
+      <div class="card-icon" style="background:var(--green-light); color:var(--green);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+      </div>
+      <h3>Enhanced Fan-Out</h3>
+      <p>Dedicated 2 MB/s throughput per consumer via HTTP/2 push. Records are pushed to consumers within ~70ms (vs. ~200ms with polling). Supports up to 20 registered consumers per stream.</p>
+      <span class="card-tag" style="background:var(--purple-light); color:var(--purple);">HTTP/2 Push</span>
+      <span class="card-tag" style="background:var(--accent-light); color:var(--accent);">~70ms Latency</span>
+    </div>
+
+    <div class="card">
+      <div class="card-icon" style="background:var(--blue-light); color:var(--blue);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </div>
+      <h3>KCL (Consumer Library)</h3>
+      <p>Java library (with multilanguage daemon) that handles shard leasing, checkpointing, and load balancing across consumer instances. Uses DynamoDB for coordination and lease management.</p>
+      <span class="card-tag" style="background:var(--amber-light); color:var(--amber);">Auto Load Balancing</span>
+      <span class="card-tag" style="background:var(--red-light); color:var(--red);">DynamoDB Lease Table</span>
+    </div>
+  </div>
+</section>
+
+<!-- Section 3: Request Flow -->
+<section class="section" id="flow">
+  <h2 class="section-title">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Request Flow
+  </h2>
+  <p class="section-subtitle">Animated sequence showing data flowing through the Kinesis pipeline.</p>
+
+  <div class="sequence-container">
+    <div class="sequence-controls">
+      <button class="seq-btn seq-btn-primary" id="seqPlayBtn" onclick="toggleSequence()">&#9654; Play</button>
+      <button class="seq-btn seq-btn-secondary" onclick="stepSequence()">Step &rarr;</button>
+      <button class="seq-btn seq-btn-secondary" onclick="resetSequence()">Reset</button>
+      <div class="speed-control">
+        <span>Speed:</span>
+        <input type="range" min="1" max="5" value="3" id="speedSlider">
+        <span id="speedLabel">1x</span>
+      </div>
+      <div style="flex:1"></div>
+      <button class="seq-btn seq-btn-secondary" id="flowWrite" onclick="setFlow('write')" style="margin-left: auto;">Write Flow</button>
+      <button class="seq-btn seq-btn-secondary" id="flowRead" onclick="setFlow('read')">Read Flow</button>
+      <button class="seq-btn seq-btn-secondary" id="flowFirehose" onclick="setFlow('firehose')">Firehose Flow</button>
+    </div>
+
+    <div class="sequence-narration" id="seqNarration">
+      <div class="narration-step" id="narrationStep">-</div>
+      <span id="narrationText">Select a flow and press Play to begin the animation.</span>
+    </div>
+
+    <div class="sequence-svg">
+      <svg id="seqSvg" width="100%" height="320" viewBox="0 0 900 320">
+        <!-- Lifelines -->
+        <g id="seqLifelines"></g>
+        <!-- Arrows will be drawn dynamically -->
+        <g id="seqArrows"></g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- Section 4: Comparisons -->
+<section class="section" id="comparison">
+  <h2 class="section-title">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+    Comparisons with Alternatives
+  </h2>
+  <p class="section-subtitle">How Kinesis stacks up against other streaming and messaging platforms.</p>
+
+  <div style="overflow-x:auto;">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Platform</th>
+          <th>Key Differentiator</th>
+          <th>Pros</th>
+          <th>Cons</th>
+          <th>Best For</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="chosen">
+          <td><strong>AWS Kinesis</strong> <span class="chosen-badge">AWS Native</span></td>
+          <td>Fully managed, tight AWS integration, on-demand capacity mode</td>
+          <td>Zero ops overhead, IAM security, Firehose for zero-code delivery, Lambda triggers</td>
+          <td>Vendor lock-in, limited throughput per shard, 7-day max retention (365 with extended)</td>
+          <td>AWS-native real-time pipelines with moderate throughput needs</td>
+        </tr>
+        <tr>
+          <td><strong>Apache Kafka (MSK)</strong></td>
+          <td>High throughput, infinite retention, rich ecosystem (Connect, Streams, ksqlDB)</td>
+          <td>Massive throughput, compacted topics, broad community, multi-DC replication</td>
+          <td>Operational complexity (even MSK), partition rebalancing, higher cost at low scale</td>
+          <td>High-throughput event backbones, event sourcing, long-term replay</td>
+        </tr>
+        <tr>
+          <td><strong>Amazon SQS</strong></td>
+          <td>Message queue (not stream), at-least-once delivery, no ordering guarantee (standard)</td>
+          <td>Simplest to operate, serverless, infinite scale, dead-letter queues</td>
+          <td>No replay, no ordering (standard), consumer deletes messages, not a true stream</td>
+          <td>Decoupling microservices, task queues, when replay isn't needed</td>
+        </tr>
+        <tr>
+          <td><strong>Apache Pulsar</strong></td>
+          <td>Unified messaging + streaming, tiered storage, multi-tenancy</td>
+          <td>Infinite retention via tiered storage, geo-replication, topic compaction + queuing</td>
+          <td>Smaller community, more complex architecture (BookKeeper), fewer managed options</td>
+          <td>Multi-tenant platforms needing both queuing and streaming semantics</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top: 2rem;">
+    <h3 style="margin-bottom: 1rem;">When to pick each</h3>
+    <div class="cards-grid">
+      <div class="card" style="border-left: 3px solid var(--accent);">
+        <h3>Choose Kinesis when...</h3>
+        <p>You're already on AWS, need managed streaming with sub-second latency, want tight integration with Lambda/S3/Redshift, and your throughput is under ~10 GB/s per stream.</p>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--blue);">
+        <h3>Choose Kafka when...</h3>
+        <p>You need extreme throughput (100K+ msgs/sec), infinite retention, compacted topics for materialized views, or multi-cloud portability.</p>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--green);">
+        <h3>Choose SQS when...</h3>
+        <p>You need simple async task processing, don't need stream replay, want zero infrastructure management, or are building request-response patterns.</p>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--teal);">
+        <h3>Choose Pulsar when...</h3>
+        <p>You need multi-tenancy isolation, unified queue + stream APIs, geo-replicated topics, or tiered storage for cost-effective long retention.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 5: Use Cases & Pitfalls -->
+<section class="section" id="usecases">
+  <h2 class="section-title">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    Use Cases & Pitfalls
+  </h2>
+  <p class="section-subtitle">Where Kinesis shines, where it doesn't, and common mistakes to avoid.</p>
+
+  <h3 style="margin-bottom: 1rem;">Primary Use Cases</h3>
+  <div class="usecase-grid">
+    <div class="usecase-card">
+      <h4>Real-Time Analytics</h4>
+      <p>Clickstream analysis, dashboards, and metrics aggregation with sub-second latency. 100K-1M events/sec typical.</p>
+    </div>
+    <div class="usecase-card">
+      <h4>Log & Event Aggregation</h4>
+      <p>Centralize application logs from hundreds of microservices into S3/OpenSearch via Firehose. Replace complex log pipelines.</p>
+    </div>
+    <div class="usecase-card">
+      <h4>IoT Data Ingestion</h4>
+      <p>Ingest telemetry from millions of IoT devices. Partition by device ID for ordered per-device processing.</p>
+    </div>
+    <div class="usecase-card">
+      <h4>Real-Time ML Inference</h4>
+      <p>Feed streaming features into SageMaker models for fraud detection, recommendations, or anomaly detection.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom: 1rem;">Anti-Use-Cases</h3>
+  <div class="usecase-grid">
+    <div class="usecase-card anti-usecase">
+      <h4>Transactional Messaging</h4>
+      <p>If you need exactly-once delivery with acknowledgment, use SQS or a message broker. Kinesis is at-least-once.</p>
+    </div>
+    <div class="usecase-card anti-usecase">
+      <h4>Long-Term Event Store</h4>
+      <p>365-day max retention. For permanent event sourcing, use Kafka with infinite retention or write to S3/DynamoDB.</p>
+    </div>
+    <div class="usecase-card anti-usecase">
+      <h4>Low-Volume Request/Response</h4>
+      <p>For simple async request/response at low volume, SQS or Step Functions are simpler and cheaper.</p>
+    </div>
+  </div>
+
+  <h3 style="margin: 2rem 0 1rem;" id="pitfalls">Common Pitfalls</h3>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span>Hot Shard / Uneven Partition Key Distribution</span>
+      <span class="chevron">&#9654;</span>
+    </div>
+    <div class="pitfall-body">
+      <span class="pitfall-label">The mistake:</span> Using a low-cardinality partition key (e.g., country code with 80% traffic from one country), causing one shard to throttle while others sit idle.
+      <span class="pitfall-label">Why it happens:</span> Developers pick semantically meaningful keys without analyzing distribution.
+      <span class="pitfall-label">The consequence:</span> ProvisionedThroughputExceededException on the hot shard; data loss or backpressure.
+      <span class="pitfall-label">The fix:</span> Use high-cardinality keys (user ID, device ID) or add random suffixes. Monitor per-shard metrics via CloudWatch IncomingBytes per shard.
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span>Ignoring Iterator Age (Consumer Falling Behind)</span>
+      <span class="chevron">&#9654;</span>
+    </div>
+    <div class="pitfall-body">
+      <span class="pitfall-label">The mistake:</span> Not monitoring GetRecords.IteratorAgeMilliseconds, so consumers fall hours behind without anyone noticing.
+      <span class="pitfall-label">Why it happens:</span> System works fine initially; only becomes visible under load or after a consumer restart.
+      <span class="pitfall-label">The consequence:</span> Data processed hours or days late. With default 24h retention, data can expire before being consumed.
+      <span class="pitfall-label">The fix:</span> Alert on IteratorAge > 60 seconds. Scale consumers or upgrade to enhanced fan-out. Extend retention as a safety net.
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span>Using GetRecords API Polling with Multiple Consumers</span>
+      <span class="chevron">&#9654;</span>
+    </div>
+    <div class="pitfall-body">
+      <span class="pitfall-label">The mistake:</span> Having 5+ consumers polling the same shard, hitting the 5 GetRecords calls/sec limit and the shared 2 MB/s read throughput.
+      <span class="pitfall-label">Why it happens:</span> Works fine with one consumer; breaks when teams add more without understanding the shared limit.
+      <span class="pitfall-label">The consequence:</span> ReadProvisionedThroughputExceeded errors, increased latency, consumers stepping on each other.
+      <span class="pitfall-label">The fix:</span> Use Enhanced Fan-Out for multiple consumers (dedicated 2 MB/s each). Or fan out via a single consumer that writes to SNS/SQS for downstream services.
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span>Not Handling Resharding Correctly</span>
+      <span class="chevron">&#9654;</span>
+    </div>
+    <div class="pitfall-body">
+      <span class="pitfall-label">The mistake:</span> Splitting or merging shards without understanding that consumers must process parent shards before children to maintain ordering.
+      <span class="pitfall-label">Why it happens:</span> Resharding seems like a simple capacity change, but it's actually a data topology change.
+      <span class="pitfall-label">The consequence:</span> Out-of-order processing, duplicate records, or records stuck in parent shards never consumed.
+      <span class="pitfall-label">The fix:</span> Use KCL (handles resharding automatically). If custom consumer: detect SHARD_END, find child shards, process them only after parent is fully consumed.
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span>Record Size Exceeding 1 MB Limit</span>
+      <span class="chevron">&#9654;</span>
+    </div>
+    <div class="pitfall-body">
+      <span class="pitfall-label">The mistake:</span> Sending records larger than 1 MB (the hard API limit) or not accounting for base64 overhead in the API call.
+      <span class="pitfall-label">Why it happens:</span> Data grows over time (adding fields), or batching logic creates oversized aggregated records.
+      <span class="pitfall-label">The consequence:</span> PutRecord fails with ValidationException. If not handled, data is lost.
+      <span class="pitfall-label">The fix:</span> Validate record size before sending. For large payloads, store in S3 and send a pointer record. Use KPL aggregation to pack many small records efficiently.
+    </div>
+  </div>
+</section>
+
+<!-- Section 6: Best Practices -->
+<section class="section" id="practices">
+  <h2 class="section-title">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    Best Practices
+  </h2>
+  <p class="section-subtitle">Proven patterns for building robust Kinesis streaming pipelines.</p>
+
+  <div class="practice-card">
+    <div class="practice-header" onclick="togglePractice(this)">
+      <span>Design Phase</span>
+      <span class="chevron">&#9654;</span>
+    </div>
+    <div class="practice-body">
+      <ul>
+        <li>Start with capacity math: peak events/sec x avg record size = required shards (1 MB/s each)</li>
+        <li>Choose On-Demand mode for unpredictable traffic; Provisioned for cost optimization at steady-state</li>
+        <li>Design partition keys for even distribution — analyze your key cardinality before deployment</li>
+        <li>Plan retention period based on your recovery SLA, not just processing speed</li>
+        <li>Decide between standard consumers (shared 2 MB/s) vs. Enhanced Fan-Out (dedicated 2 MB/s per consumer) upfront</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="practice-card">
+    <div class="practice-header" onclick="togglePractice(this)">
+      <span>Producer Implementation</span>
+      <span class="chevron">&#9654;</span>
+    </div>
+    <div class="practice-body">
+      <ul>
+        <li>Use KPL for high-throughput producers — it handles batching, aggregation, retries, and CloudWatch metrics</li>
+        <li>Implement exponential backoff with jitter for ProvisionedThroughputExceededException</li>
+        <li>Use PutRecords (batch) instead of PutRecord (single) for better throughput and fewer API calls</li>
+        <li>Handle partial failures in PutRecords: check FailedRecordCount and retry only failed records</li>
+        <li>Add a unique deduplication ID to records if your consumer needs idempotency</li>
+      </ul>
+      <div class="code-block">
+<span class="code-comment"># PutRecords with partial failure handling</span>
+response = kinesis.put_records(
+    StreamName=<span class="code-string">'my-stream'</span>,
+    Records=records
+)
+<span class="code-keyword">if</span> response[<span class="code-string">'FailedRecordCount'</span>] > 0:
+    failed = [r <span class="code-keyword">for</span> i, r <span class="code-keyword">in</span> enumerate(records)
+              <span class="code-keyword">if</span> response[<span class="code-string">'Records'</span>][i].get(<span class="code-string">'ErrorCode'</span>)]
+    <span class="code-comment"># Retry with backoff</span>
+    retry_with_backoff(failed)
+      </div>
+    </div>
+  </div>
+
+  <div class="practice-card">
+    <div class="practice-header" onclick="togglePractice(this)">
+      <span>Consumer Implementation</span>
+      <span class="chevron">&#9654;</span>
+    </div>
+    <div class="practice-body">
+      <ul>
+        <li>Use KCL 2.x for complex consumers — it handles shard discovery, load balancing, checkpointing, and resharding</li>
+        <li>Checkpoint frequently but not after every record (batch checkpoints every N records or M seconds)</li>
+        <li>Make processing idempotent: Kinesis guarantees at-least-once delivery, not exactly-once</li>
+        <li>For Lambda consumers: configure batch size, parallelization factor, and bisect-on-error for optimal processing</li>
+        <li>Set MaxRecords wisely: larger batches = higher throughput but more memory; smaller = lower latency</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="practice-card">
+    <div class="practice-header" onclick="togglePractice(this)">
+      <span>Operational Excellence</span>
+      <span class="chevron">&#9654;</span>
+    </div>
+    <div class="practice-body">
+      <ul>
+        <li>Alert on: IteratorAgeMilliseconds > threshold, WriteProvisionedThroughputExceeded, ReadProvisionedThroughputExceeded</li>
+        <li>Monitor per-shard metrics to detect hot shards early (not just stream-level aggregates)</li>
+        <li>Use enhanced monitoring (shard-level metrics) for production streams</li>
+        <li>Enable server-side encryption (SSE) with KMS for sensitive data streams</li>
+        <li>Implement a dead-letter mechanism: on repeated processing failures, write the record to a DLQ (SQS/S3) rather than blocking the shard</li>
+        <li>Test resharding in staging — understand how your consumers handle shard splits/merges</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="practice-card">
+    <div class="practice-header" onclick="togglePractice(this)">
+      <span>Cost Optimization</span>
+      <span class="chevron">&#9654;</span>
+    </div>
+    <div class="practice-body">
+      <ul>
+        <li>Use On-Demand for spiky/unpredictable workloads; switch to Provisioned when traffic stabilizes (can be 50%+ cheaper)</li>
+        <li>Aggregate small records with KPL — you pay per shard-hour and per 25KB PUT payload unit</li>
+        <li>Right-size shard count: over-provisioning wastes money; CloudWatch data helps find the sweet spot</li>
+        <li>Use Firehose instead of custom consumers for simple S3/Redshift delivery — eliminates EC2/Lambda costs</li>
+        <li>Set retention to minimum needed (24h default is often sufficient with checkpointing)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Section 7: Scaling & Trade-offs -->
+<section class="section" id="scaling">
+  <h2 class="section-title">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+    Scaling & Trade-offs
+  </h2>
+  <p class="section-subtitle">Capacity planning, growth strategies, and engineering trade-offs.</p>
+
+  <div class="scaling-grid">
+    <div class="scaling-card">
+      <h4>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+        Capacity Limits (per Shard)
+      </h4>
+      <div class="metric"><span>Write throughput</span><span class="metric-value">1 MB/s or 1,000 records/s</span></div>
+      <div class="metric"><span>Read throughput (shared)</span><span class="metric-value">2 MB/s, 5 GetRecords/s</span></div>
+      <div class="metric"><span>Read throughput (EFO)</span><span class="metric-value">2 MB/s per consumer</span></div>
+      <div class="metric"><span>Max record size</span><span class="metric-value">1 MB</span></div>
+      <div class="metric"><span>Max shards per stream</span><span class="metric-value">500 (soft limit, can increase)</span></div>
+      <div class="metric"><span>Retention</span><span class="metric-value">24h default, up to 365 days</span></div>
+    </div>
+
+    <div class="scaling-card">
+      <h4>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        Back-of-Envelope: 100K events/sec
+      </h4>
+      <div class="metric"><span>Avg record size</span><span class="metric-value">500 bytes</span></div>
+      <div class="metric"><span>Throughput needed</span><span class="metric-value">~50 MB/s</span></div>
+      <div class="metric"><span>Shards needed (write)</span><span class="metric-value">50 shards</span></div>
+      <div class="metric"><span>Shards needed (records/s)</span><span class="metric-value">100 shards</span></div>
+      <div class="metric"><span>Final shard count</span><span class="metric-value">100 shards (rate-limited)</span></div>
+      <div class="metric"><span>Monthly cost (Provisioned)</span><span class="metric-value">~$3,600 + PUT costs</span></div>
+    </div>
+
+    <div class="scaling-card">
+      <h4>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M23 6l-9.5 9.5-5-5L1 18"/></svg>
+        Scaling Strategies
+      </h4>
+      <div class="metric"><span>10x growth</span><span class="metric-value">UpdateShardCount / On-Demand auto-scales</span></div>
+      <div class="metric"><span>100x growth</span><span class="metric-value">Multiple streams + fan-out architecture</span></div>
+      <div class="metric"><span>Burst handling</span><span class="metric-value">On-Demand adapts in minutes</span></div>
+      <div class="metric"><span>Cross-region</span><span class="metric-value">Replicate with Lambda/custom consumer</span></div>
+    </div>
+
+    <div class="scaling-card">
+      <h4>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Failure Scenarios
+      </h4>
+      <div class="metric"><span>Shard throttled</span><span class="metric-value">Backpressure to producer, retry</span></div>
+      <div class="metric"><span>Consumer crashes</span><span class="metric-value">KCL reassigns shard lease</span></div>
+      <div class="metric"><span>AZ failure</span><span class="metric-value">Kinesis is multi-AZ by default</span></div>
+      <div class="metric"><span>Region failure</span><span class="metric-value">Requires cross-region replication setup</span></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 2rem;">
+    <h3 style="margin-bottom: 1rem;">Key Trade-offs</h3>
+    <div class="cards-grid">
+      <div class="card">
+        <h3>Latency vs. Cost</h3>
+        <p>Enhanced Fan-Out gives ~70ms delivery latency but costs ~$0.015/shard-hour extra + $0.013/GB. Standard polling is included but adds 200-1000ms latency and shares the 2 MB/s limit.</p>
+      </div>
+      <div class="card">
+        <h3>On-Demand vs. Provisioned</h3>
+        <p>On-Demand auto-scales and charges per GB (~$0.08/GB) — great for variable workloads. Provisioned is ~$0.015/shard-hour — cheaper at steady state but requires manual scaling.</p>
+      </div>
+      <div class="card">
+        <h3>Ordering vs. Throughput</h3>
+        <p>Kinesis guarantees ordering within a shard (by partition key). If you need global ordering, you're limited to one shard (1 MB/s). Most designs trade global order for parallelism.</p>
+      </div>
+      <div class="card">
+        <h3>Simplicity vs. Control</h3>
+        <p>Firehose is zero-code delivery to S3/Redshift but offers limited processing (Lambda transform only). KCL gives full control but requires EC2/ECS infrastructure and DynamoDB for leases.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer style="text-align:center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border);">
+  AWS Kinesis System Design Visualizer — Interactive Architecture Guide
+</footer>
+
+<script>
+// Navigation active state
+const navLinks = document.querySelectorAll('.nav-links a');
+const sections = document.querySelectorAll('.section');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(section => {
+    const top = section.offsetTop - 100;
+    if (window.scrollY >= top) current = section.getAttribute('id');
+  });
+  navLinks.forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('href') === '#' + current) link.classList.add('active');
+  });
+});
+
+// Smooth scroll
+navLinks.forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+function scrollToSection(id) {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+}
+
+// Pitfall toggles
+function togglePitfall(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+
+function togglePractice(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+
+// Sequence Diagram
+const flows = {
+  write: {
+    actors: ['Producer', 'KPL', 'Kinesis\nStream', 'Shard', 'Consumer'],
+    steps: [
+      { from: 0, to: 1, label: 'putRecord(data, partitionKey)', desc: 'Producer sends record with a partition key to the KPL library for batching.' },
+      { from: 1, to: 1, label: 'Aggregate & batch', desc: 'KPL aggregates multiple user records into a single Kinesis record (up to 1 MB) and batches PutRecords calls.' },
+      { from: 1, to: 2, label: 'PutRecords(batch)', desc: 'KPL sends batched records to the Kinesis stream via the PutRecords API (up to 500 records per call).' },
+      { from: 2, to: 3, label: 'MD5(partitionKey) → shard', desc: 'Kinesis hashes the partition key to determine which shard receives the record.' },
+      { from: 3, to: 3, label: 'Append to shard (ordered)', desc: 'Record is durably stored across 3 AZs and assigned a sequence number for ordering within the shard.' },
+      { from: 3, to: 4, label: 'GetRecords / SubscribeToShard', desc: 'Consumer polls (GetRecords) or receives push (Enhanced Fan-Out) to retrieve records from the shard.' },
+      { from: 4, to: 4, label: 'Process + checkpoint', desc: 'Consumer processes the record and checkpoints its position so it can resume after failures.' },
+    ]
+  },
+  read: {
+    actors: ['Consumer', 'KCL', 'DynamoDB\nLease Table', 'Kinesis\nStream', 'Shard'],
+    steps: [
+      { from: 0, to: 1, label: 'Initialize KCL worker', desc: 'Consumer application starts KCL worker, which discovers all shards in the stream.' },
+      { from: 1, to: 2, label: 'Claim shard lease', desc: 'KCL attempts to claim a lease in DynamoDB for an unassigned shard. Leases enable distributed coordination.' },
+      { from: 2, to: 1, label: 'Lease granted', desc: 'DynamoDB confirms the lease. This worker now owns that shard until it loses the lease or the shard ends.' },
+      { from: 1, to: 3, label: 'GetShardIterator(AFTER_SEQUENCE_NUMBER)', desc: 'KCL gets an iterator starting from the last checkpointed sequence number for this shard.' },
+      { from: 3, to: 4, label: 'Read from shard position', desc: 'The stream reads records from the shard starting at the iterator position.' },
+      { from: 4, to: 1, label: 'Return records batch', desc: 'Up to 10 MB or 10,000 records returned per GetRecords call. Includes MillisBehindLatest for lag monitoring.' },
+      { from: 1, to: 0, label: 'processRecords(batch)', desc: 'KCL invokes the consumer\'s processRecords handler with the batch of records.' },
+      { from: 1, to: 2, label: 'Checkpoint sequence number', desc: 'After successful processing, KCL writes the latest sequence number to DynamoDB for recovery.' },
+    ]
+  },
+  firehose: {
+    actors: ['Source', 'Firehose', 'Lambda\nTransform', 'S3 Buffer', 'Destination'],
+    steps: [
+      { from: 0, to: 1, label: 'PutRecord / Stream subscription', desc: 'Data arrives at Firehose either directly via API or by subscribing to a Kinesis Data Stream.' },
+      { from: 1, to: 1, label: 'Buffer (60-900s or 1-128 MB)', desc: 'Firehose buffers incoming data by time interval or size threshold (whichever is reached first).' },
+      { from: 1, to: 2, label: 'Invoke transform function', desc: 'Optional: Firehose sends the buffered batch to a Lambda function for transformation (format conversion, enrichment, filtering).' },
+      { from: 2, to: 1, label: 'Return transformed records', desc: 'Lambda returns records marked as Ok, Dropped, or ProcessingFailed. Failed records go to an error S3 prefix.' },
+      { from: 1, to: 3, label: 'Compress (GZIP/Snappy/ZIP)', desc: 'Firehose compresses the transformed data to reduce storage costs and transfer time.' },
+      { from: 3, to: 4, label: 'Deliver to S3/Redshift/OpenSearch', desc: 'Compressed data is delivered to the configured destination. S3 uses a time-based prefix (YYYY/MM/DD/HH).' },
+      { from: 1, to: 4, label: 'Backup raw data to S3', desc: 'Optionally, Firehose also stores raw (untransformed) data in a backup S3 bucket for audit/replay.' },
+    ]
+  }
+};
+
+let currentFlow = 'write';
+let currentStepIdx = -1;
+let isPlaying = false;
+let playInterval = null;
+
+function getSpeed() {
+  const v = document.getElementById('speedSlider').value;
+  document.getElementById('speedLabel').textContent = ['0.5x','0.75x','1x','1.5x','2x'][v-1];
+  return [2000, 1500, 1000, 700, 500][v-1];
+}
+
+document.getElementById('speedSlider').addEventListener('input', getSpeed);
+
+function setFlow(flow) {
+  currentFlow = flow;
+  resetSequence();
+  document.querySelectorAll('#flowWrite, #flowRead, #flowFirehose').forEach(b => b.classList.remove('active'));
+  document.getElementById('flow' + flow.charAt(0).toUpperCase() + flow.slice(1)).classList.add('active');
+  drawLifelines();
+}
+
+function drawLifelines() {
+  const flow = flows[currentFlow];
+  const svg = document.getElementById('seqSvg');
+  const lifelinesG = document.getElementById('seqLifelines');
+  const arrowsG = document.getElementById('seqArrows');
+  lifelinesG.innerHTML = '';
+  arrowsG.innerHTML = '';
+
+  const actorCount = flow.actors.length;
+  const spacing = 800 / (actorCount - 1);
+  const startX = 60;
+
+  flow.actors.forEach((actor, i) => {
+    const x = startX + i * spacing;
+    const lines = actor.split('\n');
+    const rectWidth = 110;
+    const rectHeight = lines.length > 1 ? 46 : 36;
+
+    lifelinesG.innerHTML += `
+      <rect x="${x - rectWidth/2}" y="20" width="${rectWidth}" height="${rectHeight}" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+      ${lines.map((l, li) => `<text x="${x}" y="${38 + li * 16}" text-anchor="middle" font-size="11" font-weight="600" fill="#334155">${l}</text>`).join('')}
+      <line x1="${x}" y1="${20 + rectHeight}" x2="${x}" y2="310" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4"/>
+    `;
+  });
+}
+
+function renderStep(stepIdx) {
+  const flow = flows[currentFlow];
+  const arrowsG = document.getElementById('seqArrows');
+  const actorCount = flow.actors.length;
+  const spacing = 800 / (actorCount - 1);
+  const startX = 60;
+
+  if (stepIdx < 0 || stepIdx >= flow.steps.length) return;
+
+  const step = flow.steps[stepIdx];
+  const fromX = startX + step.from * spacing;
+  const toX = startX + step.to * spacing;
+  const y = 90 + stepIdx * 30;
+
+  let arrowHtml = '';
+  if (step.from === step.to) {
+    arrowHtml = `
+      <path d="M${fromX} ${y} C${fromX + 50} ${y}, ${fromX + 50} ${y + 15}, ${fromX} ${y + 15}" fill="none" stroke="#e47911" stroke-width="1.5" marker-end="url(#arrowOrange)" opacity="0" class="seq-arrow seq-arrow-${stepIdx}"/>
+      <text x="${fromX + 55}" y="${y + 10}" font-size="9" fill="#64748b" opacity="0" class="seq-arrow seq-arrow-${stepIdx}">${step.label}</text>
+    `;
+  } else {
+    const midX = (fromX + toX) / 2;
+    arrowHtml = `
+      <line x1="${fromX}" y1="${y}" x2="${toX}" y2="${y}" stroke="#e47911" stroke-width="1.5" marker-end="url(#arrowOrange)" opacity="0" class="seq-arrow seq-arrow-${stepIdx}"/>
+      <text x="${midX}" y="${y - 6}" text-anchor="middle" font-size="9" fill="#64748b" opacity="0" class="seq-arrow seq-arrow-${stepIdx}">${step.label}</text>
+    `;
+  }
+
+  arrowsG.innerHTML += arrowHtml;
+
+  requestAnimationFrame(() => {
+    document.querySelectorAll(`.seq-arrow-${stepIdx}`).forEach(el => {
+      el.style.transition = 'opacity 0.3s';
+      el.setAttribute('opacity', '1');
+    });
+  });
+
+  document.getElementById('narrationStep').textContent = stepIdx + 1;
+  document.getElementById('narrationText').textContent = step.desc;
+}
+
+function stepSequence() {
+  const flow = flows[currentFlow];
+  if (currentStepIdx < flow.steps.length - 1) {
+    currentStepIdx++;
+    renderStep(currentStepIdx);
+  } else {
+    stopPlaying();
+  }
+}
+
+function toggleSequence() {
+  if (isPlaying) {
+    stopPlaying();
+  } else {
+    isPlaying = true;
+    document.getElementById('seqPlayBtn').innerHTML = '&#9646;&#9646; Pause';
+    if (currentStepIdx >= flows[currentFlow].steps.length - 1) resetSequence();
+    playInterval = setInterval(() => {
+      stepSequence();
+      if (currentStepIdx >= flows[currentFlow].steps.length - 1) stopPlaying();
+    }, getSpeed());
+  }
+}
+
+function stopPlaying() {
+  isPlaying = false;
+  document.getElementById('seqPlayBtn').innerHTML = '&#9654; Play';
+  clearInterval(playInterval);
+}
+
+function resetSequence() {
+  stopPlaying();
+  currentStepIdx = -1;
+  document.getElementById('seqArrows').innerHTML = '';
+  document.getElementById('narrationStep').textContent = '-';
+  document.getElementById('narrationText').textContent = 'Select a flow and press Play to begin the animation.';
+  drawLifelines();
+}
+
+// Initialize
+setFlow('write');
+
+// Architecture tooltip
+const tooltip = document.getElementById('archTooltip');
+const tooltipData = {
+  producers: 'Data producers send records to Kinesis using the SDK, KPL, or Kinesis Agent. Each record has a partition key that determines shard routing.',
+  kpl: 'Kinesis Producer Library (KPL) aggregates small records into larger ones and batches API calls for optimal throughput and cost.',
+  agent: 'Kinesis Agent monitors log files and continuously sends new data to Kinesis streams or Firehose delivery streams.',
+  streams: 'Core streaming service with shard-based architecture. Each shard provides 1 MB/s write and 2 MB/s read capacity.',
+  firehose: 'Fully managed delivery service that automatically batches, transforms, and delivers data to S3, Redshift, or OpenSearch.',
+  analytics: 'Run real-time SQL queries or Apache Flink applications on streaming data without managing infrastructure.',
+  video: 'Capture and process video/audio streams from devices. Integrates with Rekognition for computer vision.',
+  fanout: 'Enhanced Fan-Out provides dedicated 2 MB/s read throughput per consumer via HTTP/2 push (~70ms latency).',
+  lambda: 'AWS Lambda processes Kinesis records serverlessly. Automatically scales with shard count.',
+  kcl: 'Kinesis Client Library manages shard leasing, checkpointing, and load balancing across consumer instances.',
+  s3: 'Amazon S3 as the data lake destination — typically delivered via Firehose with time-partitioned prefixes.',
+  redshift: 'Data warehouse for analytics. Firehose can deliver and COPY data directly into Redshift tables.',
+  elasticsearch: 'OpenSearch (Elasticsearch) for full-text search and log analytics on streaming data.',
+  custom: 'Custom applications using Spark Streaming, Apache Flink, or direct SDK calls for specialized processing.'
+};
+
+document.querySelectorAll('.arch-component').forEach(comp => {
+  comp.addEventListener('mouseenter', e => {
+    const key = comp.getAttribute('data-component');
+    if (tooltipData[key]) {
+      tooltip.textContent = tooltipData[key];
+      tooltip.classList.add('visible');
+    }
+  });
+  comp.addEventListener('mousemove', e => {
+    tooltip.style.left = (e.clientX + 15) + 'px';
+    tooltip.style.top = (e.clientY + 15) + 'px';
+  });
+  comp.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('visible');
+  });
+});
+</script>
+
+</body>
+</html>

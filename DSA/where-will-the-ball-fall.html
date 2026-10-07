@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1706. Where Will the Ball Fall — Visualizer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0e14;
+      --surface: #12161f;
+      --surface-2: #181d28;
+      --surface-3: #1e2433;
+      --border: #2a3040;
+      --text: #c8d0dd;
+      --text-dim: #6b7a90;
+      --text-bright: #e8edf5;
+      --accent: #a78bfa;
+      --accent-dim: #7c5cbf;
+      --orange: #f0883e;
+      --orange-dim: rgba(240, 136, 62, 0.15);
+      --blue: #58a6ff;
+      --blue-dim: rgba(88, 166, 255, 0.15);
+      --green: #3fb950;
+      --green-dim: rgba(63, 185, 80, 0.15);
+      --red: #f85149;
+      --red-dim: rgba(248, 81, 73, 0.15);
+      --yellow: #e3b341;
+      --radius: 8px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    /* ---- Header ---- */
+    header {
+      text-align: center;
+      padding: 40px 0 32px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+    .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    .badge.medium { background: var(--orange-dim); border-color: var(--orange); color: var(--orange); }
+    .badge.time { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+    .badge.space { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+
+    /* ---- Section ---- */
+    section { margin-bottom: 48px; }
+    section h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-bright);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ---- Explanation ---- */
+    .explanation-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 768px) { .explanation-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+    .card p, .card li { font-size: 14px; color: var(--text); }
+    .card ul { padding-left: 18px; }
+    .card li { margin-bottom: 4px; }
+
+    .insight-box {
+      background: linear-gradient(135deg, rgba(167,139,250,0.08), rgba(167,139,250,0.02));
+      border: 1px solid var(--accent-dim);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-top: 20px;
+    }
+    .insight-box strong { color: var(--accent); }
+
+    .mini-diagram {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 12px 0;
+    }
+
+    /* ---- Animation Layout ---- */
+    .anim-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+    }
+    @media (max-width: 900px) { .anim-layout { grid-template-columns: 1fr; } }
+
+    .viz-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .ball-selector {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .ball-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--mono);
+    }
+    .ball-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .ball-btn.active { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+
+    .svg-wrap {
+      display: flex;
+      justify-content: center;
+      overflow-x: auto;
+      width: 100%;
+      margin-bottom: 16px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .ctrl-btn {
+      width: 36px; height: 36px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .ctrl-btn:hover { background: var(--surface-3); border-color: var(--accent); color: var(--accent); }
+    .ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .ctrl-btn.playing { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-left: 8px;
+    }
+    .speed-control input[type=range] {
+      width: 80px;
+      accent-color: var(--accent);
+    }
+
+    .narration-box {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--surface-2);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      font-size: 13px;
+      min-height: 44px;
+      color: var(--text);
+      transition: opacity 0.15s;
+    }
+    .narration-box .step-num {
+      font-weight: 700;
+      color: var(--accent);
+      margin-right: 6px;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .result-bar {
+      width: 100%;
+      margin-top: 12px;
+      padding: 10px 16px;
+      background: var(--surface-2);
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+    .result-bar span { color: var(--text-bright); }
+
+    /* ---- Code Panel ---- */
+    .code-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .code-panel-header {
+      padding: 10px 16px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .code-lines {
+      padding: 12px 0;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.7;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .code-line {
+      padding: 0 16px;
+      white-space: pre;
+      transition: background 0.2s;
+      color: var(--text-dim);
+      position: relative;
+    }
+    .code-line.active {
+      background: rgba(167, 139, 250, 0.1);
+      color: var(--text-bright);
+    }
+    .code-line.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--accent);
+    }
+    .code-line .kw { color: #c792ea; }
+    .code-line .fn { color: #82aaff; }
+    .code-line .num { color: #f78c6c; }
+    .code-line .str { color: #c3e88d; }
+    .code-line .cm { color: #546e7a; }
+    .code-line .op { color: #89ddff; }
+    .code-line .var { color: #eeffff; }
+
+    /* ---- Playground ---- */
+    .playground-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 768px) { .playground-layout { grid-template-columns: 1fr; } }
+
+    .pg-controls { display: flex; flex-direction: column; gap: 12px; }
+    .pg-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .pg-row label { font-size: 13px; color: var(--text-dim); min-width: 50px; }
+    .pg-input {
+      width: 60px; padding: 6px 8px;
+      border-radius: 4px; border: 1px solid var(--border);
+      background: var(--surface-2); color: var(--text);
+      font-family: var(--mono); font-size: 13px;
+      text-align: center;
+    }
+    .pg-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: var(--font);
+    }
+    .pg-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .pg-btn.primary { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .pg-btn.primary:hover { background: var(--accent); color: #fff; }
+
+    .pg-results {
+      margin-top: 12px;
+      padding: 12px 16px;
+      background: var(--surface-2);
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+    .pg-results .label { color: var(--text-dim); margin-bottom: 4px; }
+    .pg-results .values { display: flex; gap: 4px; flex-wrap: wrap; }
+    .pg-results .val {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .pg-results .val.ok { background: var(--green-dim); color: var(--green); }
+    .pg-results .val.stuck { background: var(--red-dim); color: var(--red); }
+
+    .pg-hint {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    .preset-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* ---- SVG Styles ---- */
+    svg text { user-select: none; }
+
+    /* ---- Legend ---- */
+    .legend {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-swatch {
+      width: 20px; height: 2px;
+      border-radius: 1px;
+    }
+
+    /* Keyboard hint */
+    .kb-hint {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+    kbd {
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <h1>1706. Where Will the Ball Fall</h1>
+    <div class="badges">
+      <span class="badge medium">Medium</span>
+      <span class="badge">Array</span>
+      <span class="badge">Matrix</span>
+      <span class="badge">Simulation</span>
+      <span class="badge time">O(m &times; n)</span>
+      <span class="badge space">O(n) space</span>
+    </div>
+  </header>
+
+  <!-- Section 1: Explanation -->
+  <section id="explanation">
+    <h2>Understanding the Problem</h2>
+    <div class="explanation-grid">
+      <div class="card">
+        <h3>Problem</h3>
+        <p>A box has <strong>m &times; n</strong> cells, each containing a diagonal board:</p>
+        <ul>
+          <li><strong style="color:var(--orange)">\</strong> (value 1) &mdash; redirects the ball to the <strong>right</strong></li>
+          <li><strong style="color:var(--blue)">/</strong> (value &minus;1) &mdash; redirects the ball to the <strong>left</strong></li>
+        </ul>
+        <p style="margin-top:8px">Drop a ball at the top of each column. For each ball, find which column it exits from at the bottom, or &minus;1 if it gets stuck.</p>
+      </div>
+      <div class="card">
+        <h3>When Does a Ball Get Stuck?</h3>
+        <ul>
+          <li><strong style="color:var(--red)">V-shape trap:</strong> Two adjacent cells have opposing diagonals (<span style="color:var(--orange)">\</span><span style="color:var(--blue)">/</span>), forming a V. The ball is caught at the bottom.</li>
+          <li><strong style="color:var(--red)">Wall collision:</strong> A <span style="color:var(--orange)">\</span> at the rightmost column or a <span style="color:var(--blue)">/</span> at the leftmost column pushes the ball into a wall.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="insight-box">
+      <strong>Key Insight:</strong> A ball passes through a row only if the current cell and the adjacent cell (in the redirect direction) share the <em>same</em> diagonal direction. We simulate column-by-column, row-by-row.
+    </div>
+  </section>
+
+  <!-- Section 2: Animation -->
+  <section id="animation">
+    <h2>Step-by-Step Animation</h2>
+    <div class="anim-layout">
+      <div class="viz-panel">
+        <div class="ball-selector" id="ballSelector"></div>
+        <div class="svg-wrap">
+          <svg id="gridSvg"></svg>
+        </div>
+        <div class="controls">
+          <button class="ctrl-btn" id="btnFirst" title="First step">&#x23EE;</button>
+          <button class="ctrl-btn" id="btnPrev" title="Previous step">&#x23EA;</button>
+          <button class="ctrl-btn" id="btnPlay" title="Play / Pause">&#x25B6;</button>
+          <button class="ctrl-btn" id="btnNext" title="Next step">&#x23E9;</button>
+          <button class="ctrl-btn" id="btnLast" title="Last step">&#x23ED;</button>
+          <div class="speed-control">
+            <span>Speed</span>
+            <input type="range" id="speedSlider" min="1" max="8" value="3" step="1">
+            <span id="speedLabel">1x</span>
+          </div>
+        </div>
+        <div class="narration-box" id="narration">
+          Select a ball column above, then press play or step through.
+        </div>
+        <div class="result-bar" id="resultBar">
+          Result: <span>[ ]</span>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-swatch" style="background:var(--orange)"></div><span>\ redirects right</span></div>
+          <div class="legend-item"><div class="legend-swatch" style="background:var(--blue)"></div><span>/ redirects left</span></div>
+          <div class="legend-item"><div class="legend-swatch" style="background:var(--green); width:10px; height:10px; border-radius:50%"></div><span>ball</span></div>
+        </div>
+        <div class="kb-hint">
+          <kbd>Space</kbd> play/pause &nbsp; <kbd>&larr;</kbd><kbd>&rarr;</kbd> step &nbsp; <kbd>R</kbd> reset
+        </div>
+      </div>
+
+      <!-- Code Panel -->
+      <div class="code-panel">
+        <div class="code-panel-header">Algorithm — Python</div>
+        <div class="code-lines" id="codeLines"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Playground -->
+  <section id="playground">
+    <h2>Interactive Playground</h2>
+    <div class="playground-layout">
+      <div class="card" style="display:flex;flex-direction:column;align-items:center;">
+        <h3 style="align-self:flex-start">Grid Editor</h3>
+        <p class="pg-hint" style="margin-bottom:10px;align-self:flex-start">Click any cell to toggle its diagonal</p>
+        <div class="svg-wrap">
+          <svg id="pgSvg"></svg>
+        </div>
+      </div>
+      <div class="card pg-controls">
+        <h3>Controls</h3>
+        <div class="pg-row">
+          <label>Rows</label>
+          <input class="pg-input" id="pgRows" type="number" min="1" max="10" value="5">
+          <label>Cols</label>
+          <input class="pg-input" id="pgCols" type="number" min="2" max="10" value="5">
+          <button class="pg-btn" id="pgResize">Resize</button>
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:6px">Presets</label>
+          <div class="preset-btns">
+            <button class="pg-btn" data-preset="default">Problem Example</button>
+            <button class="pg-btn" data-preset="allright">All Right</button>
+            <button class="pg-btn" data-preset="zigzag">Zigzag</button>
+            <button class="pg-btn" data-preset="allstuck">All Stuck</button>
+          </div>
+        </div>
+        <button class="pg-btn primary" id="pgRun">Drop All Balls</button>
+        <div class="pg-results" id="pgResults" style="display:none">
+          <div class="label">Results:</div>
+          <div class="values" id="pgResultValues"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// ================================================================
+// CONSTANTS & HELPERS
+// ================================================================
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svgEl(tag, attrs = {}) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+
+function easeInOut(t) {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+
+// ================================================================
+// DEFAULT GRID (Problem example)
+// ================================================================
+const DEFAULT_GRID = [
+  [ 1, 1, 1,-1,-1],
+  [ 1, 1, 1,-1,-1],
+  [-1,-1,-1, 1, 1],
+  [ 1, 1, 1, 1,-1],
+  [-1,-1,-1,-1,-1]
+];
+
+// ================================================================
+// ALGORITHM
+// ================================================================
+function findBallResult(grid) {
+  const m = grid.length, n = grid[0].length;
+  const result = [];
+  for (let ball = 0; ball < n; ball++) {
+    let col = ball;
+    let stuck = false;
+    for (let row = 0; row < m; row++) {
+      const d = grid[row][col];
+      const nc = col + d;
+      if (nc < 0 || nc >= n || grid[row][nc] !== d) {
+        stuck = true;
+        break;
+      }
+      col = nc;
+    }
+    result.push(stuck ? -1 : col);
+  }
+  return result;
+}
+
+// ================================================================
+// STEP COMPUTATION
+// ================================================================
+function computeSteps(grid, startCol, cellSize, padding) {
+  const m = grid.length, n = grid[0].length;
+  const steps = [];
+  let col = startCol;
+
+  const cx = c => padding + c * cellSize + cellSize / 2;
+  const cy = r => padding + r * cellSize + cellSize / 2;
+  const topY = r => padding + r * cellSize;
+  const botY = r => padding + (r + 1) * cellSize;
+
+  // Step 0: ball above grid
+  steps.push({
+    x: cx(col), y: padding - 14,
+    narration: `Drop ball at column ${col}`,
+    codeLine: 3, cells: [], status: 'active'
+  });
+
+  for (let row = 0; row < m; row++) {
+    const d = grid[row][col];
+    const nc = col + d;
+    const dirName = d === 1 ? 'right (\\)' : 'left (/)';
+
+    // Ball reaches center of current cell
+    steps.push({
+      x: cx(col), y: cy(row),
+      narration: `Row ${row}, Col ${col}: board redirects ${dirName}`,
+      codeLine: 6, cells: [[row, col]], status: 'active'
+    });
+
+    // Check wall
+    if (nc < 0 || nc >= n) {
+      const wallX = d === 1 ? padding + n * cellSize - 4 : padding + 4;
+      steps.push({
+        x: wallX, y: cy(row) + 6,
+        narration: `Stuck! Ball hits the ${d === 1 ? 'right' : 'left'} wall`,
+        codeLine: 8, cells: [[row, col]], status: 'stuck'
+      });
+      return steps;
+    }
+
+    // Check V-shape
+    if (grid[row][nc] !== d) {
+      const vx = d === 1
+        ? padding + (col + 1) * cellSize
+        : padding + col * cellSize;
+      steps.push({
+        x: vx, y: botY(row) - 8,
+        narration: `Stuck! V-shaped trap between columns ${col} and ${nc}`,
+        codeLine: 10, cells: [[row, col], [row, nc]], status: 'stuck'
+      });
+      return steps;
+    }
+
+    // Ball deflects to next column
+    steps.push({
+      x: cx(nc), y: topY(row + 1 < m ? row + 1 : row) + (row + 1 < m ? 0 : cellSize),
+      narration: `Ball deflected to column ${nc}`,
+      codeLine: 12, cells: [[row, col], [row, nc]], status: 'active'
+    });
+
+    col = nc;
+  }
+
+  // Exit
+  steps.push({
+    x: cx(col), y: padding + m * cellSize + 14,
+    narration: `Ball exits at column ${col}!`,
+    codeLine: 13, cells: [], status: 'success'
+  });
+
+  return steps;
+}
+
+// ================================================================
+// SVG GRID RENDERING
+// ================================================================
+function renderGridSVG(svg, grid, cellSize, padding, opts = {}) {
+  const m = grid.length, n = grid[0].length;
+  const w = n * cellSize + padding * 2;
+  const h = m * cellSize + padding * 2;
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.innerHTML = '';
+
+  // Defs for glow filters
+  const defs = svgEl('defs');
+  // Ball glow
+  const glowFilter = svgEl('filter', { id: 'glow', x: '-50%', y: '-50%', width: '200%', height: '200%' });
+  const gb = svgEl('feGaussianBlur', { stdDeviation: '3', result: 'blur' });
+  const merge = svgEl('feMerge');
+  const mn1 = svgEl('feMergeNode', { in: 'blur' });
+  const mn2 = svgEl('feMergeNode', { in: 'SourceGraphic' });
+  merge.appendChild(mn1); merge.appendChild(mn2);
+  glowFilter.appendChild(gb); glowFilter.appendChild(merge);
+  defs.appendChild(glowFilter);
+
+  // Red glow
+  const redGlow = svgEl('filter', { id: 'redGlow', x: '-50%', y: '-50%', width: '200%', height: '200%' });
+  const rgb = svgEl('feGaussianBlur', { stdDeviation: '4', result: 'blur' });
+  const rm = svgEl('feMerge');
+  rm.appendChild(svgEl('feMergeNode', { in: 'blur' }));
+  rm.appendChild(svgEl('feMergeNode', { in: 'SourceGraphic' }));
+  redGlow.appendChild(rgb); redGlow.appendChild(rm);
+  defs.appendChild(redGlow);
+
+  svg.appendChild(defs);
+
+  const staticG = svgEl('g', { id: 'static-layer' });
+  const dynamicG = svgEl('g', { id: 'dynamic-layer' });
+
+  const highlightSet = new Set((opts.highlightCells || []).map(c => `${c[0]},${c[1]}`));
+  const trailSet = new Set((opts.trailCells || []).map(c => `${c[0]},${c[1]}`));
+
+  // Grid cells and diagonals
+  for (let r = 0; r < m; r++) {
+    for (let c = 0; c < n; c++) {
+      const x = padding + c * cellSize;
+      const y = padding + r * cellSize;
+      const key = `${r},${c}`;
+      const isHighlight = highlightSet.has(key);
+      const isTrail = trailSet.has(key);
+
+      let fill = '#141a24';
+      if (isHighlight) fill = grid[r][c] === 1 ? 'rgba(240,136,62,0.18)' : 'rgba(88,166,255,0.18)';
+      else if (isTrail) fill = 'rgba(167,139,250,0.08)';
+
+      staticG.appendChild(svgEl('rect', {
+        x, y, width: cellSize, height: cellSize,
+        fill, stroke: '#2a3040', 'stroke-width': 1
+      }));
+
+      // Diagonal
+      const pad = 6;
+      const v = grid[r][c];
+      const lx1 = v === 1 ? x + pad : x + cellSize - pad;
+      const ly1 = y + pad;
+      const lx2 = v === 1 ? x + cellSize - pad : x + pad;
+      const ly2 = y + cellSize - pad;
+      const color = v === 1 ? '#f0883e' : '#58a6ff';
+      const lw = isHighlight ? 3.5 : 2.5;
+
+      staticG.appendChild(svgEl('line', {
+        x1: lx1, y1: ly1, x2: lx2, y2: ly2,
+        stroke: color, 'stroke-width': lw, 'stroke-linecap': 'round',
+        opacity: isHighlight ? 1 : 0.7
+      }));
+
+      // Cell value label
+      staticG.appendChild(svgEl('text', {
+        x: x + cellSize - 8, y: y + 13,
+        fill: v === 1 ? 'rgba(240,136,62,0.35)' : 'rgba(88,166,255,0.35)',
+        'font-size': '10', 'font-family': 'monospace', 'text-anchor': 'end'
+      })).textContent = v === 1 ? '1' : '-1';
+    }
+  }
+
+  // Column labels (top)
+  for (let c = 0; c < n; c++) {
+    const t = svgEl('text', {
+      x: padding + c * cellSize + cellSize / 2,
+      y: padding - 6,
+      fill: '#6b7a90', 'font-size': '12', 'font-family': 'monospace',
+      'text-anchor': 'middle'
+    });
+    t.textContent = c;
+    staticG.appendChild(t);
+  }
+
+  // Row labels (left)
+  for (let r = 0; r < m; r++) {
+    const t = svgEl('text', {
+      x: padding - 8,
+      y: padding + r * cellSize + cellSize / 2 + 4,
+      fill: '#6b7a90', 'font-size': '12', 'font-family': 'monospace',
+      'text-anchor': 'end'
+    });
+    t.textContent = r;
+    staticG.appendChild(t);
+  }
+
+  // Exit indicators at bottom
+  if (opts.results) {
+    for (let c = 0; c < n; c++) {
+      const rx = padding + c * cellSize + cellSize / 2;
+      const ry = padding + m * cellSize + 16;
+      const t = svgEl('text', {
+        x: rx, y: ry,
+        fill: opts.results[c] >= 0 ? '#3fb950' : '#f85149',
+        'font-size': '11', 'font-family': 'monospace',
+        'text-anchor': 'middle', 'font-weight': 'bold'
+      });
+      t.textContent = opts.results[c];
+      staticG.appendChild(t);
+    }
+  }
+
+  svg.appendChild(staticG);
+
+  // Trail path
+  if (opts.trail && opts.trail.length > 1) {
+    let d = `M ${opts.trail[0].x} ${opts.trail[0].y}`;
+    for (let i = 1; i < opts.trail.length; i++) {
+      d += ` L ${opts.trail[i].x} ${opts.trail[i].y}`;
+    }
+    dynamicG.appendChild(svgEl('path', {
+      d, fill: 'none', stroke: 'rgba(167,139,250,0.3)',
+      'stroke-width': 2, 'stroke-dasharray': '4,4',
+      'stroke-linecap': 'round'
+    }));
+  }
+
+  // Ball
+  if (opts.ballX != null && opts.ballY != null) {
+    const ballColor = opts.ballStatus === 'stuck' ? '#f85149'
+      : opts.ballStatus === 'success' ? '#3fb950'
+      : '#3fb950';
+    const filterAttr = opts.ballStatus === 'stuck' ? 'url(#redGlow)' : 'url(#glow)';
+    dynamicG.appendChild(svgEl('circle', {
+      cx: opts.ballX, cy: opts.ballY, r: 7,
+      fill: ballColor, filter: filterAttr, opacity: 0.95
+    }));
+    // Inner highlight
+    dynamicG.appendChild(svgEl('circle', {
+      cx: opts.ballX - 2, cy: opts.ballY - 2, r: 2.5,
+      fill: 'rgba(255,255,255,0.4)'
+    }));
+  }
+
+  svg.appendChild(dynamicG);
+}
+
+// ================================================================
+// CODE PANEL
+// ================================================================
+const CODE_LINES = [
+  { text: 'def findBall(grid):', classes: ['kw', '', 'fn', '', ''] },
+  { text: '    m, n = len(grid), len(grid[0])' },
+  { text: '    result = []' },
+  { text: '    for ball in range(n):',        ln: 3 },
+  { text: '        col = ball',                ln: 4 },
+  { text: '        for row in range(m):',      ln: 5 },
+  { text: '            d = grid[row][col]',    ln: 6 },
+  { text: '            nc = col + d',          ln: 7 },
+  { text: '            if nc<0 or nc>=n:',     ln: 8 },
+  { text: '                col = -1; break',   ln: 9 },
+  { text: '            if grid[row][nc] != d:', ln: 10 },
+  { text: '                col = -1; break',   ln: 11 },
+  { text: '            col = nc',              ln: 12 },
+  { text: '        result.append(col)',        ln: 13 },
+  { text: '    return result',                 ln: 14 },
+];
+
+function buildCodePanel() {
+  const container = document.getElementById('codeLines');
+  container.innerHTML = '';
+  CODE_LINES.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'code-line';
+    div.dataset.index = i;
+    div.dataset.ln = item.ln || '';
+
+    // Simple syntax highlighting
+    let html = item.text
+      .replace(/\b(def|for|in|if|or|return|break)\b/g, '<span class="kw">$1</span>')
+      .replace(/\b(len|range|append)\b/g, '<span class="fn">$1</span>')
+      .replace(/\b(\d+)\b/g, '<span class="num">$1</span>')
+      .replace(/(#.*)/g, '<span class="cm">$1</span>');
+    div.innerHTML = html;
+    container.appendChild(div);
+  });
+}
+
+function highlightCodeLine(lineNum) {
+  document.querySelectorAll('#codeLines .code-line').forEach(el => {
+    el.classList.toggle('active', el.dataset.ln == lineNum);
+  });
+}
+
+// ================================================================
+// ANIMATION STATE & ENGINE
+// ================================================================
+const anim = {
+  grid: DEFAULT_GRID,
+  cellSize: 64,
+  padding: 30,
+  ballIndex: 0,
+  steps: [],
+  currentStep: -1,
+  playing: false,
+  speed: 1, // actual speed multiplier
+  animating: false,
+  timerId: null,
+  trail: [],
+  results: null,
+};
+
+function selectBall(idx) {
+  stopPlaying();
+  anim.ballIndex = idx;
+  anim.steps = computeSteps(anim.grid, idx, anim.cellSize, anim.padding);
+  anim.currentStep = -1;
+  anim.trail = [];
+
+  // Update button states
+  document.querySelectorAll('.ball-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.col) === idx);
+  });
+
+  renderCurrentState();
+  updateNarration('Select a ball column above, then press play or step through.');
+  highlightCodeLine(-1);
+  updateControlStates();
+}
+
+function renderCurrentState() {
+  const step = anim.currentStep >= 0 && anim.currentStep < anim.steps.length
+    ? anim.steps[anim.currentStep] : null;
+
+  // Collect trail cells from visited steps
+  const trailCells = [];
+  for (let i = 0; i <= anim.currentStep; i++) {
+    if (anim.steps[i] && anim.steps[i].cells) {
+      anim.steps[i].cells.forEach(c => trailCells.push(c));
+    }
+  }
+
+  renderGridSVG(
+    document.getElementById('gridSvg'),
+    anim.grid, anim.cellSize, anim.padding,
+    {
+      highlightCells: step ? step.cells : [],
+      trailCells,
+      trail: anim.trail,
+      ballX: step ? step.x : null,
+      ballY: step ? step.y : null,
+      ballStatus: step ? step.status : 'active',
+      results: anim.results,
+    }
+  );
+}
+
+function updateNarration(text) {
+  const box = document.getElementById('narration');
+  if (anim.currentStep >= 0 && anim.currentStep < anim.steps.length) {
+    box.innerHTML = `<span class="step-num">Step ${anim.currentStep + 1}/${anim.steps.length}</span>${text}`;
+  } else {
+    box.textContent = text;
+  }
+}
+
+function goToStep(idx) {
+  if (idx < 0 || idx >= anim.steps.length) return;
+  anim.currentStep = idx;
+  const step = anim.steps[idx];
+
+  // Build trail
+  anim.trail = [];
+  for (let i = 0; i <= idx; i++) {
+    anim.trail.push({ x: anim.steps[i].x, y: anim.steps[i].y });
+  }
+
+  renderCurrentState();
+  updateNarration(step.narration);
+  highlightCodeLine(step.codeLine);
+  updateControlStates();
+}
+
+function animateToStep(idx, callback) {
+  if (idx < 0 || idx >= anim.steps.length || anim.animating) return;
+
+  const fromStep = anim.currentStep >= 0 ? anim.steps[anim.currentStep] : null;
+  const toStep = anim.steps[idx];
+
+  if (!fromStep) {
+    goToStep(idx);
+    callback?.();
+    return;
+  }
+
+  anim.animating = true;
+  const duration = 250 / anim.speed;
+  const startX = fromStep.x, startY = fromStep.y;
+  const endX = toStep.x, endY = toStep.y;
+  const startTime = performance.now();
+
+  // Build trail up to previous step
+  const trailCells = [];
+  for (let i = 0; i < idx; i++) {
+    if (anim.steps[i].cells) anim.steps[i].cells.forEach(c => trailCells.push(c));
+  }
+
+  function frame(now) {
+    const t = Math.min((now - startTime) / duration, 1);
+    const e = easeInOut(t);
+    const bx = startX + (endX - startX) * e;
+    const by = startY + (endY - startY) * e;
+
+    // Build partial trail
+    const trail = [];
+    for (let i = 0; i <= anim.currentStep; i++) {
+      trail.push({ x: anim.steps[i].x, y: anim.steps[i].y });
+    }
+    trail.push({ x: bx, y: by });
+
+    renderGridSVG(
+      document.getElementById('gridSvg'),
+      anim.grid, anim.cellSize, anim.padding,
+      {
+        highlightCells: toStep.cells || [],
+        trailCells: [...trailCells, ...(toStep.cells || [])],
+        trail,
+        ballX: bx, ballY: by,
+        ballStatus: t >= 1 ? toStep.status : 'active',
+        results: anim.results,
+      }
+    );
+
+    if (t < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      anim.currentStep = idx;
+      anim.trail = trail;
+      updateNarration(toStep.narration);
+      highlightCodeLine(toStep.codeLine);
+      updateControlStates();
+      anim.animating = false;
+      callback?.();
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+function stepForward() {
+  if (anim.animating) return;
+  const next = anim.currentStep + 1;
+  if (next < anim.steps.length) {
+    animateToStep(next);
+  }
+}
+
+function stepBackward() {
+  if (anim.animating) return;
+  const prev = anim.currentStep - 1;
+  if (prev >= 0) {
+    goToStep(prev);
+  }
+}
+
+function goFirst() {
+  if (anim.animating) return;
+  if (anim.steps.length > 0) goToStep(0);
+}
+
+function goLast() {
+  if (anim.animating) return;
+  if (anim.steps.length > 0) goToStep(anim.steps.length - 1);
+}
+
+function startPlaying() {
+  if (anim.steps.length === 0) return;
+  anim.playing = true;
+  document.getElementById('btnPlay').classList.add('playing');
+  document.getElementById('btnPlay').innerHTML = '&#x23F8;';
+  playNextStep();
+}
+
+function playNextStep() {
+  if (!anim.playing) return;
+  const next = anim.currentStep + 1;
+  if (next >= anim.steps.length) {
+    stopPlaying();
+    return;
+  }
+  animateToStep(next, () => {
+    if (anim.playing) {
+      const delay = Math.max(80, 400 / anim.speed);
+      anim.timerId = setTimeout(playNextStep, delay);
+    }
+  });
+}
+
+function stopPlaying() {
+  anim.playing = false;
+  if (anim.timerId) clearTimeout(anim.timerId);
+  anim.timerId = null;
+  document.getElementById('btnPlay').classList.remove('playing');
+  document.getElementById('btnPlay').innerHTML = '&#x25B6;';
+}
+
+function togglePlay() {
+  if (anim.playing) {
+    stopPlaying();
+  } else {
+    if (anim.currentStep >= anim.steps.length - 1) {
+      // Reset to beginning before playing
+      anim.currentStep = -1;
+      anim.trail = [];
+      renderCurrentState();
+    }
+    startPlaying();
+  }
+}
+
+function updateControlStates() {
+  document.getElementById('btnFirst').disabled = anim.currentStep <= 0;
+  document.getElementById('btnPrev').disabled = anim.currentStep <= 0;
+  document.getElementById('btnNext').disabled = anim.currentStep >= anim.steps.length - 1;
+  document.getElementById('btnLast').disabled = anim.currentStep >= anim.steps.length - 1;
+}
+
+// ================================================================
+// SPEED CONTROL
+// ================================================================
+const SPEED_MAP = { 1: 0.25, 2: 0.5, 3: 1, 4: 1.5, 5: 2, 6: 3, 7: 4, 8: 6 };
+const SPEED_LABELS = { 1: '0.25x', 2: '0.5x', 3: '1x', 4: '1.5x', 5: '2x', 6: '3x', 7: '4x', 8: '6x' };
+
+function updateSpeed() {
+  const val = document.getElementById('speedSlider').value;
+  anim.speed = SPEED_MAP[val];
+  document.getElementById('speedLabel').textContent = SPEED_LABELS[val];
+}
+
+// ================================================================
+// PLAYGROUND
+// ================================================================
+let pgGrid = JSON.parse(JSON.stringify(DEFAULT_GRID));
+
+const PRESETS = {
+  default: [
+    [ 1, 1, 1,-1,-1],
+    [ 1, 1, 1,-1,-1],
+    [-1,-1,-1, 1, 1],
+    [ 1, 1, 1, 1,-1],
+    [-1,-1,-1,-1,-1]
+  ],
+  allright: [
+    [1, 1, 1, 1],
+    [1, 1, 1, 1],
+    [1, 1, 1, 1],
+  ],
+  zigzag: [
+    [ 1,-1, 1,-1, 1,-1],
+    [-1, 1,-1, 1,-1, 1],
+    [ 1,-1, 1,-1, 1,-1],
+    [-1, 1,-1, 1,-1, 1],
+  ],
+  allstuck: [
+    [ 1,-1, 1,-1],
+    [ 1,-1, 1,-1],
+    [ 1,-1, 1,-1],
+  ],
+};
+
+function renderPlayground() {
+  const svg = document.getElementById('pgSvg');
+  const m = pgGrid.length, n = pgGrid[0].length;
+  const maxW = 400;
+  const cs = Math.min(56, Math.floor((maxW - 60) / n));
+  const pad = 30;
+  const w = n * cs + pad * 2;
+  const h = m * cs + pad * 2;
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.innerHTML = '';
+  svg.style.cursor = 'pointer';
+
+  for (let r = 0; r < m; r++) {
+    for (let c = 0; c < n; c++) {
+      const x = pad + c * cs;
+      const y = pad + r * cs;
+      const v = pgGrid[r][c];
+
+      // Cell background
+      const rect = svgEl('rect', {
+        x, y, width: cs, height: cs,
+        fill: '#141a24', stroke: '#2a3040', 'stroke-width': 1,
+        'data-r': r, 'data-c': c,
+        style: 'cursor:pointer'
+      });
+      rect.addEventListener('click', () => {
+        pgGrid[r][c] *= -1;
+        renderPlayground();
+        document.getElementById('pgResults').style.display = 'none';
+      });
+      svg.appendChild(rect);
+
+      // Diagonal
+      const dp = 5;
+      const lx1 = v === 1 ? x + dp : x + cs - dp;
+      const ly1 = y + dp;
+      const lx2 = v === 1 ? x + cs - dp : x + dp;
+      const ly2 = y + cs - dp;
+      svg.appendChild(svgEl('line', {
+        x1: lx1, y1: ly1, x2: lx2, y2: ly2,
+        stroke: v === 1 ? '#f0883e' : '#58a6ff',
+        'stroke-width': 2.5, 'stroke-linecap': 'round',
+        'pointer-events': 'none'
+      }));
+    }
+  }
+
+  // Column labels
+  for (let c = 0; c < n; c++) {
+    const t = svgEl('text', {
+      x: pad + c * cs + cs / 2, y: pad - 6,
+      fill: '#6b7a90', 'font-size': '11', 'font-family': 'monospace',
+      'text-anchor': 'middle', 'pointer-events': 'none'
+    });
+    t.textContent = c;
+    svg.appendChild(t);
+  }
+}
+
+function runPlayground() {
+  const result = findBallResult(pgGrid);
+  const container = document.getElementById('pgResultValues');
+  container.innerHTML = '';
+  result.forEach((v, i) => {
+    const el = document.createElement('div');
+    el.className = `val ${v >= 0 ? 'ok' : 'stuck'}`;
+    el.textContent = v;
+    el.title = `Ball ${i} → ${v >= 0 ? 'exits col ' + v : 'stuck'}`;
+    container.appendChild(el);
+  });
+  document.getElementById('pgResults').style.display = '';
+
+  // Also render paths on the playground SVG
+  renderPlaygroundWithPaths(result);
+}
+
+function renderPlaygroundWithPaths(result) {
+  const svg = document.getElementById('pgSvg');
+  const m = pgGrid.length, n = pgGrid[0].length;
+  const maxW = 400;
+  const cs = Math.min(56, Math.floor((maxW - 60) / n));
+  const pad = 30;
+
+  // Re-render base grid
+  renderPlayground();
+
+  // Draw paths for each ball
+  const colors = ['#3fb950','#a78bfa','#f0883e','#58a6ff','#e3b341','#f85149','#79c0ff','#d2a8ff','#7ee787','#ffa657'];
+  const cx = c => pad + c * cs + cs / 2;
+
+  for (let ball = 0; ball < n; ball++) {
+    let col = ball;
+    const points = [{ x: cx(col), y: pad }];
+    let stuck = false;
+
+    for (let row = 0; row < m; row++) {
+      const d = pgGrid[row][col];
+      const nc = col + d;
+      points.push({ x: cx(col), y: pad + row * cs + cs / 2 });
+
+      if (nc < 0 || nc >= n || pgGrid[row][nc] !== d) {
+        stuck = true;
+        break;
+      }
+      points.push({ x: cx(nc), y: pad + (row + 1) * cs });
+      col = nc;
+    }
+    if (!stuck) {
+      points.push({ x: cx(col), y: pad + m * cs });
+    }
+
+    // Draw path
+    if (points.length > 1) {
+      let d = `M ${points[0].x} ${points[0].y}`;
+      for (let i = 1; i < points.length; i++) {
+        d += ` L ${points[i].x} ${points[i].y}`;
+      }
+      const color = colors[ball % colors.length];
+      svg.appendChild(svgEl('path', {
+        d, fill: 'none',
+        stroke: color,
+        'stroke-width': 2,
+        'stroke-linecap': 'round',
+        opacity: 0.7,
+        'pointer-events': 'none'
+      }));
+
+      // Ball at end
+      const last = points[points.length - 1];
+      svg.appendChild(svgEl('circle', {
+        cx: last.x, cy: last.y, r: 5,
+        fill: stuck ? '#f85149' : color,
+        opacity: 0.9,
+        'pointer-events': 'none'
+      }));
+    }
+
+    // Ball number at top
+    const t = svgEl('text', {
+      x: cx(ball), y: pad - 16,
+      fill: colors[ball % colors.length],
+      'font-size': '10', 'font-weight': 'bold',
+      'font-family': 'monospace', 'text-anchor': 'middle',
+      'pointer-events': 'none'
+    });
+    t.textContent = ball;
+    svg.appendChild(t);
+  }
+
+  // Result labels at bottom
+  for (let c = 0; c < n; c++) {
+    const t = svgEl('text', {
+      x: cx(c), y: pad + m * cs + 18,
+      fill: result[c] >= 0 ? '#3fb950' : '#f85149',
+      'font-size': '11', 'font-weight': 'bold',
+      'font-family': 'monospace', 'text-anchor': 'middle',
+      'pointer-events': 'none'
+    });
+    t.textContent = result[c];
+    svg.appendChild(t);
+  }
+}
+
+// ================================================================
+// INITIALIZATION
+// ================================================================
+function initBallSelector() {
+  const container = document.getElementById('ballSelector');
+  container.innerHTML = '';
+  const n = anim.grid[0].length;
+  for (let i = 0; i < n; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'ball-btn';
+    btn.dataset.col = i;
+    btn.textContent = i;
+    btn.title = `Drop ball at column ${i}`;
+    btn.addEventListener('click', () => selectBall(i));
+    container.appendChild(btn);
+  }
+}
+
+function initMain() {
+  anim.grid = JSON.parse(JSON.stringify(DEFAULT_GRID));
+  anim.results = findBallResult(anim.grid);
+
+  // Compute cell size based on grid
+  const n = anim.grid[0].length;
+  anim.cellSize = Math.min(64, Math.floor(500 / n));
+
+  // Result bar
+  const resBar = document.getElementById('resultBar');
+  resBar.innerHTML = `Result: <span>[${anim.results.join(', ')}]</span>`;
+
+  initBallSelector();
+  buildCodePanel();
+  selectBall(0);
+
+  // Render initial grid
+  renderCurrentState();
+}
+
+function initPlayground() {
+  renderPlayground();
+
+  document.getElementById('pgResize').addEventListener('click', () => {
+    const rows = Math.max(1, Math.min(10, parseInt(document.getElementById('pgRows').value) || 5));
+    const cols = Math.max(2, Math.min(10, parseInt(document.getElementById('pgCols').value) || 5));
+    pgGrid = Array.from({ length: rows }, () => Array(cols).fill(1));
+    document.getElementById('pgResults').style.display = 'none';
+    renderPlayground();
+  });
+
+  document.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.preset;
+      pgGrid = JSON.parse(JSON.stringify(PRESETS[key]));
+      document.getElementById('pgRows').value = pgGrid.length;
+      document.getElementById('pgCols').value = pgGrid[0].length;
+      document.getElementById('pgResults').style.display = 'none';
+      renderPlayground();
+    });
+  });
+
+  document.getElementById('pgRun').addEventListener('click', runPlayground);
+}
+
+function initControls() {
+  document.getElementById('btnPlay').addEventListener('click', togglePlay);
+  document.getElementById('btnNext').addEventListener('click', stepForward);
+  document.getElementById('btnPrev').addEventListener('click', stepBackward);
+  document.getElementById('btnFirst').addEventListener('click', goFirst);
+  document.getElementById('btnLast').addEventListener('click', goLast);
+  document.getElementById('speedSlider').addEventListener('input', updateSpeed);
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Don't capture when typing in input fields
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    switch (e.key) {
+      case ' ':
+        e.preventDefault();
+        togglePlay();
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        if (!anim.playing) stepForward();
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        if (!anim.playing) stepBackward();
+        break;
+      case 'r':
+      case 'R':
+        e.preventDefault();
+        stopPlaying();
+        selectBall(anim.ballIndex);
+        break;
+    }
+  });
+
+  updateSpeed();
+}
+
+// Boot
+initMain();
+initControls();
+initPlayground();
+</script>
+</body>
+</html>

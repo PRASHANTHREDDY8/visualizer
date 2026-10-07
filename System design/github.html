@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub — System Design Visualizer</title>
+<style>
+:root {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface-alt: #f0f2f6;
+  --border: #d1d9e0;
+  --border-strong: #b0b8c4;
+  --text: #1f2328;
+  --text-secondary: #59636e;
+  --text-tertiary: #8b949e;
+  --accent: #0969da;
+  --accent-light: #ddf4ff;
+  --accent-dark: #0550ae;
+  --green: #1a7f37;
+  --green-light: #dafbe1;
+  --orange: #bf8700;
+  --orange-light: #fff8c5;
+  --red: #cf222e;
+  --red-light: #ffebe9;
+  --purple: #8250df;
+  --purple-light: #fbefff;
+  --teal: #0e7c86;
+  --teal-light: #ddf4ff;
+  --pink: #bf3989;
+  --pink-light: #ffeff7;
+  --shadow-sm: 0 1px 3px rgba(31,35,40,0.06);
+  --shadow-md: 0 4px 12px rgba(31,35,40,0.08);
+  --shadow-lg: 0 8px 24px rgba(31,35,40,0.12);
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+}
+
+.nav-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav-inner::-webkit-scrollbar { display: none; }
+
+.nav-brand {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+  white-space: nowrap;
+  padding: 0.75rem 0.75rem 0.75rem 0;
+  border-right: 1px solid var(--border);
+  margin-right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.nav-brand svg { flex-shrink: 0; }
+
+.nav-link {
+  padding: 0.75rem 0.65rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.nav-link:hover, .nav-link.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #0969da, #8250df);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 2.5rem;
+  max-width: 720px;
+}
+
+.section {
+  max-width: 1280px;
+  margin: 0 auto 3rem;
+  padding: 0 2rem;
+  scroll-margin-top: 60px;
+}
+
+.section > h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section > h2 .icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.card h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+@media (max-width: 900px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  h1 { font-size: 1.8rem; }
+  .container, .section { padding: 0 1rem; }
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-green { background: var(--green-light); color: var(--green); }
+.badge-blue { background: var(--accent-light); color: var(--accent); }
+.badge-orange { background: var(--orange-light); color: var(--orange); }
+.badge-purple { background: var(--purple-light); color: var(--purple); }
+.badge-red { background: var(--red-light); color: var(--red); }
+.badge-teal { background: var(--teal-light); color: var(--teal); }
+.badge-pink { background: var(--pink-light); color: var(--pink); }
+
+/* Architecture */
+#arch-svg {
+  width: 100%;
+  min-height: 580px;
+  cursor: grab;
+}
+#arch-svg text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.arch-node { cursor: pointer; transition: filter 0.2s; }
+.arch-node:hover { filter: drop-shadow(0 4px 10px rgba(0,0,0,0.15)); }
+
+.arch-tooltip {
+  position: fixed;
+  background: #1f2328;
+  color: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  max-width: 300px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 50;
+  line-height: 1.5;
+  box-shadow: var(--shadow-lg);
+}
+.arch-tooltip.show { opacity: 1; }
+
+/* Component cards */
+.comp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.comp-card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); }
+
+.comp-card .comp-title {
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.comp-card .comp-purpose {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.tech-tag {
+  display: inline-block;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.75rem;
+  margin: 0.15rem 0.15rem 0.15rem 0;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.comp-detail {
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+/* Sequence diagram */
+.seq-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.seq-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.seq-controls button, .flow-btn {
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text);
+}
+
+.seq-controls button:hover, .flow-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.seq-controls button.active, .flow-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.seq-narration {
+  background: var(--accent-light);
+  border-left: 3px solid var(--accent);
+  padding: 0.75rem 1rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.88rem;
+  margin-top: 1rem;
+  min-height: 3rem;
+}
+
+#seq-svg { width: 100%; overflow-x: auto; }
+
+/* Comparison table */
+.comp-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.comp-table th {
+  background: var(--surface-alt);
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+
+.comp-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.comp-table tr.chosen { background: var(--accent-light); }
+.comp-table tr:hover { background: var(--surface-alt); }
+
+.decision-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+@media (max-width: 900px) { .decision-cards { grid-template-columns: 1fr; } }
+
+.decision-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+}
+
+.decision-card h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.decision-card p { font-size: 0.85rem; color: var(--text-secondary); }
+
+/* Pitfall cards */
+.pitfall-card {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--orange);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+
+.pitfall-header {
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface);
+  user-select: none;
+}
+
+.pitfall-header:hover { background: var(--surface-alt); }
+
+.pitfall-header .arrow {
+  transition: transform 0.2s;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.pitfall-card.open .pitfall-header .arrow { transform: rotate(90deg); }
+
+.pitfall-body {
+  padding: 0 1rem;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s, padding 0.3s;
+  font-size: 0.88rem;
+}
+
+.pitfall-card.open .pitfall-body { max-height: 600px; padding: 0.75rem 1rem; }
+.pitfall-body p { margin-bottom: 0.5rem; }
+.pitfall-body strong { color: var(--text); }
+
+/* Best practices */
+.bp-group { margin-bottom: 1.5rem; }
+
+.bp-group h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.bp-item {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  font-size: 0.88rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.bp-item:last-child { border-bottom: none; }
+
+.bp-check {
+  color: var(--green);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Scaling */
+.metric-card {
+  text-align: center;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.metric-card .metric-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.metric-card .metric-label {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.tradeoff-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.75rem;
+}
+
+.tradeoff-label {
+  font-weight: 700;
+  font-size: 0.88rem;
+  min-width: 140px;
+}
+
+.tradeoff-bar {
+  flex: 1;
+  height: 10px;
+  background: var(--surface-alt);
+  border-radius: 5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tradeoff-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.4s;
+}
+
+.tradeoff-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  min-width: 160px;
+}
+
+/* Playground */
+.playground-container {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.pg-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.pg-tab {
+  padding: 0.4rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.pg-tab:hover { color: var(--accent); }
+.pg-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.pg-panel { display: none; }
+.pg-panel.active { display: block; }
+
+.pg-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  align-items: flex-end;
+}
+
+.pg-control label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.3rem;
+}
+
+.pg-control input[type="range"] {
+  width: 160px;
+  accent-color: var(--accent);
+}
+
+.pg-control input[type="number"],
+.pg-control select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  background: var(--surface);
+  color: var(--text);
+  width: 120px;
+}
+
+.pg-btn {
+  padding: 0.45rem 1.1rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pg-btn:hover { background: var(--accent-dark); }
+
+.pg-btn-outline {
+  background: var(--surface);
+  color: var(--accent);
+}
+.pg-btn-outline:hover { background: var(--accent-light); }
+
+.pg-output {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  min-height: 100px;
+}
+
+.pg-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.pg-metric {
+  text-align: center;
+  padding: 0.75rem;
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.pg-metric .val {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.pg-metric .lbl {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 0.15rem;
+}
+
+.preset-btns {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.preset-btn {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.preset-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+/* Use cases */
+.usecase-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  transition: border-color 0.2s;
+}
+
+.usecase-card:hover { border-color: var(--accent); }
+
+.usecase-card .uc-icon {
+  font-size: 1.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.usecase-card h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.usecase-card p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.anti-usecase {
+  border-left: 4px solid var(--red);
+}
+
+/* Failure scenario cards */
+.failure-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--red);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.failure-card h4 {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--red);
+  margin-bottom: 0.35rem;
+}
+
+.failure-card p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Git graph for playground */
+.git-graph-container {
+  background: #0d1117;
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  overflow-x: auto;
+  color: #c9d1d9;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.82rem;
+  line-height: 1.8;
+}
+
+.git-line { white-space: nowrap; }
+.git-hash { color: #f0883e; }
+.git-branch { color: #7ee787; font-weight: 700; }
+.git-msg { color: #c9d1d9; }
+.git-merge { color: #a5d6ff; }
+.git-graph-pipe { color: #8b949e; }
+</style>
+</head>
+<body>
+    <nav>
+        <div class="nav-inner">
+            <span class="nav-brand">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                GitHub
+            </span>
+            <a class="nav-link active" href="#architecture" onclick="scrollToSection('architecture')">Architecture</a>
+            <a class="nav-link" href="#components" onclick="scrollToSection('components')">Components</a>
+            <a class="nav-link" href="#sequence" onclick="scrollToSection('sequence')">Request Flow</a>
+            <a class="nav-link" href="#comparisons" onclick="scrollToSection('comparisons')">Comparisons</a>
+            <a class="nav-link" href="#usecases" onclick="scrollToSection('usecases')">Use Cases</a>
+            <a class="nav-link" href="#pitfalls" onclick="scrollToSection('pitfalls')">Pitfalls</a>
+            <a class="nav-link" href="#practices" onclick="scrollToSection('practices')">Best Practices</a>
+            <a class="nav-link" href="#scaling" onclick="scrollToSection('scaling')">Scaling</a>
+            <a class="nav-link" href="#playground" onclick="scrollToSection('playground')">Playground</a>
+        </div>
+    </nav>
+
+    <div class="arch-tooltip" id="tooltip"></div>
+
+    <div class="container">
+        <h1>GitHub System Design</h1>
+        <p class="subtitle">A distributed code hosting platform serving 100M+ developers — Git repository storage, pull request workflows, CI/CD pipelines, code search, and real-time collaboration at massive scale.</p>
+    </div>
+
+    <!-- Section 1: Architecture -->
+    <section class="section" id="architecture">
+        <h2><span class="icon" style="background:var(--accent-light);color:var(--accent);">&#9638;</span> Architecture Diagram</h2>
+        <div class="card" style="padding:0.5rem;">
+            <svg id="arch-svg" viewBox="0 0 1200 620"></svg>
+        </div>
+    </section>
+
+    <!-- Section 2: Components -->
+    <section class="section" id="components">
+        <h2><span class="icon" style="background:var(--purple-light);color:var(--purple);">&#9881;</span> Component Breakdown</h2>
+        <div class="grid-3" id="comp-grid"></div>
+    </section>
+
+    <!-- Section 3: Request Flow -->
+    <section class="section" id="sequence">
+        <h2><span class="icon" style="background:var(--green-light);color:var(--green);">&#8594;</span> Request Flow</h2>
+        <div class="seq-container">
+            <div class="seq-controls">
+                <button class="flow-btn active" onclick="selectFlow('push')">Git Push</button>
+                <button class="flow-btn" onclick="selectFlow('pr')">Open PR</button>
+                <button class="flow-btn" onclick="selectFlow('actions')">CI/CD Run</button>
+                <button class="flow-btn" onclick="selectFlow('search')">Code Search</button>
+                <span style="flex:1"></span>
+                <button onclick="seqPrev()">&#9664; Prev</button>
+                <button onclick="seqToggle()" id="seq-play-btn">&#9654; Play</button>
+                <button onclick="seqNext()">Next &#9654;</button>
+                <label style="font-size:0.78rem;color:var(--text-secondary);display:flex;align-items:center;gap:0.4rem;">
+                    Speed <input type="range" min="1" max="5" value="2" id="seq-speed" style="width:80px;accent-color:var(--accent);">
+                </label>
+            </div>
+            <svg id="seq-svg" viewBox="0 0 1200 400" style="width:100%;min-height:360px;"></svg>
+            <div class="seq-narration" id="seq-narration">Select a flow and press Play to see the request sequence.</div>
+        </div>
+    </section>
+
+    <!-- Section 4: Comparisons -->
+    <section class="section" id="comparisons">
+        <h2><span class="icon" style="background:var(--teal-light);color:var(--teal);">&#8596;</span> Comparisons with Alternatives</h2>
+        <div class="comp-table-wrap" style="margin-bottom:1.25rem;">
+            <table class="comp-table">
+                <thead>
+                    <tr>
+                        <th>Platform</th>
+                        <th>Key Differentiator</th>
+                        <th>Pros</th>
+                        <th>Cons</th>
+                        <th>Best For</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="chosen">
+                        <td><strong>GitHub</strong> <span class="badge badge-blue">Chosen</span></td>
+                        <td>Largest ecosystem, Actions CI/CD, Copilot AI</td>
+                        <td>100M+ devs, marketplace, deep integrations, Copilot</td>
+                        <td>Vendor lock-in (Microsoft), pricing for large private orgs</td>
+                        <td>Open-source, startups, enterprises wanting ecosystem</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GitLab</strong></td>
+                        <td>Single DevOps platform (built-in CI/CD, registry, monitoring)</td>
+                        <td>All-in-one, self-hosted option, built-in DevSecOps</td>
+                        <td>UI complexity, slower than GitHub for simple workflows</td>
+                        <td>Enterprises wanting single platform, self-hosted needs</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bitbucket</strong></td>
+                        <td>Tight Jira/Atlassian integration</td>
+                        <td>Free private repos for small teams, Jira linking</td>
+                        <td>Smaller community, fewer integrations, Pipelines less flexible</td>
+                        <td>Teams already in Atlassian ecosystem</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Self-hosted Git (Gitea/Gogs)</strong></td>
+                        <td>Full control, lightweight, open-source</td>
+                        <td>No vendor lock-in, low resource usage, data sovereignty</td>
+                        <td>No ecosystem, manual maintenance, limited CI/CD</td>
+                        <td>Air-gapped envs, extreme customization, cost-sensitive</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.75rem;">When to Pick Each</h3>
+        <div class="decision-cards">
+            <div class="decision-card" style="border-left:3px solid var(--accent);">
+                <h4>Choose GitHub when...</h4>
+                <p>You want the largest developer ecosystem, seamless open-source collaboration, GitHub Actions for CI/CD, and AI-powered tools like Copilot. Best for teams that value community and integrations.</p>
+            </div>
+            <div class="decision-card" style="border-left:3px solid var(--orange);">
+                <h4>Choose GitLab when...</h4>
+                <p>You need a single platform for the entire DevOps lifecycle — source control, CI/CD, container registry, monitoring, and security scanning — without stitching together multiple tools.</p>
+            </div>
+            <div class="decision-card" style="border-left:3px solid var(--teal);">
+                <h4>Choose Bitbucket when...</h4>
+                <p>Your team is already invested in Jira, Confluence, and the Atlassian suite. The tight integration between Bitbucket branches and Jira tickets reduces context-switching.</p>
+            </div>
+            <div class="decision-card" style="border-left:3px solid var(--purple);">
+                <h4>Choose self-hosted when...</h4>
+                <p>Regulatory requirements mandate data sovereignty, you operate in air-gapped environments, or you need full control over the hosting infrastructure and data lifecycle.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 5: Use Cases & Pitfalls -->
+    <section class="section" id="usecases">
+        <h2><span class="icon" style="background:var(--green-light);color:var(--green);">&#9733;</span> Use Cases & Common Pitfalls</h2>
+
+        <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.75rem;">Primary Use Cases</h3>
+        <div class="grid-3" style="margin-bottom:1.5rem;">
+            <div class="usecase-card">
+                <div class="uc-icon">&#128187;</div>
+                <h4>Open-Source Collaboration</h4>
+                <p>Millions of contributors forking, branching, and submitting PRs. Scale: 300M+ repos, fork-based workflow. Key: discoverability, PR review, community tools.</p>
+            </div>
+            <div class="usecase-card">
+                <div class="uc-icon">&#127970;</div>
+                <h4>Enterprise Source Control</h4>
+                <p>Fortune 500 companies managing thousands of private repos with SSO, audit logs, and compliance. Scale: 10K+ devs, strict access control. Key: SAML, SCIM, IP allow-lists.</p>
+            </div>
+            <div class="usecase-card">
+                <div class="uc-icon">&#9889;</div>
+                <h4>CI/CD with Actions</h4>
+                <p>Automated build, test, deploy pipelines triggered on push/PR. Scale: millions of workflow runs/day. Key: runner fleet management, artifact storage, secrets.</p>
+            </div>
+            <div class="usecase-card">
+                <div class="uc-icon">&#128270;</div>
+                <h4>Code Search & Discovery</h4>
+                <p>Searching across billions of lines of code for patterns, vulnerabilities, or examples. Scale: 100B+ lines indexed. Key: trigram indexes, ranked results.</p>
+            </div>
+            <div class="usecase-card">
+                <div class="uc-icon">&#128230;</div>
+                <h4>Package Registry</h4>
+                <p>Hosting npm, Docker, Maven, NuGet packages tied to source repos. Scale: millions of packages, billions of downloads. Key: CDN, integrity checks.</p>
+            </div>
+            <div class="usecase-card">
+                <div class="uc-icon">&#128272;</div>
+                <h4>Security & Compliance</h4>
+                <p>Dependabot alerts, secret scanning, code scanning (CodeQL). Scale: scanning every push across all repos. Key: low latency alerts, minimal false positives.</p>
+            </div>
+        </div>
+
+        <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.75rem;">Anti-Use-Cases</h3>
+        <div class="grid-2" style="margin-bottom:1.5rem;">
+            <div class="usecase-card anti-usecase">
+                <h4>Large Binary File Storage</h4>
+                <p>Git is designed for text diffs; storing large binaries (videos, datasets, ML models) bloats repo size. Use Git LFS, DVC, or dedicated object storage instead.</p>
+            </div>
+            <div class="usecase-card anti-usecase">
+                <h4>Real-Time Collaborative Editing</h4>
+                <p>GitHub is async-first (commits, PRs). For real-time code editing, use VS Code Live Share, Replit, or purpose-built CRDT editors.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 5b: Pitfalls -->
+    <section class="section" id="pitfalls">
+        <h2><span class="icon" style="background:var(--orange-light);color:var(--orange);">&#9888;</span> Common Pitfalls</h2>
+        <div id="pitfalls-container"></div>
+    </section>
+
+    <!-- Section 6: Best Practices -->
+    <section class="section" id="practices">
+        <h2><span class="icon" style="background:var(--green-light);color:var(--green);">&#10003;</span> Best Practices</h2>
+        <div id="practices-container"></div>
+    </section>
+
+    <!-- Section 7: Scaling & Trade-offs -->
+    <section class="section" id="scaling">
+        <h2><span class="icon" style="background:var(--accent-light);color:var(--accent);">&#8593;</span> Scaling & Trade-offs</h2>
+        <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.75rem;">Capacity Estimates (GitHub-scale)</h3>
+        <div class="grid-4" style="margin-bottom:1.5rem;" id="metrics-grid"></div>
+
+        <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.75rem;">Trade-off Analysis</h3>
+        <div id="tradeoffs-container" style="margin-bottom:1.5rem;"></div>
+
+        <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.75rem;">Failure Scenarios</h3>
+        <div id="failures-container"></div>
+    </section>
+
+    <!-- Section 8: Playground -->
+    <section class="section" id="playground">
+        <h2><span class="icon" style="background:var(--purple-light);color:var(--purple);">&#9654;</span> Interactive Playground</h2>
+        <div class="playground-container">
+            <div class="pg-tabs">
+                <button class="pg-tab active" onclick="switchPlayground('git-sim')">Git Workflow Simulator</button>
+                <button class="pg-tab" onclick="switchPlayground('scale-calc')">Scale Calculator</button>
+                <button class="pg-tab" onclick="switchPlayground('merge-sim')">Merge Strategy</button>
+            </div>
+
+            <!-- Git Workflow Simulator -->
+            <div class="pg-panel active" id="pg-git-sim">
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:1rem;">Simulate a Git branching workflow. Add commits, create branches, and merge — watch the graph update in real-time.</p>
+                <div class="pg-controls">
+                    <div class="pg-control">
+                        <label>Branch Name</label>
+                        <input type="text" id="git-branch-name" value="feature/auth" style="width:160px;">
+                    </div>
+                    <div class="pg-control">
+                        <label>Commit Message</label>
+                        <input type="text" id="git-commit-msg" value="Add login endpoint" style="width:200px;">
+                    </div>
+                    <button class="pg-btn" onclick="gitCommit()">Commit</button>
+                    <button class="pg-btn pg-btn-outline" onclick="gitBranch()">Create Branch</button>
+                    <button class="pg-btn pg-btn-outline" onclick="gitMerge()">Merge to main</button>
+                    <button class="pg-btn pg-btn-outline" onclick="gitReset()">Reset</button>
+                </div>
+                <div class="preset-btns">
+                    <button class="preset-btn" onclick="gitPreset('feature')">Feature Branch Flow</button>
+                    <button class="preset-btn" onclick="gitPreset('hotfix')">Hotfix Workflow</button>
+                    <button class="preset-btn" onclick="gitPreset('release')">Release Branch</button>
+                </div>
+                <div class="git-graph-container" id="git-graph"></div>
+                <div class="pg-metrics" id="git-metrics"></div>
+            </div>
+
+            <!-- Scale Calculator -->
+            <div class="pg-panel" id="pg-scale-calc">
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:1rem;">Estimate infrastructure requirements for a GitHub-like platform at different scales.</p>
+                <div class="preset-btns">
+                    <button class="preset-btn" onclick="scalePreset('startup')">Startup (1K devs)</button>
+                    <button class="preset-btn" onclick="scalePreset('midscale')">Mid-Scale (100K devs)</button>
+                    <button class="preset-btn" onclick="scalePreset('github')">GitHub-Scale (100M devs)</button>
+                </div>
+                <div class="pg-controls">
+                    <div class="pg-control">
+                        <label>Daily Active Users</label>
+                        <input type="number" id="scale-dau" value="10000" min="100" max="200000000">
+                    </div>
+                    <div class="pg-control">
+                        <label>Avg Repos/User</label>
+                        <input type="number" id="scale-repos" value="5" min="1" max="100">
+                    </div>
+                    <div class="pg-control">
+                        <label>Avg Pushes/User/Day</label>
+                        <input type="number" id="scale-pushes" value="3" min="1" max="50">
+                    </div>
+                    <div class="pg-control">
+                        <label>Avg Push Size (KB)</label>
+                        <input type="number" id="scale-push-size" value="50" min="1" max="10000">
+                    </div>
+                    <div class="pg-control">
+                        <label>Read/Write Ratio</label>
+                        <select id="scale-rw">
+                            <option value="5">5:1</option>
+                            <option value="10" selected>10:1</option>
+                            <option value="20">20:1</option>
+                            <option value="50">50:1</option>
+                        </select>
+                    </div>
+                    <button class="pg-btn" onclick="calcScale()">Calculate</button>
+                </div>
+                <div class="pg-output" id="scale-output" style="font-family:monospace;white-space:pre-wrap;"></div>
+                <div class="pg-metrics" id="scale-metrics"></div>
+            </div>
+
+            <!-- Merge Strategy -->
+            <div class="pg-panel" id="pg-merge-sim">
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:1rem;">Compare Git merge strategies: merge commit, squash merge, and rebase. See how each affects the commit history.</p>
+                <div class="pg-controls">
+                    <div class="pg-control">
+                        <label>Strategy</label>
+                        <select id="merge-strategy" onchange="renderMergeStrategy()">
+                            <option value="merge">Merge Commit</option>
+                            <option value="squash">Squash & Merge</option>
+                            <option value="rebase">Rebase & Merge</option>
+                        </select>
+                    </div>
+                    <div class="pg-control">
+                        <label>Feature Commits</label>
+                        <input type="range" min="1" max="8" value="3" id="merge-commits" onchange="renderMergeStrategy()">
+                        <span id="merge-commits-val" style="font-size:0.82rem;font-weight:600;">3</span>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div>
+                        <h4 style="font-size:0.92rem;font-weight:700;margin-bottom:0.5rem;">Before Merge</h4>
+                        <div class="git-graph-container" id="merge-before"></div>
+                    </div>
+                    <div>
+                        <h4 style="font-size:0.92rem;font-weight:700;margin-bottom:0.5rem;">After Merge</h4>
+                        <div class="git-graph-container" id="merge-after"></div>
+                    </div>
+                </div>
+                <div class="pg-output" id="merge-info" style="margin-top:1rem;"></div>
+            </div>
+        </div>
+    </section>
+
+<script>
+// ===== Architecture Diagram =====
+const ARCH_NODES = [
+    { id:'clients', x:80, y:60, w:160, h:50, label:'Clients', sub:'Web / CLI / API / Mobile', color:'#ddf4ff', stroke:'#0969da', group:'Client Layer', tip:'Web UI (React), gh CLI, Git protocol clients, mobile apps, and third-party API consumers. ~100M monthly active users.' },
+    { id:'cdn', x:370, y:30, w:130, h:44, label:'CDN', sub:'Assets & Clones', color:'#dafbe1', stroke:'#1a7f37', group:'Edge', tip:'Global CDN for static assets, release downloads, and git clone acceleration. GitHub uses its own edge network with 80+ PoPs worldwide.' },
+    { id:'lb', x:370, y:100, w:130, h:44, label:'Load Balancer', sub:'GLB / HAProxy', color:'#fff8c5', stroke:'#bf8700', group:'Edge', shape:'hex', tip:'GitHub Load Balancer (GLB) — custom L4 load balancer using ECMP + IPVS. Handles millions of requests/sec with consistent hashing.' },
+    { id:'api', x:580, y:30, w:140, h:48, label:'API Gateway', sub:'REST / GraphQL', color:'#ddf4ff', stroke:'#0969da', group:'Application Layer', tip:'Unified API layer supporting REST v3 and GraphQL v4. Handles authentication, rate limiting (5K req/hr authenticated), and request routing.' },
+    { id:'web', x:580, y:105, w:140, h:48, label:'Web App', sub:'Rails Monolith', color:'#ddf4ff', stroke:'#0969da', group:'Application Layer', tip:'The main Rails monolith — one of the largest Rails apps in the world. Serves the github.com web UI. Deployed 50+ times/day.' },
+    { id:'git-srv', x:580, y:180, w:140, h:48, label:'Git Servers', sub:'SSH / HTTP', color:'#fbefff', stroke:'#8250df', group:'Application Layer', tip:'Gitaly-like service handling Git operations over SSH and HTTP. Translates Git protocol commands to storage operations. Manages pack-files and refs.' },
+    { id:'pr-svc', x:810, y:20, w:130, h:44, label:'PR Service', sub:'Reviews & Checks', color:'#dafbe1', stroke:'#1a7f37', group:'Services', tip:'Manages pull requests, review assignments, status checks, merge queues, and branch protection rules. Integrates with CI/CD for check suites.' },
+    { id:'actions', x:810, y:80, w:130, h:44, label:'Actions', sub:'CI/CD Engine', color:'#fff8c5', stroke:'#bf8700', group:'Services', tip:'GitHub Actions — workflow engine running CI/CD. Manages runner fleet (hosted + self-hosted), job queuing, artifact storage, and secrets management.' },
+    { id:'search', x:810, y:140, w:130, h:44, label:'Search', sub:'Code Search', color:'#ddf4ff', stroke:'#0969da', group:'Services', tip:'Blackbird — GitHub\'s code search engine. Custom indexing using Zoekt-inspired trigram index across 200M+ repos. Supports regex and symbol search.' },
+    { id:'notify', x:810, y:200, w:130, h:44, label:'Notifications', sub:'Email / WebSocket', color:'#ffeff7', stroke:'#bf3989', group:'Services', tip:'Fan-out notification system. Delivers via email, web push, mobile push, and WebSocket for real-time updates. Handles billions of notifications/day.' },
+    { id:'webhooks', x:810, y:260, w:130, h:44, label:'Webhooks', sub:'Event Delivery', color:'#fbefff', stroke:'#8250df', group:'Services', tip:'Event-driven webhook delivery system. Delivers events to 10M+ webhook endpoints with retry logic, payload signing (HMAC-SHA256), and rate limiting.' },
+    { id:'mysql', x:1040, y:30, w:120, h:48, label:'MySQL', sub:'Metadata', color:'#ddf4ff', stroke:'#0969da', group:'Data Layer', shape:'cyl', tip:'Vitess-managed MySQL cluster for all relational data — users, repos, issues, PRs, comments, permissions. Horizontally sharded by org/repo.' },
+    { id:'git-store', x:1040, y:105, w:120, h:48, label:'Git Storage', sub:'Repos on Disk', color:'#fbefff', stroke:'#8250df', group:'Data Layer', shape:'cyl', tip:'Distributed filesystem storing bare Git repositories. Uses three-replica storage with consistent hashing for placement. Petabytes of pack-files.' },
+    { id:'redis', x:1040, y:180, w:120, h:48, label:'Redis', sub:'Cache & Queues', color:'#ffebe9', stroke:'#cf222e', group:'Data Layer', shape:'cyl', tip:'Redis clusters for caching (sessions, feature flags, hot data), background job queues (Resque/Sidekiq), and real-time pub/sub for notifications.' },
+    { id:'es', x:1040, y:255, w:120, h:48, label:'Search Index', sub:'Elasticsearch', color:'#fff8c5', stroke:'#bf8700', group:'Data Layer', shape:'cyl', tip:'Elasticsearch for issues/PR search and Blackbird index for code search. Hundreds of TBs of indexed data. Near-real-time indexing on push.' },
+    { id:'obj-store', x:1040, y:330, w:120, h:48, label:'Object Storage', sub:'S3 / Blob', color:'#dafbe1', stroke:'#1a7f37', group:'Data Layer', shape:'cyl', tip:'S3-compatible object storage for Git LFS objects, Actions artifacts, release assets, user uploads, and Packages (npm, Docker, Maven).' },
+    { id:'kafka', x:810, y:330, w:130, h:44, label:'Event Bus', sub:'Kafka', color:'#dafbe1', stroke:'#1a7f37', group:'Infrastructure', shape:'para', tip:'Apache Kafka for event streaming. Publishes events (push, PR, issue, etc.) consumed by search indexer, notifications, webhooks, analytics, and audit log.' },
+];
+
+const ARCH_EDGES = [
+    { from:'clients', to:'cdn', label:'Static' },
+    { from:'clients', to:'lb', label:'HTTPS' },
+    { from:'lb', to:'api', label:'Route' },
+    { from:'lb', to:'web', label:'Route' },
+    { from:'lb', to:'git-srv', label:'SSH/HTTP' },
+    { from:'api', to:'pr-svc', label:'gRPC' },
+    { from:'api', to:'actions', label:'gRPC' },
+    { from:'api', to:'search', label:'gRPC' },
+    { from:'web', to:'pr-svc', label:'gRPC' },
+    { from:'web', to:'notify', label:'gRPC' },
+    { from:'git-srv', to:'git-store', label:'NFS/RPC' },
+    { from:'git-srv', to:'kafka', label:'Events' },
+    { from:'pr-svc', to:'mysql', label:'SQL' },
+    { from:'pr-svc', to:'kafka', label:'Events' },
+    { from:'actions', to:'obj-store', label:'Artifacts' },
+    { from:'actions', to:'redis', label:'Queue' },
+    { from:'search', to:'es', label:'Query' },
+    { from:'notify', to:'redis', label:'Pub/Sub' },
+    { from:'webhooks', to:'kafka', label:'Consume' },
+    { from:'kafka', to:'es', label:'Index' },
+    { from:'kafka', to:'notify', label:'Events' },
+    { from:'kafka', to:'webhooks', label:'Events' },
+    { from:'web', to:'mysql', label:'SQL' },
+    { from:'web', to:'redis', label:'Cache' },
+];
+
+function drawArchitecture() {
+    const svg = document.getElementById('arch-svg');
+    let html = '';
+    const groups = {};
+    ARCH_NODES.forEach(n => {
+        if (!groups[n.group]) groups[n.group] = [];
+        groups[n.group].push(n);
+    });
+
+    const groupColors = {
+        'Client Layer': '#ddf4ff',
+        'Edge': '#fff8c5',
+        'Application Layer': '#ddf4ff',
+        'Services': '#dafbe1',
+        'Data Layer': '#fbefff',
+        'Infrastructure': '#dafbe1',
+    };
+
+    const groupBounds = {};
+    Object.entries(groups).forEach(([name, nodes]) => {
+        let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
+        nodes.forEach(n => {
+            minX = Math.min(minX, n.x);
+            minY = Math.min(minY, n.y);
+            maxX = Math.max(maxX, n.x + n.w);
+            maxY = Math.max(maxY, n.y + n.h);
+        });
+        groupBounds[name] = { x: minX - 15, y: minY - 25, w: maxX - minX + 30, h: maxY - minY + 45 };
+    });
+
+    Object.entries(groupBounds).forEach(([name, b]) => {
+        html += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="8" fill="${groupColors[name] || '#f0f2f6'}" opacity="0.35" stroke="${groupColors[name] ? '#b0b8c4' : '#d1d9e0'}" stroke-width="0.5" stroke-dasharray="4,3"/>`;
+        html += `<text x="${b.x + 6}" y="${b.y + 13}" font-size="10" fill="#59636e" font-weight="600">${name}</text>`;
+    });
+
+    ARCH_EDGES.forEach(e => {
+        const from = ARCH_NODES.find(n => n.id === e.from);
+        const to = ARCH_NODES.find(n => n.id === e.to);
+        const x1 = from.x + from.w;
+        const y1 = from.y + from.h / 2;
+        const x2 = to.x;
+        const y2 = to.y + to.h / 2;
+        const mx = (x1 + x2) / 2;
+        html += `<path d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}" fill="none" stroke="#b0b8c4" stroke-width="1.2" marker-end="url(#arrowhead)"/>`;
+        html += `<text x="${mx}" y="${(y1+y2)/2 - 5}" font-size="8.5" fill="#8b949e" text-anchor="middle" font-weight="500">${e.label}</text>`;
+    });
+
+    ARCH_NODES.forEach(n => {
+        html += `<g class="arch-node" data-id="${n.id}" onmouseenter="showTip(evt,'${n.id}')" onmouseleave="hideTip()" onclick="scrollToSection('components')">`;
+        if (n.shape === 'cyl') {
+            html += `<rect x="${n.x}" y="${n.y+6}" width="${n.w}" height="${n.h-6}" rx="3" fill="${n.color}" stroke="${n.stroke}" stroke-width="1.5"/>`;
+            html += `<ellipse cx="${n.x+n.w/2}" cy="${n.y+6}" rx="${n.w/2}" ry="6" fill="${n.color}" stroke="${n.stroke}" stroke-width="1.5"/>`;
+        } else if (n.shape === 'hex') {
+            const cx = n.x+n.w/2, cy = n.y+n.h/2, rx = n.w/2, ry = n.h/2;
+            html += `<polygon points="${cx-rx},${cy} ${cx-rx*0.6},${cy-ry} ${cx+rx*0.6},${cy-ry} ${cx+rx},${cy} ${cx+rx*0.6},${cy+ry} ${cx-rx*0.6},${cy+ry}" fill="${n.color}" stroke="${n.stroke}" stroke-width="1.5"/>`;
+        } else if (n.shape === 'para') {
+            const off = 12;
+            html += `<polygon points="${n.x+off},${n.y} ${n.x+n.w},${n.y} ${n.x+n.w-off},${n.y+n.h} ${n.x},${n.y+n.h}" fill="${n.color}" stroke="${n.stroke}" stroke-width="1.5"/>`;
+        } else {
+            html += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="8" fill="${n.color}" stroke="${n.stroke}" stroke-width="1.5"/>`;
+        }
+        html += `<text x="${n.x+n.w/2}" y="${n.y+n.h/2-4}" text-anchor="middle" font-size="12" font-weight="700" fill="#1f2328">${n.label}</text>`;
+        html += `<text x="${n.x+n.w/2}" y="${n.y+n.h/2+10}" text-anchor="middle" font-size="9" fill="#59636e">${n.sub}</text>`;
+        html += `</g>`;
+    });
+
+    html += `<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#b0b8c4"/></marker></defs>`;
+    svg.innerHTML = html;
+}
+
+function showTip(evt, id) {
+    const n = ARCH_NODES.find(n => n.id === id);
+    const tip = document.getElementById('tooltip');
+    tip.innerHTML = `<strong>${n.label}</strong><br>${n.tip}`;
+    tip.classList.add('show');
+    const r = evt.target.closest('.arch-node').getBoundingClientRect();
+    tip.style.left = (r.right + 10) + 'px';
+    tip.style.top = (r.top) + 'px';
+    if (r.right + 320 > window.innerWidth) {
+        tip.style.left = (r.left - 310) + 'px';
+    }
+}
+
+function hideTip() {
+    document.getElementById('tooltip').classList.remove('show');
+}
+
+// ===== Components =====
+const COMPONENTS = [
+    { title: 'Load Balancer (GLB)', badge: 'Edge', badgeClass: 'badge-orange', purpose: 'Distributes incoming traffic across application servers using L4 ECMP + IPVS consistent hashing.',
+      techs: ['GLB', 'HAProxy', 'IPVS', 'ECMP'],
+      detail: 'Custom-built GitHub Load Balancer handles millions of concurrent connections. Uses consistent hashing so Git connections stick to the same backend. Horizontal scaling by adding more LB nodes.' },
+    { title: 'Rails Monolith', badge: 'App', badgeClass: 'badge-blue', purpose: 'The core web application serving github.com — one of the largest Ruby on Rails applications in production.',
+      techs: ['Ruby on Rails', 'Puma', 'ViewComponent'],
+      detail: 'Deployed 50+ times/day via ChatOps. Uses feature flags extensively. Gradually extracting services but the monolith remains the primary entry point. 1M+ lines of Ruby.' },
+    { title: 'Git Servers', badge: 'App', badgeClass: 'badge-purple', purpose: 'Handle Git protocol operations — clone, fetch, push over SSH and HTTPS.',
+      techs: ['libgit2', 'Custom RPC', 'SSH'],
+      detail: 'Translates Git wire protocol to storage operations. Manages packfile negotiation, ref updates, and server-side hooks. Three-replica storage for durability.' },
+    { title: 'Pull Request Service', badge: 'Service', badgeClass: 'badge-green', purpose: 'Manages the full PR lifecycle — creation, review assignment, merge queues, and status checks.',
+      techs: ['gRPC', 'MySQL', 'Redis'],
+      detail: 'Enforces branch protection rules, required reviews, and status check policies. Merge queue batches PRs and runs CI on the combined diff to prevent merge skew.' },
+    { title: 'GitHub Actions', badge: 'Service', badgeClass: 'badge-orange', purpose: 'CI/CD workflow engine managing job queuing, runner provisioning, artifact storage, and secrets.',
+      techs: ['Azure', '.NET Runner', 'Kafka'],
+      detail: 'Hosted runners spin up fresh VMs per job. Self-hosted runners connect via long-poll. Supports matrix builds, reusable workflows, and workflow_dispatch triggers. Processes millions of jobs/day.' },
+    { title: 'Code Search (Blackbird)', badge: 'Service', badgeClass: 'badge-blue', purpose: 'Full-text and symbol-aware code search across 200M+ repositories using a custom trigram index.',
+      techs: ['Rust', 'Trigram Index', 'Zoekt'],
+      detail: 'Indexes code on push via Kafka events. Supports regex, exact match, symbol search, and path filtering. Returns results in <1s for most queries. Index is sharded across hundreds of nodes.' },
+    { title: 'Notification Service', badge: 'Service', badgeClass: 'badge-pink', purpose: 'Fan-out notification delivery across email, web, mobile push, and WebSocket channels.',
+      techs: ['Redis Pub/Sub', 'WebSocket', 'APNS/FCM'],
+      detail: 'Processes billions of notifications daily. Uses Redis pub/sub for real-time web notifications. Deduplication prevents notification storms during mass-mention or bulk operations.' },
+    { title: 'MySQL (Vitess)', badge: 'Data', badgeClass: 'badge-blue', purpose: 'Primary relational store for all metadata — users, repos, issues, PRs, comments, permissions.',
+      techs: ['MySQL 8', 'Vitess', 'ProxySQL'],
+      detail: 'Vitess provides horizontal sharding, connection pooling, and query routing. Sharded primarily by repository/org ID. Read replicas serve read-heavy queries. Thousands of MySQL instances.' },
+    { title: 'Git Storage', badge: 'Data', badgeClass: 'badge-purple', purpose: 'Distributed filesystem storing bare Git repositories as pack-files and loose objects.',
+      techs: ['SPOKES', 'NFS', '3-replica'],
+      detail: 'GitHub\'s SPOKES system maintains 3 replicas of every repository on separate hosts. Automatic failover and repair. Petabytes of total storage. Uses consistent hashing for repo-to-host mapping.' },
+    { title: 'Redis Cluster', badge: 'Data', badgeClass: 'badge-red', purpose: 'Multi-purpose caching layer, background job queue, and real-time pub/sub system.',
+      techs: ['Redis Cluster', 'Resque', 'Sidekiq'],
+      detail: 'Separate Redis clusters for different workloads: caching (sessions, feature flags), job queues (background workers), and pub/sub (notifications). Hundreds of Redis instances.' },
+    { title: 'Kafka Event Bus', badge: 'Infra', badgeClass: 'badge-green', purpose: 'Event streaming backbone connecting all services — push events, PR events, audit logs.',
+      techs: ['Apache Kafka', 'Schema Registry'],
+      detail: 'Every significant action publishes an event to Kafka. Consumers include search indexer, notification service, webhooks, analytics pipeline, and audit log. Millions of events/sec.' },
+    { title: 'Object Storage (S3)', badge: 'Data', badgeClass: 'badge-teal', purpose: 'Stores Git LFS objects, Actions artifacts, release assets, packages, and user uploads.',
+      techs: ['S3', 'CloudFront', 'LFS'],
+      detail: 'CDN-fronted for downloads. Git LFS uses pointer files in Git repos with actual objects in S3. Packages (npm, Docker, Maven) stored with content-addressable hashing for deduplication.' },
+];
+
+function renderComponents() {
+    const grid = document.getElementById('comp-grid');
+    grid.innerHTML = COMPONENTS.map(c => `
+        <div class="comp-card">
+            <div class="comp-title"><span class="badge ${c.badgeClass}">${c.badge}</span> ${c.title}</div>
+            <div class="comp-purpose">${c.purpose}</div>
+            <div>${c.techs.map(t => `<span class="tech-tag">${t}</span>`).join('')}</div>
+            <div class="comp-detail">${c.detail}</div>
+        </div>
+    `).join('');
+}
+
+// ===== Sequence Diagram =====
+const FLOWS = {
+    push: {
+        actors: ['Developer', 'Git Client', 'Load Balancer', 'Git Server', 'Git Storage', 'Kafka', 'Search Index'],
+        steps: [
+            { from: 0, to: 1, label: 'git push origin main', desc: 'Developer runs git push. Git client initiates SSH/HTTPS connection to github.com.' },
+            { from: 1, to: 2, label: 'SSH/HTTPS', desc: 'Git client connects via SSH (port 22) or HTTPS (port 443). SSH uses deploy keys or user SSH keys for auth.' },
+            { from: 2, to: 3, label: 'Route to Git server', desc: 'Load balancer routes the connection to an available Git server using consistent hashing based on repository ID.' },
+            { from: 3, to: 1, label: 'Pack negotiation', desc: 'Git server and client negotiate which objects need to be transferred using have/want protocol.' },
+            { from: 1, to: 3, label: 'Send packfile', desc: 'Client sends a packfile containing new commits, trees, and blobs. Server validates pack integrity.' },
+            { from: 3, to: 4, label: 'Write objects + update refs', desc: 'Git server writes packfile to storage, updates refs (branch pointers). Data replicated to 3 hosts via SPOKES.' },
+            { from: 3, to: 5, label: 'Publish push event', desc: 'Git server publishes a PushEvent to Kafka with repo, branch, commits, and author information.' },
+            { from: 5, to: 6, label: 'Trigger re-index', desc: 'Search indexer consumes the event and updates the code search index with new/modified files.' },
+            { from: 3, to: 1, label: 'OK — refs updated', desc: 'Git server responds with success. Developer sees updated refs on their terminal.' },
+        ]
+    },
+    pr: {
+        actors: ['Developer', 'Web Browser', 'API Gateway', 'PR Service', 'MySQL', 'Kafka', 'Notifications'],
+        steps: [
+            { from: 0, to: 1, label: 'Click "Create PR"', desc: 'Developer fills in title, description, reviewers, and labels in the GitHub web UI.' },
+            { from: 1, to: 2, label: 'POST /repos/:owner/:repo/pulls', desc: 'Browser sends API request with base branch, head branch, title, body, and reviewer list.' },
+            { from: 2, to: 3, label: 'gRPC CreatePullRequest', desc: 'API gateway authenticates (OAuth token/session), checks permissions, forwards to PR service.' },
+            { from: 3, to: 4, label: 'INSERT pull_request', desc: 'PR service creates records in MySQL: pull_request, review_requests, labels, and cross-references.' },
+            { from: 3, to: 3, label: 'Compute merge status', desc: 'PR service computes mergeability by attempting a trial merge. Checks branch protection rules.' },
+            { from: 3, to: 5, label: 'Publish PullRequestEvent', desc: 'Publishes event to Kafka for downstream consumers — notifications, webhooks, Actions triggers.' },
+            { from: 5, to: 6, label: 'Notify reviewers', desc: 'Notification service sends emails, mobile push, and web notifications to requested reviewers.' },
+            { from: 3, to: 2, label: 'Return PR #1234', desc: 'PR service returns the created PR with number, URL, diff stats, and mergeability status.' },
+            { from: 2, to: 1, label: 'Render PR page', desc: 'Browser receives response and renders the PR page with diff view, timeline, and review panel.' },
+        ]
+    },
+    actions: {
+        actors: ['Kafka', 'Actions Engine', 'Job Queue', 'Runner', 'Object Store', 'PR Service'],
+        steps: [
+            { from: 0, to: 1, label: 'PushEvent / PR event', desc: 'Actions engine consumes push or pull_request events from Kafka, matching against workflow triggers.' },
+            { from: 1, to: 1, label: 'Parse .github/workflows/*.yml', desc: 'Engine reads workflow YAML files, evaluates conditions (on: push, branches, paths), and builds a job graph.' },
+            { from: 1, to: 2, label: 'Enqueue jobs', desc: 'Each job (with its dependencies) is placed in the job queue. Matrix strategies expand into parallel jobs.' },
+            { from: 2, to: 3, label: 'Assign to runner', desc: 'Available runner picks up a job. Hosted runners get a fresh VM; self-hosted runners use long-poll.' },
+            { from: 3, to: 3, label: 'Execute steps', desc: 'Runner executes each step: checkout code, install deps, run tests, build. Streams logs back in real-time.' },
+            { from: 3, to: 4, label: 'Upload artifacts', desc: 'Build artifacts, test reports, and logs are uploaded to object storage for retention.' },
+            { from: 3, to: 1, label: 'Report job status', desc: 'Runner reports back success/failure for each step and the overall job. Engine updates workflow run status.' },
+            { from: 1, to: 5, label: 'Update check suite', desc: 'Actions engine updates the PR\'s check suite status. All checks passing may auto-merge via merge queue.' },
+        ]
+    },
+    search: {
+        actors: ['Developer', 'Web UI', 'API Gateway', 'Search Service', 'Trigram Index', 'Git Storage'],
+        steps: [
+            { from: 0, to: 1, label: 'Type search query', desc: 'Developer enters a code search query like "func handleWebhook lang:go repo:org/repo" in the search bar.' },
+            { from: 1, to: 2, label: 'GET /search/code?q=...', desc: 'Browser sends the search request to the API with query, filters (language, repo, org), and pagination.' },
+            { from: 2, to: 3, label: 'gRPC Search', desc: 'API gateway routes to Blackbird search service. Auth check ensures user has access to the repos in results.' },
+            { from: 3, to: 4, label: 'Query trigram index', desc: 'Search service breaks query into trigrams, queries the sharded index, intersects posting lists for matches.' },
+            { from: 4, to: 3, label: 'Return file:line matches', desc: 'Index returns matching file paths, line numbers, and snippets. Results ranked by relevance and recency.' },
+            { from: 3, to: 5, label: 'Fetch file content', desc: 'For snippet rendering, search service fetches the actual file content from Git storage around the match.' },
+            { from: 3, to: 2, label: 'Return ranked results', desc: 'Search service returns results with syntax-highlighted snippets, file paths, repo info, and match count.' },
+            { from: 2, to: 1, label: 'Render results page', desc: 'Browser renders search results with highlighted matches, faceted filtering by language/repo/path.' },
+        ]
+    }
+};
+
+let seqState = { flow: 'push', step: -1, playing: false, timer: null };
+
+function selectFlow(f) {
+    seqState.flow = f;
+    seqState.step = -1;
+    seqState.playing = false;
+    clearInterval(seqState.timer);
+    document.getElementById('seq-play-btn').textContent = '▶ Play';
+    document.querySelectorAll('.flow-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    drawSequence();
+    document.getElementById('seq-narration').textContent = 'Press Play to animate, or use Prev/Next to step through.';
+}
+
+function drawSequence() {
+    const svg = document.getElementById('seq-svg');
+    const flow = FLOWS[seqState.flow];
+    const actorCount = flow.actors.length;
+    const gap = 1100 / (actorCount + 1);
+    const startX = 80;
+    let html = '';
+
+    flow.actors.forEach((a, i) => {
+        const x = startX + gap * i;
+        html += `<rect x="${x-45}" y="10" width="90" height="30" rx="6" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>`;
+        html += `<text x="${x}" y="30" text-anchor="middle" font-size="10" font-weight="700" fill="#1f2328">${a}</text>`;
+        html += `<line x1="${x}" y1="42" x2="${x}" y2="380" stroke="#d1d9e0" stroke-width="1" stroke-dasharray="4,3"/>`;
+    });
+
+    flow.steps.forEach((s, i) => {
+        const x1 = startX + gap * s.from;
+        const x2 = startX + gap * s.to;
+        const y = 70 + i * 34;
+        const isActive = i <= seqState.step;
+        const isCurrent = i === seqState.step;
+        const color = isCurrent ? '#0969da' : (isActive ? '#59636e' : '#d1d9e0');
+        const textColor = isCurrent ? '#0969da' : (isActive ? '#1f2328' : '#b0b8c4');
+        const sw = isCurrent ? 2 : 1.2;
+
+        if (s.from === s.to) {
+            html += `<path d="M${x1+5},${y} C${x1+50},${y-10} ${x1+50},${y+20} ${x1+5},${y+10}" fill="none" stroke="${color}" stroke-width="${sw}" marker-end="url(#arr-${isActive?'a':'i'})"/>`;
+            html += `<text x="${x1+55}" y="${y+5}" font-size="9" fill="${textColor}" font-weight="${isCurrent?700:500}">${s.label}</text>`;
+        } else {
+            const dir = x2 > x1 ? 1 : -1;
+            html += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${color}" stroke-width="${sw}" marker-end="url(#arr-${isActive?'a':'i'})"/>`;
+            const tx = (x1 + x2) / 2;
+            html += `<text x="${tx}" y="${y-5}" text-anchor="middle" font-size="9" fill="${textColor}" font-weight="${isCurrent?700:500}">${s.label}</text>`;
+        }
+
+        html += `<text x="15" y="${y+4}" font-size="9" fill="${isCurrent ? '#0969da' : '#8b949e'}" font-weight="600">${i+1}.</text>`;
+    });
+
+    html += `<defs>
+        <marker id="arr-a" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#59636e"/></marker>
+        <marker id="arr-i" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#d1d9e0"/></marker>
+    </defs>`;
+
+    svg.innerHTML = html;
+}
+
+function seqNext() {
+    const flow = FLOWS[seqState.flow];
+    if (seqState.step < flow.steps.length - 1) {
+        seqState.step++;
+        drawSequence();
+        document.getElementById('seq-narration').innerHTML = `<strong>Step ${seqState.step+1}:</strong> ${flow.steps[seqState.step].desc}`;
+    } else {
+        seqState.playing = false;
+        clearInterval(seqState.timer);
+        document.getElementById('seq-play-btn').textContent = '▶ Play';
+    }
+}
+
+function seqPrev() {
+    if (seqState.step > 0) {
+        seqState.step--;
+        drawSequence();
+        document.getElementById('seq-narration').innerHTML = `<strong>Step ${seqState.step+1}:</strong> ${FLOWS[seqState.flow].steps[seqState.step].desc}`;
+    }
+}
+
+function seqToggle() {
+    if (seqState.playing) {
+        seqState.playing = false;
+        clearInterval(seqState.timer);
+        document.getElementById('seq-play-btn').textContent = '▶ Play';
+    } else {
+        if (seqState.step >= FLOWS[seqState.flow].steps.length - 1) seqState.step = -1;
+        seqState.playing = true;
+        document.getElementById('seq-play-btn').textContent = '⏸ Pause';
+        const speed = [2000, 1500, 1000, 600, 300][document.getElementById('seq-speed').value - 1];
+        seqState.timer = setInterval(seqNext, speed);
+    }
+}
+
+// ===== Pitfalls =====
+const PITFALLS = [
+    { title: 'Monorepo at extreme scale without Git optimization', category: 'Design',
+      mistake: 'Storing a massive monorepo (millions of files) on GitHub without using sparse checkout, partial clone, or Git LFS.',
+      why: 'Monorepos keep all code discoverable in one place, and small teams never hit scale limits.',
+      consequence: 'Clone times grow to 30+ minutes, CI runners waste time fetching irrelevant code, and developers\' local disks fill up. GitHub may throttle or reject pushes.',
+      fix: 'Use shallow clones (--depth 1) in CI, sparse checkout for developers, Git LFS for large binaries, and consider splitting into multiple repos with a dependency manager.' },
+    { title: 'Storing secrets in Git history', category: 'Implementation',
+      mistake: 'Committing API keys, tokens, or credentials to a repository — even temporarily.',
+      why: 'Quick local testing with hardcoded secrets, forgetting .gitignore, or not realizing Git retains history.',
+      consequence: 'Secrets persist in Git history forever (even after deletion). Bots scan public repos and exploit leaked credentials within minutes.',
+      fix: 'Use GitHub secret scanning, .gitignore, environment variables, and tools like git-secrets. If a secret is committed, rotate it immediately — git filter-repo cannot guarantee all cached copies are purged.' },
+    { title: 'Not using branch protection on main', category: 'Design',
+      mistake: 'Allowing direct pushes to the default branch without requiring PR reviews or CI checks.',
+      why: 'Small teams value speed, and branch protection adds friction. "We trust each other."',
+      consequence: 'Broken builds, accidental force-pushes that rewrite history, and no audit trail. Incidents multiply as the team grows.',
+      fix: 'Enable branch protection: require PR reviews, status checks (CI green), no force-push, and signed commits for sensitive repos. Use merge queue to prevent merge skew.' },
+    { title: 'Over-relying on GitHub Actions minutes for large builds', category: 'Design',
+      mistake: 'Running heavy builds (ML training, large compiles, integration tests) entirely on GitHub-hosted runners.',
+      why: 'Hosted runners are zero-config and free for public repos.',
+      consequence: 'Expensive bills (especially macOS/GPU runners), slow builds due to cold start and no caching, and flaky tests from resource contention.',
+      fix: 'Use self-hosted runners for heavy workloads, cache dependencies aggressively (actions/cache), use matrix builds to parallelize, and consider splitting long workflows into reusable pieces.' },
+    { title: 'Ignoring rate limits in integrations', category: 'Implementation',
+      mistake: 'Building GitHub API integrations without handling rate limits (5,000 req/hr for authenticated, 60/hr unauthenticated).',
+      why: 'Low-volume testing never hits limits. Developers assume the API is unlimited.',
+      consequence: 'Integrations break during spikes (new release, incident). 403 responses cascade through CI/CD and automation. Webhook redelivery amplifies the problem.',
+      fix: 'Check X-RateLimit-Remaining headers, implement exponential backoff, use conditional requests (ETags), prefer webhooks over polling, and use GraphQL to reduce API call count.' },
+    { title: 'Not securing webhook endpoints', category: 'Implementation',
+      mistake: 'Accepting webhook payloads without validating the HMAC-SHA256 signature from GitHub.',
+      why: 'Webhook handler "just works" in development, and adding signature verification feels like extra work.',
+      consequence: 'Attackers send forged payloads to trigger deployments, inject malicious code, or exfiltrate secrets through your CI/CD pipeline.',
+      fix: 'Always verify the X-Hub-Signature-256 header using your webhook secret. Reject replayed payloads by checking timestamps. Use HTTPS endpoints only.' },
+    { title: 'Designing a GitHub clone without sharding Git storage', category: 'Interview',
+      mistake: 'Putting all Git repositories on a single server or NAS without a distribution strategy.',
+      why: 'Git repos are just directories — it seems simple to store them on a shared filesystem.',
+      consequence: 'I/O bottlenecks, inability to scale past a single server\'s disk/IOPS capacity, and catastrophic data loss without replication.',
+      fix: 'Use consistent hashing to distribute repos across storage nodes (like GitHub\'s SPOKES). Maintain 3 replicas. Separate hot repos (popular open-source) from cold repos for tiered storage.' },
+    { title: 'Skipping capacity estimation in interviews', category: 'Interview',
+      mistake: 'Jumping straight into architecture without estimating QPS, storage, and bandwidth requirements.',
+      why: 'It feels faster to start drawing boxes than to do math. "The architecture handles any scale."',
+      consequence: 'The design is either over-engineered for a startup or woefully under-engineered for GitHub-scale. Interviewers see a lack of systematic thinking.',
+      fix: 'Always start with: users, read/write ratio, data growth, peak QPS. Then derive: storage (repos * avg size), bandwidth (reads * avg payload), compute (QPS * processing time). Show the math.' },
+];
+
+function renderPitfalls() {
+    const container = document.getElementById('pitfalls-container');
+    container.innerHTML = PITFALLS.map((p, i) => `
+        <div class="pitfall-card" onclick="this.classList.toggle('open')">
+            <div class="pitfall-header">
+                <span class="arrow">&#9654;</span>
+                <span class="badge ${p.category==='Design'?'badge-orange':p.category==='Implementation'?'badge-red':'badge-purple'}">${p.category}</span>
+                ${p.title}
+            </div>
+            <div class="pitfall-body">
+                <p><strong>The mistake:</strong> ${p.mistake}</p>
+                <p><strong>Why it happens:</strong> ${p.why}</p>
+                <p><strong>Consequence:</strong> ${p.consequence}</p>
+                <p><strong>The fix:</strong> ${p.fix}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ===== Best Practices =====
+const PRACTICES = [
+    { group: 'Design Phase', color: 'var(--green)', items: [
+        'Start with read/write ratio — GitHub is 10:1+ read-heavy. Design caching and replication accordingly.',
+        'Separate Git object storage from metadata (MySQL). They have fundamentally different access patterns and scaling needs.',
+        'Plan for repository size variance — some repos are 10KB, some are 10GB. Your storage system must handle both efficiently.',
+        'Design the event bus (Kafka) early — it decouples services and enables features like webhooks, notifications, and search indexing.',
+        'Define SLAs: 99.99% for Git operations, <200ms p95 for API reads, <2s for PR mergeability computation.',
+    ]},
+    { group: 'Implementation', color: 'var(--accent)', items: [
+        'Use packfile protocol efficiently — deltification reduces bandwidth by 70%+ for clones and fetches.',
+        'Implement ref advertisement caching — reduce load on storage by caching branch/tag lists per repo.',
+        'Use content-addressable storage (SHA-256) for deduplication across forks — forks share objects with their upstream.',
+        'Implement merge queue to prevent "merge skew" — where individually passing PRs break when combined.',
+        'Rate limit by token, IP, and repo — different limits for authenticated vs. anonymous, API vs. Git protocol.',
+    ]},
+    { group: 'Operational', color: 'var(--purple)', items: [
+        'Monitor Git server p99 latency and packfile negotiation time — these indicate storage health before users notice.',
+        'Alert on replica lag in SPOKES — if a replica falls behind, you risk data loss on primary failure.',
+        'Use canary deployments for Rails monolith — with 50+ deploys/day, each deploy must be safe to roll back in seconds.',
+        'Implement circuit breakers between services — a slow search service should not cascade into Git push failures.',
+        'Track webhook delivery success rate per endpoint — disable endpoints with sustained failures to protect the delivery system.',
+    ]},
+    { group: 'Scaling', color: 'var(--teal)', items: [
+        'Shard MySQL by repository/org ID using Vitess — this provides horizontal scaling without application-level sharding logic.',
+        'Cache aggressively at multiple layers: CDN (static), Redis (sessions/hot data), application (computed results like mergeability).',
+        'Use consistent hashing for Git repo placement — adding/removing storage nodes should redistribute minimal repos.',
+        'Implement tiered storage — hot repos (popular open-source) on SSD, cold repos on HDD, archived repos compressed.',
+        'Scale CI/CD runners independently from the web tier — Actions load is bursty and uncorrelated with web traffic.',
+    ]},
+];
+
+function renderPractices() {
+    const container = document.getElementById('practices-container');
+    container.innerHTML = PRACTICES.map(g => `
+        <div class="bp-group">
+            <h3 style="color:${g.color};">✓ ${g.group}</h3>
+            ${g.items.map(item => `
+                <div class="bp-item">
+                    <span class="bp-check">✓</span>
+                    <span>${item}</span>
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
+}
+
+// ===== Scaling =====
+const METRICS = [
+    { value: '100M+', label: 'Monthly Active Users' },
+    { value: '300M+', label: 'Repositories' },
+    { value: '3B+', label: 'Daily API Requests' },
+    { value: '72M+', label: 'CI Jobs / Day' },
+    { value: '1M+', label: 'Daily Git Pushes' },
+    { value: '200M+', label: 'Repos Indexed (Search)' },
+    { value: '5+ PB', label: 'Git Object Storage' },
+    { value: '99.99%', label: 'Availability Target' },
+];
+
+function renderMetrics() {
+    const grid = document.getElementById('metrics-grid');
+    grid.innerHTML = METRICS.map(m => `
+        <div class="metric-card">
+            <div class="metric-value">${m.value}</div>
+            <div class="metric-label">${m.label}</div>
+        </div>
+    `).join('');
+}
+
+const TRADEOFFS = [
+    { label: 'Consistency', left: 'Strong (linearizable)', right: 'Eventual', pct: 35, color: 'var(--accent)',
+      note: 'Git refs need strong consistency (no lost writes). Notifications and search indexing use eventual consistency for throughput.' },
+    { label: 'Latency vs Durability', left: 'Low latency', right: 'High durability', pct: 60, color: 'var(--green)',
+      note: 'Git pushes wait for 3 replicas before acknowledging (durability first). Reads served from any replica for low latency.' },
+    { label: 'Monolith vs Micro', left: 'Monolith', right: 'Microservices', pct: 40, color: 'var(--purple)',
+      note: 'GitHub uses a hybrid — Rails monolith for web with extracted services for Git, Actions, Search. Pragmatic, not dogmatic.' },
+    { label: 'Scale Strategy', left: 'Vertical', right: 'Horizontal', pct: 75, color: 'var(--orange)',
+      note: 'Horizontal for most components (stateless web, sharded MySQL). Vertical for individual Git storage nodes (bigger disks, more IOPS).' },
+];
+
+function renderTradeoffs() {
+    const container = document.getElementById('tradeoffs-container');
+    container.innerHTML = TRADEOFFS.map(t => `
+        <div class="tradeoff-row">
+            <div class="tradeoff-label">${t.label}</div>
+            <div class="tradeoff-ends" style="min-width:auto;"><span>${t.left}</span></div>
+            <div class="tradeoff-bar">
+                <div class="tradeoff-fill" style="width:${t.pct}%;background:${t.color};"></div>
+            </div>
+            <div class="tradeoff-ends" style="min-width:auto;"><span>${t.right}</span></div>
+        </div>
+        <p style="font-size:0.82rem;color:var(--text-secondary);margin:-0.5rem 0 0.75rem 155px;">${t.note}</p>
+    `).join('');
+}
+
+const FAILURES = [
+    { title: 'Git Storage Node Failure', desc: 'SPOKES maintains 3 replicas. On primary failure, a replica is promoted within seconds. Lost node is replaced and re-synced from surviving replicas. RPO: 0 (synchronous replication). RTO: <30 seconds.' },
+    { title: 'MySQL Primary Failure', desc: 'Vitess orchestrates automatic failover to a read replica promoted to primary. In-flight transactions may be lost (RPO: ~1s). Client connections retry transparently via ProxySQL. RTO: <60 seconds.' },
+    { title: 'Redis Cluster Partition', desc: 'Cache misses fall through to MySQL (increased DB load). Job queues may delay background tasks (notifications, webhooks). Session cache loss forces re-login for affected users. System degrades but remains functional.' },
+    { title: 'Kafka Broker Outage', desc: 'Partition replication ensures no data loss. Producers buffer and retry. Downstream consumers (search indexer, notifications) fall behind but catch up when the broker recovers. Events are never lost due to replication factor 3.' },
+    { title: 'CDN Outage', desc: 'Static assets and clone acceleration degrade. Origin servers handle direct requests at higher latency. Git operations continue via direct SSH. Auto-failover to secondary CDN provider.' },
+    { title: 'GitHub Actions Runner Pool Exhaustion', desc: 'Queued jobs wait for available runners. Self-hosted runners unaffected. GitHub auto-scales hosted runner fleet but may take minutes. Users see "Queued" status for longer than usual. No data loss.' },
+];
+
+function renderFailures() {
+    const container = document.getElementById('failures-container');
+    container.innerHTML = FAILURES.map(f => `
+        <div class="failure-card">
+            <h4>${f.title}</h4>
+            <p>${f.desc}</p>
+        </div>
+    `).join('');
+}
+
+// ===== Playground: Git Workflow Simulator =====
+let gitState = { commits: [], branches: { main: 0 }, currentBranch: 'main', nextId: 1 };
+
+function gitReset() {
+    gitState = {
+        commits: [{ id: 0, msg: 'Initial commit', branch: 'main', parent: null, merge: false }],
+        branches: { main: 0 },
+        currentBranch: 'main',
+        nextId: 1
+    };
+    renderGitGraph();
+}
+
+function gitCommit() {
+    const msg = document.getElementById('git-commit-msg').value || 'Update';
+    const branch = document.getElementById('git-branch-name').value || gitState.currentBranch;
+    if (!gitState.branches.hasOwnProperty(branch)) {
+        gitState.branches[branch] = gitState.branches[gitState.currentBranch];
+    }
+    gitState.currentBranch = branch;
+    const parentId = gitState.branches[branch];
+    const commit = { id: gitState.nextId++, msg, branch, parent: parentId, merge: false };
+    gitState.commits.push(commit);
+    gitState.branches[branch] = commit.id;
+    renderGitGraph();
+}
+
+function gitBranch() {
+    const name = document.getElementById('git-branch-name').value || 'feature/new';
+    if (!gitState.branches.hasOwnProperty(name)) {
+        gitState.branches[name] = gitState.branches[gitState.currentBranch];
+    }
+    gitState.currentBranch = name;
+    renderGitGraph();
+}
+
+function gitMerge() {
+    const branch = gitState.currentBranch;
+    if (branch === 'main') return;
+    const mergeCommit = {
+        id: gitState.nextId++,
+        msg: `Merge ${branch} into main`,
+        branch: 'main',
+        parent: gitState.branches['main'],
+        mergeParent: gitState.branches[branch],
+        merge: true
+    };
+    gitState.commits.push(mergeCommit);
+    gitState.branches['main'] = mergeCommit.id;
+    gitState.currentBranch = 'main';
+    renderGitGraph();
+}
+
+function gitPreset(type) {
+    gitReset();
+    if (type === 'feature') {
+        document.getElementById('git-branch-name').value = 'feature/auth';
+        gitState.branches['feature/auth'] = 0;
+        gitState.currentBranch = 'feature/auth';
+        [{ msg: 'Add auth middleware' }, { msg: 'Add login tests' }, { msg: 'Fix session handling' }].forEach(c => {
+            const commit = { id: gitState.nextId++, msg: c.msg, branch: 'feature/auth', parent: gitState.branches['feature/auth'], merge: false };
+            gitState.commits.push(commit);
+            gitState.branches['feature/auth'] = commit.id;
+        });
+        const merge = { id: gitState.nextId++, msg: 'Merge feature/auth into main', branch: 'main', parent: 0, mergeParent: gitState.branches['feature/auth'], merge: true };
+        gitState.commits.push(merge);
+        gitState.branches['main'] = merge.id;
+        gitState.currentBranch = 'main';
+    } else if (type === 'hotfix') {
+        document.getElementById('git-branch-name').value = 'hotfix/security-patch';
+        const mainCommit = { id: gitState.nextId++, msg: 'Add user dashboard', branch: 'main', parent: 0, merge: false };
+        gitState.commits.push(mainCommit);
+        gitState.branches['main'] = mainCommit.id;
+        gitState.branches['hotfix/security-patch'] = mainCommit.id;
+        gitState.currentBranch = 'hotfix/security-patch';
+        const fix = { id: gitState.nextId++, msg: 'Patch XSS vulnerability', branch: 'hotfix/security-patch', parent: mainCommit.id, merge: false };
+        gitState.commits.push(fix);
+        gitState.branches['hotfix/security-patch'] = fix.id;
+        const merge = { id: gitState.nextId++, msg: 'Merge hotfix/security-patch into main', branch: 'main', parent: mainCommit.id, mergeParent: fix.id, merge: true };
+        gitState.commits.push(merge);
+        gitState.branches['main'] = merge.id;
+        gitState.currentBranch = 'main';
+    } else if (type === 'release') {
+        document.getElementById('git-branch-name').value = 'release/v2.0';
+        const c1 = { id: gitState.nextId++, msg: 'Add new API endpoints', branch: 'main', parent: 0, merge: false };
+        gitState.commits.push(c1); gitState.branches['main'] = c1.id;
+        const c2 = { id: gitState.nextId++, msg: 'Add rate limiting', branch: 'main', parent: c1.id, merge: false };
+        gitState.commits.push(c2); gitState.branches['main'] = c2.id;
+        gitState.branches['release/v2.0'] = c2.id;
+        const r1 = { id: gitState.nextId++, msg: 'Bump version to 2.0.0', branch: 'release/v2.0', parent: c2.id, merge: false };
+        gitState.commits.push(r1); gitState.branches['release/v2.0'] = r1.id;
+        const r2 = { id: gitState.nextId++, msg: 'Fix release blocker', branch: 'release/v2.0', parent: r1.id, merge: false };
+        gitState.commits.push(r2); gitState.branches['release/v2.0'] = r2.id;
+        const merge = { id: gitState.nextId++, msg: 'Merge release/v2.0 into main', branch: 'main', parent: c2.id, mergeParent: r2.id, merge: true };
+        gitState.commits.push(merge);
+        gitState.branches['main'] = merge.id;
+        gitState.currentBranch = 'main';
+    }
+    renderGitGraph();
+}
+
+function renderGitGraph() {
+    const el = document.getElementById('git-graph');
+    const branchNames = Object.keys(gitState.branches);
+    const branchColors = ['#7ee787', '#f0883e', '#a5d6ff', '#d2a8ff', '#ff7b72', '#79c0ff'];
+    const colorMap = {};
+    branchNames.forEach((b, i) => colorMap[b] = branchColors[i % branchColors.length]);
+
+    let lines = [];
+    const sorted = [...gitState.commits].reverse();
+
+    sorted.forEach(c => {
+        const hash = (c.id * 2654435761 >>> 0).toString(16).slice(0, 7);
+        const branchLabel = branchNames.filter(b => gitState.branches[b] === c.id).map(b => `<span class="git-branch">(${b})</span>`).join(' ');
+        const color = colorMap[c.branch] || '#c9d1d9';
+        const dot = `<span style="color:${color};">*</span>`;
+        const mergeLabel = c.merge ? ' <span class="git-merge">[merge]</span>' : '';
+        lines.push(`<div class="git-line">${dot} <span class="git-hash">${hash}</span> ${branchLabel}${mergeLabel} <span class="git-msg">${c.msg}</span></div>`);
+    });
+
+    el.innerHTML = lines.join('');
+
+    const metricsEl = document.getElementById('git-metrics');
+    metricsEl.innerHTML = `
+        <div class="pg-metric"><div class="val">${gitState.commits.length}</div><div class="lbl">Commits</div></div>
+        <div class="pg-metric"><div class="val">${branchNames.length}</div><div class="lbl">Branches</div></div>
+        <div class="pg-metric"><div class="val">${gitState.commits.filter(c=>c.merge).length}</div><div class="lbl">Merges</div></div>
+        <div class="pg-metric"><div class="val">${gitState.currentBranch}</div><div class="lbl">HEAD</div></div>
+    `;
+}
+
+// ===== Playground: Scale Calculator =====
+function scalePreset(level) {
+    const presets = {
+        startup: { dau: 1000, repos: 3, pushes: 2, pushSize: 30, rw: '5' },
+        midscale: { dau: 100000, repos: 8, pushes: 4, pushSize: 60, rw: '10' },
+        github: { dau: 100000000, repos: 5, pushes: 3, pushSize: 50, rw: '20' },
+    };
+    const p = presets[level];
+    document.getElementById('scale-dau').value = p.dau;
+    document.getElementById('scale-repos').value = p.repos;
+    document.getElementById('scale-pushes').value = p.pushes;
+    document.getElementById('scale-push-size').value = p.pushSize;
+    document.getElementById('scale-rw').value = p.rw;
+    calcScale();
+}
+
+function calcScale() {
+    const dau = parseInt(document.getElementById('scale-dau').value);
+    const repos = parseInt(document.getElementById('scale-repos').value);
+    const pushes = parseInt(document.getElementById('scale-pushes').value);
+    const pushSizeKB = parseInt(document.getElementById('scale-push-size').value);
+    const rwRatio = parseInt(document.getElementById('scale-rw').value);
+
+    const totalRepos = dau * repos;
+    const dailyPushes = dau * pushes;
+    const pushQPS = Math.ceil(dailyPushes / 86400);
+    const readQPS = pushQPS * rwRatio;
+    const totalQPS = pushQPS + readQPS;
+    const dailyStorageMB = (dailyPushes * pushSizeKB) / 1024;
+    const monthlyStorageGB = (dailyStorageMB * 30) / 1024;
+    const yearlyStorageTB = (monthlyStorageGB * 12) / 1024;
+    const bandwidthGbps = ((readQPS * pushSizeKB * 1024 * 8) / 1e9).toFixed(2);
+    const gitServers = Math.ceil(pushQPS / 200);
+    const webServers = Math.ceil(readQPS / 2000);
+    const mysqlShards = Math.max(1, Math.ceil(totalRepos / 10000000));
+    const redisNodes = Math.max(3, Math.ceil(readQPS / 50000));
+    const storageNodes = Math.max(3, Math.ceil(yearlyStorageTB / 10));
+
+    const fmt = n => n >= 1e9 ? (n/1e9).toFixed(1)+'B' : n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : n;
+
+    const output = document.getElementById('scale-output');
+    output.innerHTML = `<strong>Capacity Estimation</strong>
+
+<strong>Traffic:</strong>
+  Daily Active Users:       ${fmt(dau)}
+  Total Repositories:       ${fmt(totalRepos)}
+  Daily Git Pushes:         ${fmt(dailyPushes)}
+  Write QPS (pushes):       ${fmt(pushQPS)} req/s
+  Read QPS (${rwRatio}:1 ratio):   ${fmt(readQPS)} req/s
+  Total QPS:                ${fmt(totalQPS)} req/s
+
+<strong>Storage:</strong>
+  Daily new data:           ${dailyStorageMB >= 1024 ? (dailyStorageMB/1024).toFixed(1)+' GB' : dailyStorageMB.toFixed(0)+' MB'}
+  Monthly growth:           ${monthlyStorageGB >= 1024 ? (monthlyStorageGB/1024).toFixed(1)+' TB' : monthlyStorageGB.toFixed(0)+' GB'}
+  Yearly growth:            ${yearlyStorageTB >= 1024 ? (yearlyStorageTB/1024).toFixed(1)+' PB' : yearlyStorageTB.toFixed(1)+' TB'}
+  (x3 for replication):     ${(yearlyStorageTB*3).toFixed(1)} TB raw
+
+<strong>Bandwidth:</strong>
+  Read bandwidth:           ${bandwidthGbps} Gbps
+
+<strong>Infrastructure (estimated):</strong>
+  Git protocol servers:     ${gitServers} (@ 200 push QPS each)
+  Web/API servers:          ${webServers} (@ 2000 read QPS each)
+  MySQL shards (Vitess):    ${mysqlShards} (@ 10M repos each)
+  Redis nodes:              ${redisNodes} (@ 50K ops/s each)
+  Storage nodes:            ${storageNodes} (@ 10TB each, x3 replicas)`;
+
+    const metricsEl = document.getElementById('scale-metrics');
+    metricsEl.innerHTML = `
+        <div class="pg-metric"><div class="val">${fmt(totalQPS)}</div><div class="lbl">Total QPS</div></div>
+        <div class="pg-metric"><div class="val">${yearlyStorageTB >= 1024 ? (yearlyStorageTB/1024).toFixed(1)+'PB' : yearlyStorageTB.toFixed(1)+'TB'}</div><div class="lbl">Yearly Storage</div></div>
+        <div class="pg-metric"><div class="val">${bandwidthGbps}</div><div class="lbl">Gbps Read BW</div></div>
+        <div class="pg-metric"><div class="val">${gitServers + webServers + storageNodes}</div><div class="lbl">Total Servers</div></div>
+    `;
+}
+
+// ===== Playground: Merge Strategy =====
+function renderMergeStrategy() {
+    const strategy = document.getElementById('merge-strategy').value;
+    const count = parseInt(document.getElementById('merge-commits').value);
+    document.getElementById('merge-commits-val').textContent = count;
+
+    const commits = ['Initial commit', 'Add base module'];
+    const featureCommits = [];
+    const featureMsgs = ['Add feature scaffold', 'Implement core logic', 'Add unit tests', 'Fix edge case', 'Refactor handler', 'Add docs', 'Update config', 'Polish UI'];
+    for (let i = 0; i < count; i++) featureCommits.push(featureMsgs[i]);
+
+    // Before
+    let beforeLines = [];
+    const mainColor = '#7ee787';
+    const featureColor = '#f0883e';
+
+    commits.forEach((c, i) => {
+        const hash = ((i+1) * 2654435761 >>> 0).toString(16).slice(0, 7);
+        beforeLines.push(`<div class="git-line"><span style="color:${mainColor};">*</span> <span class="git-hash">${hash}</span> <span class="git-branch">(main)</span> <span class="git-msg">${c}</span></div>`);
+    });
+    beforeLines.push(`<div class="git-line"><span style="color:${mainColor};">|</span><span style="color:${featureColor};">\\</span></div>`);
+    featureCommits.forEach((c, i) => {
+        const hash = ((i+10) * 2654435761 >>> 0).toString(16).slice(0, 7);
+        beforeLines.push(`<div class="git-line"><span style="color:${mainColor};">|</span> <span style="color:${featureColor};">*</span> <span class="git-hash">${hash}</span> <span class="git-branch">(feature)</span> <span class="git-msg">${c}</span></div>`);
+    });
+
+    document.getElementById('merge-before').innerHTML = beforeLines.reverse().join('');
+
+    // After
+    let afterLines = [];
+    if (strategy === 'merge') {
+        const mergeHash = (99 * 2654435761 >>> 0).toString(16).slice(0, 7);
+        afterLines.push(`<div class="git-line"><span style="color:${mainColor};">*</span> <span class="git-hash">${mergeHash}</span> <span class="git-branch">(main)</span> <span class="git-merge">[merge]</span> <span class="git-msg">Merge feature into main</span></div>`);
+        afterLines.push(`<div class="git-line"><span style="color:${mainColor};">|</span><span style="color:${featureColor};">\\</span></div>`);
+        featureCommits.slice().reverse().forEach((c, i) => {
+            const hash = ((i+10) * 2654435761 >>> 0).toString(16).slice(0, 7);
+            afterLines.push(`<div class="git-line"><span style="color:${mainColor};">|</span> <span style="color:${featureColor};">*</span> <span class="git-hash">${hash}</span> <span class="git-msg">${c}</span></div>`);
+        });
+        afterLines.push(`<div class="git-line"><span style="color:${mainColor};">|</span><span style="color:${featureColor};">/</span></div>`);
+        commits.slice().reverse().forEach(c => {
+            const hash = ((commits.indexOf(c)+1) * 2654435761 >>> 0).toString(16).slice(0, 7);
+            afterLines.push(`<div class="git-line"><span style="color:${mainColor};">*</span> <span class="git-hash">${hash}</span> <span class="git-msg">${c}</span></div>`);
+        });
+    } else if (strategy === 'squash') {
+        const squashHash = (88 * 2654435761 >>> 0).toString(16).slice(0, 7);
+        afterLines.push(`<div class="git-line"><span style="color:${mainColor};">*</span> <span class="git-hash">${squashHash}</span> <span class="git-branch">(main)</span> <span class="git-msg">${featureCommits[0]} (squashed ${count} commits)</span></div>`);
+        commits.slice().reverse().forEach(c => {
+            const hash = ((commits.indexOf(c)+1) * 2654435761 >>> 0).toString(16).slice(0, 7);
+            afterLines.push(`<div class="git-line"><span style="color:${mainColor};">*</span> <span class="git-hash">${hash}</span> <span class="git-msg">${c}</span></div>`);
+        });
+    } else {
+        const rebased = featureCommits.slice().reverse();
+        rebased.forEach((c, i) => {
+            const hash = ((i+50) * 2654435761 >>> 0).toString(16).slice(0, 7);
+            afterLines.push(`<div class="git-line"><span style="color:${mainColor};">*</span> <span class="git-hash">${hash}</span>${i===0?' <span class="git-branch">(main)</span>':''} <span class="git-msg">${c}</span></div>`);
+        });
+        commits.slice().reverse().forEach(c => {
+            const hash = ((commits.indexOf(c)+1) * 2654435761 >>> 0).toString(16).slice(0, 7);
+            afterLines.push(`<div class="git-line"><span style="color:${mainColor};">*</span> <span class="git-hash">${hash}</span> <span class="git-msg">${c}</span></div>`);
+        });
+    }
+
+    document.getElementById('merge-after').innerHTML = afterLines.join('');
+
+    const info = {
+        merge: `<strong>Merge Commit</strong> — preserves full branch history with a merge commit. All ${count} feature commits remain in the log. Best for: team collaboration where commit history matters. Trade-off: history can become complex with many branches.`,
+        squash: `<strong>Squash & Merge</strong> — combines all ${count} feature commits into a single commit on main. Clean, linear history. Best for: small features, keeping main branch clean. Trade-off: individual commit granularity is lost.`,
+        rebase: `<strong>Rebase & Merge</strong> — replays ${count} feature commits on top of main with new hashes. Linear history preserving individual commits. Best for: when you want both clean history and commit granularity. Trade-off: rewrites history (new commit hashes).`,
+    };
+
+    document.getElementById('merge-info').innerHTML = info[strategy];
+}
+
+// ===== Playground Tab Switching =====
+function switchPlayground(panel) {
+    document.querySelectorAll('.pg-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.pg-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('pg-' + panel).classList.add('active');
+    event.target.classList.add('active');
+}
+
+// ===== Navigation =====
+function scrollToSection(id) {
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    const link = document.querySelector(`.nav-link[href="#${id}"]`);
+    if (link) link.classList.add('active');
+}
+
+const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            const link = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+            if (link) link.classList.add('active');
+        }
+    });
+}, { threshold: 0.2 });
+
+document.querySelectorAll('.section').forEach(s => observer.observe(s));
+
+// ===== Init =====
+drawArchitecture();
+renderComponents();
+drawSequence();
+renderPitfalls();
+renderPractices();
+renderMetrics();
+renderTradeoffs();
+renderFailures();
+gitReset();
+calcScale();
+renderMergeStrategy();
+</script>
+</body>
+</html>

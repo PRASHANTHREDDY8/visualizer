@@ -1,0 +1,1835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAP Theorem — Visualizer</title>
+  <style>
+    :root {
+      --bg: #f8f9fc;
+      --surface: #ffffff;
+      --surface-alt: #f0f2f7;
+      --border: #e2e6ef;
+      --border-strong: #c5cad6;
+      --text: #1a1e2e;
+      --text-secondary: #5a6178;
+      --text-muted: #8b91a5;
+      --accent-c: #2563eb;
+      --accent-c-light: #dbeafe;
+      --accent-a: #059669;
+      --accent-a-light: #d1fae5;
+      --accent-p: #d97706;
+      --accent-p-light: #fef3c7;
+      --accent-cp: #7c3aed;
+      --accent-cp-light: #ede9fe;
+      --accent-ap: #0891b2;
+      --accent-ap-light: #cffafe;
+      --accent-ca: #dc2626;
+      --accent-ca-light: #fee2e2;
+      --danger: #dc2626;
+      --danger-light: #fee2e2;
+      --success: #059669;
+      --success-light: #d1fae5;
+      --warn: #d97706;
+      --warn-light: #fef3c7;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,0.1);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* Sticky Nav */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .nav-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+      padding: 0.85rem 0.75rem 0.85rem 0;
+      border-right: 1px solid var(--border);
+      margin-right: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .nav a {
+      display: inline-block;
+      padding: 0.85rem 0.75rem;
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .nav a:hover, .nav a.active {
+      color: var(--accent-c);
+      border-bottom-color: var(--accent-c);
+    }
+
+    /* Main layout */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 3rem 1rem 2rem;
+    }
+
+    .hero h1 {
+      font-size: 2.75rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, var(--accent-c), var(--accent-cp), var(--accent-a));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    section {
+      margin-bottom: 3rem;
+      scroll-margin-top: 60px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .section-header .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-c);
+      color: white;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .section-header h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1rem;
+    }
+
+    .card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .card p, .card li {
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+    }
+
+    /* Badge / Pill */
+    .pill {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .pill-c { background: var(--accent-c-light); color: var(--accent-c); }
+    .pill-a { background: var(--accent-a-light); color: var(--accent-a); }
+    .pill-p { background: var(--accent-p-light); color: var(--accent-p); }
+    .pill-cp { background: var(--accent-cp-light); color: var(--accent-cp); }
+    .pill-ap { background: var(--accent-ap-light); color: var(--accent-ap); }
+    .pill-ca { background: var(--accent-ca-light); color: var(--accent-ca); }
+
+    /* Architecture Diagram */
+    .arch-container {
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+
+    .arch-svg-wrap {
+      flex: 1;
+      min-height: 460px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .arch-svg-wrap svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .arch-sidebar {
+      width: 300px;
+      flex-shrink: 0;
+    }
+
+    .arch-detail-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .arch-detail-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .arch-detail-card p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 900px) {
+      .arch-container { flex-direction: column; }
+      .arch-sidebar { width: 100%; }
+    }
+
+    /* Component cards */
+    .component-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .component-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-strong);
+    }
+
+    .component-card .tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+    }
+
+    .component-card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .component-card ul {
+      padding-left: 1.25rem;
+      margin-top: 0.5rem;
+    }
+
+    .component-card li {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.35rem;
+    }
+
+    /* Sequence diagram */
+    .seq-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .seq-controls button {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .seq-controls button:hover { background: var(--surface-alt); }
+    .seq-controls button.active { background: var(--accent-c); color: white; border-color: var(--accent-c); }
+
+    .seq-flow-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .seq-flow-tabs button {
+      padding: 0.4rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .seq-flow-tabs button.active {
+      background: var(--accent-c);
+      color: white;
+      border-color: var(--accent-c);
+    }
+
+    .seq-narration {
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      min-height: 2.5em;
+      margin-top: 0.75rem;
+    }
+
+    /* Comparison table */
+    .comp-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      font-size: 0.88rem;
+    }
+
+    .comp-table th {
+      background: var(--surface-alt);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .comp-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comp-table tr:last-child td { border-bottom: none; }
+
+    .comp-table tr.highlighted {
+      background: var(--accent-c-light);
+    }
+
+    /* Pitfalls */
+    .pitfall {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--warn);
+      border-radius: var(--radius-sm);
+      margin-bottom: 0.75rem;
+      overflow: hidden;
+    }
+
+    .pitfall-header {
+      padding: 0.85rem 1rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      font-size: 0.92rem;
+      user-select: none;
+    }
+
+    .pitfall-header:hover { background: var(--surface-alt); }
+
+    .pitfall-body {
+      padding: 0 1rem 1rem;
+      display: none;
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+    }
+
+    .pitfall.open .pitfall-body { display: block; }
+    .pitfall.open .pitfall-chevron { transform: rotate(180deg); }
+
+    .pitfall-chevron { transition: transform 0.2s; }
+
+    .pitfall-label {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+      margin-bottom: 0.35rem;
+    }
+
+    .pitfall-label.mistake { background: var(--danger-light); color: var(--danger); }
+    .pitfall-label.why { background: var(--warn-light); color: var(--warn); }
+    .pitfall-label.consequence { background: #fce7f3; color: #be185d; }
+    .pitfall-label.fix { background: var(--success-light); color: var(--success); }
+
+    .pitfall-section { margin-bottom: 0.6rem; }
+
+    /* Best practices */
+    .bp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--success);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .bp-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+      color: var(--success);
+    }
+
+    .bp-card ul {
+      padding-left: 1.25rem;
+    }
+
+    .bp-card li {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.3rem;
+    }
+
+    /* Scaling section */
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .calc-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .calc-item .val {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent-c);
+    }
+
+    .calc-item .label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Playground */
+    .playground-container {
+      background: var(--surface);
+      border: 2px dashed var(--border-strong);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .pg-controls {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      align-items: flex-end;
+    }
+
+    .pg-control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .pg-control-group label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .pg-control-group select,
+    .pg-control-group input[type="range"] {
+      min-width: 160px;
+    }
+
+    select {
+      padding: 0.45rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      background: var(--surface);
+      cursor: pointer;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent-c);
+      cursor: pointer;
+    }
+
+    .pg-btn {
+      padding: 0.5rem 1.25rem;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .pg-btn-primary { background: var(--accent-c); color: white; }
+    .pg-btn-primary:hover { background: #1d4ed8; }
+    .pg-btn-danger { background: var(--danger); color: white; }
+    .pg-btn-danger:hover { background: #b91c1c; }
+    .pg-btn-secondary { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); }
+    .pg-btn-secondary:hover { background: var(--border); }
+
+    .pg-sim-area {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 1.5rem;
+      min-height: 400px;
+    }
+
+    @media (max-width: 900px) {
+      .pg-sim-area { grid-template-columns: 1fr; }
+    }
+
+    .pg-vis {
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      position: relative;
+      min-height: 400px;
+    }
+
+    .pg-vis svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .pg-metrics {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .pg-metric {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem;
+    }
+
+    .pg-metric .metric-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+
+    .pg-metric .metric-val {
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin: 0.15rem 0;
+    }
+
+    .pg-metric .metric-desc {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    .pg-log {
+      background: #1a1e2e;
+      color: #a5b4c8;
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      max-height: 180px;
+      overflow-y: auto;
+      margin-top: 1rem;
+    }
+
+    .pg-log .log-line {
+      margin-bottom: 0.2rem;
+    }
+
+    .pg-log .log-ok { color: #34d399; }
+    .pg-log .log-err { color: #f87171; }
+    .pg-log .log-warn { color: #fbbf24; }
+    .pg-log .log-info { color: #60a5fa; }
+
+    .pg-narration {
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 0.75rem;
+      min-height: 2em;
+    }
+
+    .preset-btns {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+
+    /* Use case cards */
+    .uc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .uc-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+
+    .uc-card h4 { font-size: 0.95rem; margin-bottom: 0.35rem; }
+    .uc-card p { font-size: 0.85rem; color: var(--text-secondary); }
+
+    .anti-uc {
+      border-left: 4px solid var(--danger);
+    }
+
+    /* Decision boxes */
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .decision-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+
+    .decision-box h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .decision-box ul {
+      padding-left: 1.25rem;
+    }
+
+    .decision-box li {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
+    }
+
+    /* Tabs inside sections */
+    .tab-strip {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab-strip button {
+      padding: 0.5rem 1rem;
+      border: none;
+      background: transparent;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .tab-strip button.active {
+      color: var(--accent-c);
+      border-bottom-color: var(--accent-c);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Scaling tradeoff bars */
+    .tradeoff-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .tradeoff-label {
+      width: 120px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .tradeoff-track {
+      flex: 1;
+      height: 24px;
+      background: var(--surface-alt);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .tradeoff-fill {
+      height: 100%;
+      border-radius: 12px;
+      transition: width 0.4s ease;
+    }
+
+    .tradeoff-ends {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <span class="nav-title">CAP Theorem</span>
+    <a href="#architecture">Architecture</a>
+    <a href="#components">Components</a>
+    <a href="#request-flow">Request Flow</a>
+    <a href="#comparisons">Comparisons</a>
+    <a href="#use-cases">Use Cases & Pitfalls</a>
+    <a href="#best-practices">Best Practices</a>
+    <a href="#scaling">Scaling & Trade-offs</a>
+    <a href="#playground">Playground</a>
+  </nav>
+
+  <div class="container">
+    <div class="hero">
+      <h1>CAP Theorem</h1>
+      <p>In a distributed data store, you can only guarantee two out of three properties: <strong>Consistency</strong>, <strong>Availability</strong>, and <strong>Partition Tolerance</strong>. Since network partitions are inevitable, the real choice is between CP and AP.</p>
+    </div>
+
+    <!-- Section 1: Architecture Diagram -->
+    <section id="architecture">
+      <div class="section-header">
+        <span class="num">1</span>
+        <h2>Architecture Diagram</h2>
+      </div>
+      <div class="arch-container">
+        <div class="arch-svg-wrap" id="archSvg"></div>
+        <div class="arch-sidebar">
+          <div class="arch-detail-card" id="archDetail">
+            <h4>Hover or click a component</h4>
+            <p>Explore the CAP triangle and see how each property relates to distributed system design. Click any node or region to learn more.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Component Breakdown -->
+    <section id="components">
+      <div class="section-header">
+        <span class="num">2</span>
+        <h2>Component Breakdown</h2>
+      </div>
+      <div class="card-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="component-card">
+          <div class="tag" style="background:var(--accent-c-light);color:var(--accent-c);">Property</div>
+          <h3>Consistency (C)</h3>
+          <p>Every read receives the most recent write or an error. All nodes see the same data at the same time.</p>
+          <ul>
+            <li><strong>Mechanism:</strong> Synchronous replication, consensus protocols (Raft, Paxos)</li>
+            <li><strong>Trade-off:</strong> Higher latency — must wait for all replicas to acknowledge</li>
+            <li><strong>Examples:</strong> ZooKeeper, etcd, HBase, Google Spanner</li>
+          </ul>
+        </div>
+        <div class="component-card">
+          <div class="tag" style="background:var(--accent-a-light);color:var(--accent-a);">Property</div>
+          <h3>Availability (A)</h3>
+          <p>Every request receives a non-error response, without guarantee that it contains the most recent write.</p>
+          <ul>
+            <li><strong>Mechanism:</strong> Asynchronous replication, eventual consistency, multi-master</li>
+            <li><strong>Trade-off:</strong> May return stale data during partitions</li>
+            <li><strong>Examples:</strong> Cassandra, DynamoDB, CouchDB, Riak</li>
+          </ul>
+        </div>
+        <div class="component-card">
+          <div class="tag" style="background:var(--accent-p-light);color:var(--accent-p);">Property</div>
+          <h3>Partition Tolerance (P)</h3>
+          <p>The system continues to operate despite arbitrary message loss or failure of part of the network.</p>
+          <ul>
+            <li><strong>Reality:</strong> Network partitions <em>will</em> happen — P is not optional in distributed systems</li>
+            <li><strong>Implication:</strong> The real choice is between CP and AP during a partition</li>
+            <li><strong>Scope:</strong> Applies to any system with >1 node</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card-grid" style="margin-top:1rem;">
+        <div class="component-card" style="border-left:4px solid var(--accent-cp);">
+          <div class="tag" style="background:var(--accent-cp-light);color:var(--accent-cp);">System Type</div>
+          <h3>CP Systems</h3>
+          <p>Sacrifice availability during partitions to maintain consistency. Reject requests when nodes can't reach consensus.</p>
+          <ul>
+            <li><strong>Behavior during partition:</strong> Returns errors or blocks until partition heals</li>
+            <li><strong>Use when:</strong> Correctness is critical (financial transactions, leader election, config management)</li>
+            <li><strong>Tech:</strong> ZooKeeper, etcd, Redis (with WAIT), MongoDB (majority write concern), HBase</li>
+          </ul>
+        </div>
+        <div class="component-card" style="border-left:4px solid var(--accent-ap);">
+          <div class="tag" style="background:var(--accent-ap-light);color:var(--accent-ap);">System Type</div>
+          <h3>AP Systems</h3>
+          <p>Sacrifice consistency during partitions to remain available. Every node responds, but may return stale data.</p>
+          <ul>
+            <li><strong>Behavior during partition:</strong> All nodes respond, conflict resolution happens later</li>
+            <li><strong>Use when:</strong> Uptime is critical (social media feeds, DNS, shopping carts)</li>
+            <li><strong>Tech:</strong> Cassandra, DynamoDB, CouchDB, Riak, DNS</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Request Flow -->
+    <section id="request-flow">
+      <div class="section-header">
+        <span class="num">3</span>
+        <h2>Request Flow</h2>
+      </div>
+      <div class="seq-flow-tabs" id="seqTabs">
+        <button class="active" data-flow="normal">Normal Operation</button>
+        <button data-flow="cp-partition">CP During Partition</button>
+        <button data-flow="ap-partition">AP During Partition</button>
+      </div>
+      <div class="seq-controls">
+        <button id="seqPlay">&#9654; Play</button>
+        <button id="seqStep">Step &#9654;|</button>
+        <button id="seqReset">&#8634; Reset</button>
+        <label style="font-size:0.82rem;color:var(--text-secondary);margin-left:0.5rem;">Speed:</label>
+        <input type="range" id="seqSpeed" min="1" max="5" value="3" style="width:100px;">
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <svg id="seqSvg" width="100%" height="400" viewBox="0 0 800 400"></svg>
+      </div>
+      <div class="seq-narration" id="seqNarration">Press Play or Step to see how requests flow through a distributed system.</div>
+    </section>
+
+    <!-- Section 4: Comparisons -->
+    <section id="comparisons">
+      <div class="section-header">
+        <span class="num">4</span>
+        <h2>Comparisons with Alternatives</h2>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th>Approach</th>
+              <th>Trade-off</th>
+              <th>Behavior During Partition</th>
+              <th>Consistency Model</th>
+              <th>Real-World Examples</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="pill pill-cp">CP</span> <strong>Consistency + Partition Tolerance</strong></td>
+              <td>Sacrifices availability</td>
+              <td>Blocks or returns errors until partition heals; refuses stale reads</td>
+              <td>Strong / Linearizable</td>
+              <td>ZooKeeper, etcd, HBase, Spanner</td>
+            </tr>
+            <tr>
+              <td><span class="pill pill-ap">AP</span> <strong>Availability + Partition Tolerance</strong></td>
+              <td>Sacrifices consistency</td>
+              <td>All nodes respond; may return stale data; conflicts resolved later</td>
+              <td>Eventual consistency</td>
+              <td>Cassandra, DynamoDB, CouchDB, DNS</td>
+            </tr>
+            <tr>
+              <td><span class="pill pill-ca">CA</span> <strong>Consistency + Availability</strong></td>
+              <td>No partition tolerance</td>
+              <td>Cannot handle partitions — only valid for single-node systems</td>
+              <td>Strong (single-node)</td>
+              <td>Single-node PostgreSQL, single-node MySQL</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top:1.5rem;margin-bottom:1rem;">When to Pick Each</h3>
+      <div class="decision-grid">
+        <div class="decision-box" style="border-left:4px solid var(--accent-cp);">
+          <h4><span class="pill pill-cp">CP</span> Choose CP when...</h4>
+          <ul>
+            <li>Data correctness is non-negotiable (banking, inventory, leader election)</li>
+            <li>You'd rather reject a request than return wrong data</li>
+            <li>Clients can tolerate brief unavailability or retries</li>
+            <li>Coordination services: distributed locks, config stores</li>
+          </ul>
+        </div>
+        <div class="decision-box" style="border-left:4px solid var(--accent-ap);">
+          <h4><span class="pill pill-ap">AP</span> Choose AP when...</h4>
+          <ul>
+            <li>User-facing uptime is critical — downtime costs more than stale data</li>
+            <li>The domain tolerates eventual consistency (social feeds, analytics)</li>
+            <li>You can design conflict resolution (last-write-wins, CRDTs, merge functions)</li>
+            <li>Global distribution with low latency matters</li>
+          </ul>
+        </div>
+        <div class="decision-box" style="border-left:4px solid var(--accent-ca);">
+          <h4><span class="pill pill-ca">CA</span> Choose CA when...</h4>
+          <ul>
+            <li>Your system runs on a single node (no distribution needed)</li>
+            <li>It's behind a reliable local network with no realistic partition risk</li>
+            <li>Prototype / MVP stage where simplicity outweighs resilience</li>
+            <li><em>Note: Not viable for truly distributed systems</em></li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 style="margin-top:1.5rem;margin-bottom:1rem;">Real-World Database Classification</h3>
+      <div style="overflow-x:auto;">
+        <table class="comp-table">
+          <thead>
+            <tr><th>Database</th><th>Default CAP</th><th>Tunable?</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>PostgreSQL (single)</td><td><span class="pill pill-ca">CA</span></td><td>No</td><td>Single-node ACID; add Patroni for CP failover</td></tr>
+            <tr><td>MongoDB</td><td><span class="pill pill-cp">CP</span></td><td>Yes</td><td>Write concern + read preference tune C vs A</td></tr>
+            <tr><td>Cassandra</td><td><span class="pill pill-ap">AP</span></td><td>Yes</td><td>Tunable consistency levels (ONE to ALL)</td></tr>
+            <tr><td>DynamoDB</td><td><span class="pill pill-ap">AP</span></td><td>Yes</td><td>Strongly consistent reads available at 2x cost</td></tr>
+            <tr><td>etcd</td><td><span class="pill pill-cp">CP</span></td><td>No</td><td>Raft consensus; foundation of Kubernetes</td></tr>
+            <tr><td>CockroachDB</td><td><span class="pill pill-cp">CP</span></td><td>Partial</td><td>Serializable + Raft; follower reads trade latency</td></tr>
+            <tr><td>Redis (cluster)</td><td><span class="pill pill-ap">AP</span></td><td>Yes</td><td>Async replication default; WAIT command for CP behavior</td></tr>
+            <tr><td>Google Spanner</td><td><span class="pill pill-cp">CP</span></td><td>No</td><td>TrueTime + Paxos; effectively CP with very high A</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 5: Use Cases & Pitfalls -->
+    <section id="use-cases">
+      <div class="section-header">
+        <span class="num">5</span>
+        <h2>Use Cases & Common Pitfalls</h2>
+      </div>
+
+      <h3 style="margin-bottom:1rem;">Primary Use Cases</h3>
+      <div class="uc-grid">
+        <div class="uc-card" style="border-left:4px solid var(--accent-cp);">
+          <h4>Financial Transactions</h4>
+          <p><span class="pill pill-cp">CP</span> Account balances, transfers, and ledger entries require strong consistency. A stale read could mean double-spending.</p>
+        </div>
+        <div class="uc-card" style="border-left:4px solid var(--accent-cp);">
+          <h4>Distributed Coordination</h4>
+          <p><span class="pill pill-cp">CP</span> Leader election, distributed locks, and service discovery (ZooKeeper, etcd) must never disagree on who holds a lock.</p>
+        </div>
+        <div class="uc-card" style="border-left:4px solid var(--accent-ap);">
+          <h4>Social Media Feeds</h4>
+          <p><span class="pill pill-ap">AP</span> A slightly stale timeline is far better than showing users an error page. Eventual consistency is perfectly fine.</p>
+        </div>
+        <div class="uc-card" style="border-left:4px solid var(--accent-ap);">
+          <h4>Shopping Cart / Wishlist</h4>
+          <p><span class="pill pill-ap">AP</span> Cart should always be accessible. Conflict resolution via merge (union of items) handles partitions gracefully.</p>
+        </div>
+        <div class="uc-card" style="border-left:4px solid var(--accent-ap);">
+          <h4>DNS & CDN</h4>
+          <p><span class="pill pill-ap">AP</span> Must always respond. TTL-based eventual consistency is the core design — propagation delays are expected and acceptable.</p>
+        </div>
+        <div class="uc-card" style="border-left:4px solid var(--accent-cp);">
+          <h4>Inventory Management</h4>
+          <p><span class="pill pill-cp">CP</span> Overselling is expensive. Stock counts must be consistent to prevent selling the last item twice.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top:1.5rem;margin-bottom:0.5rem;">Anti-Use-Cases</h3>
+      <div class="uc-grid">
+        <div class="uc-card anti-uc">
+          <h4>Don't use CP for analytics dashboards</h4>
+          <p>Dashboards showing metrics from 5 minutes ago don't need strong consistency. CP adds latency for zero benefit here.</p>
+        </div>
+        <div class="uc-card anti-uc">
+          <h4>Don't use AP for financial ledgers</h4>
+          <p>Eventual consistency on money is a lawsuit. Use CP with well-designed retry logic instead.</p>
+        </div>
+        <div class="uc-card anti-uc">
+          <h4>Don't use CA for multi-region</h4>
+          <p>CA assumes no partitions. Cross-datacenter links <em>will</em> fail. You must choose CP or AP.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top:1.5rem;margin-bottom:1rem;">Common Pitfalls</h3>
+
+      <div class="pitfall" onclick="this.classList.toggle('open')">
+        <div class="pitfall-header">
+          Treating CAP as a permanent, system-wide choice
+          <span class="pitfall-chevron">&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <div class="pitfall-section"><span class="pitfall-label mistake">The Mistake</span><br>Labeling an entire system as "CP" or "AP" and applying that uniformly to all data paths.</div>
+          <div class="pitfall-section"><span class="pitfall-label why">Why It Happens</span><br>The CAP triangle is often taught as a single choice. In reality, different data in the same system can have different requirements.</div>
+          <div class="pitfall-section"><span class="pitfall-label consequence">Consequence</span><br>Over-engineering low-value reads with strong consistency (added latency) or under-protecting critical writes with eventual consistency (data loss).</div>
+          <div class="pitfall-section"><span class="pitfall-label fix">The Fix</span><br>Design per-data-path. User profiles can be AP (eventual), while payment records must be CP (strong). Many databases (Cassandra, MongoDB) let you tune consistency per-query.</div>
+        </div>
+      </div>
+
+      <div class="pitfall" onclick="this.classList.toggle('open')">
+        <div class="pitfall-header">
+          Ignoring partition tolerance ("we have reliable networking")
+          <span class="pitfall-chevron">&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <div class="pitfall-section"><span class="pitfall-label mistake">The Mistake</span><br>Designing a distributed system as CA, assuming the network won't partition.</div>
+          <div class="pitfall-section"><span class="pitfall-label why">Why It Happens</span><br>Cloud networks feel reliable. Partitions are rare but real — cable cuts, DNS failures, firewall misconfigs, GC pauses, asymmetric partitions.</div>
+          <div class="pitfall-section"><span class="pitfall-label consequence">Consequence</span><br>When a partition happens (and it will), the system exhibits undefined behavior — split-brain, data corruption, or total outage.</div>
+          <div class="pitfall-section"><span class="pitfall-label fix">The Fix</span><br>Accept P as given in any multi-node system. Design and test your partition behavior explicitly. Use chaos engineering (Jepsen, Chaos Monkey) to verify.</div>
+        </div>
+      </div>
+
+      <div class="pitfall" onclick="this.classList.toggle('open')">
+        <div class="pitfall-header">
+          Conflating consistency in CAP with ACID consistency
+          <span class="pitfall-chevron">&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <div class="pitfall-section"><span class="pitfall-label mistake">The Mistake</span><br>Assuming "consistent" in CAP means the same as the "C" in ACID transactions.</div>
+          <div class="pitfall-section"><span class="pitfall-label why">Why It Happens</span><br>Same letter, similar-sounding concept. But ACID consistency means "valid state transitions" (constraints, triggers), while CAP consistency means "linearizability" (all nodes see the same data).</div>
+          <div class="pitfall-section"><span class="pitfall-label consequence">Consequence</span><br>Designing for the wrong guarantee. You might get ACID compliance but still have stale reads across replicas.</div>
+          <div class="pitfall-section"><span class="pitfall-label fix">The Fix</span><br>Be precise: CAP-C = linearizability (every read reflects the latest write). ACID-C = integrity constraints. They're orthogonal concerns.</div>
+        </div>
+      </div>
+
+      <div class="pitfall" onclick="this.classList.toggle('open')">
+        <div class="pitfall-header">
+          Not designing conflict resolution for AP systems
+          <span class="pitfall-chevron">&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <div class="pitfall-section"><span class="pitfall-label mistake">The Mistake</span><br>Choosing AP for availability but having no strategy for resolving conflicting writes after a partition heals.</div>
+          <div class="pitfall-section"><span class="pitfall-label why">Why It Happens</span><br>Teams focus on the happy path. During a partition, both sides accept writes. When the partition heals, those writes may conflict.</div>
+          <div class="pitfall-section"><span class="pitfall-label consequence">Consequence</span><br>Data loss — one side's writes silently overwritten, or corrupt merged state.</div>
+          <div class="pitfall-section"><span class="pitfall-label fix">The Fix</span><br>Choose a conflict resolution strategy upfront: last-write-wins (LWW), vector clocks, CRDTs, or application-level merge. Amazon's shopping cart uses union-merge; Riak supports CRDTs natively.</div>
+        </div>
+      </div>
+
+      <div class="pitfall" onclick="this.classList.toggle('open')">
+        <div class="pitfall-header">
+          Jumping to "we need Spanner" in interviews
+          <span class="pitfall-chevron">&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <div class="pitfall-section"><span class="pitfall-label mistake">The Mistake</span><br>Name-dropping Google Spanner (which appears to offer C+A+P) without understanding its constraints and cost.</div>
+          <div class="pitfall-section"><span class="pitfall-label why">Why It Happens</span><br>Spanner is often cited as "beating" CAP. It achieves very high availability with strong consistency by using atomic clocks (TrueTime), but it still sacrifices availability during severe partitions.</div>
+          <div class="pitfall-section"><span class="pitfall-label consequence">Consequence</span><br>Looks like you don't understand the theorem. Interviewers want to see you reason about trade-offs, not name-drop solutions.</div>
+          <div class="pitfall-section"><span class="pitfall-label fix">The Fix</span><br>Acknowledge Spanner is CP — it minimizes unavailability windows through engineering, but still chooses consistency over availability during partitions. Discuss the trade-off reasoning, not just the database name.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: Best Practices -->
+    <section id="best-practices">
+      <div class="section-header">
+        <span class="num">6</span>
+        <h2>Best Practices</h2>
+      </div>
+
+      <div class="bp-card">
+        <h4>Design Phase</h4>
+        <ul>
+          <li>Classify every data entity as CP or AP based on its business impact, not a blanket system choice</li>
+          <li>Define your consistency SLA: linearizable, causal, session, or eventual — most data doesn't need linearizable</li>
+          <li>Map out partition scenarios and document expected behavior for each (error vs. stale data vs. queue-and-retry)</li>
+          <li>Use the PACELC extension: during Partition choose A or C; Else (normal operation) choose Latency or Consistency</li>
+        </ul>
+      </div>
+
+      <div class="bp-card">
+        <h4>Implementation</h4>
+        <ul>
+          <li>Use tunable consistency where available (Cassandra's CL, MongoDB's write concern) — default to eventual, tighten for critical paths</li>
+          <li>Implement idempotent writes so retries after partition recovery don't create duplicates</li>
+          <li>Design conflict resolution before you need it: LWW with vector clocks, CRDTs for counters/sets, or application-level merge functions</li>
+          <li>Use read-repair and anti-entropy protocols to speed convergence in AP systems</li>
+          <li>Add consistency health checks: compare replica states periodically and alert on drift</li>
+        </ul>
+      </div>
+
+      <div class="bp-card">
+        <h4>Operations</h4>
+        <ul>
+          <li>Monitor replication lag as a first-class metric — it's the live indicator of consistency health</li>
+          <li>Run chaos engineering tests (Jepsen, Chaos Monkey) to verify partition behavior matches your design</li>
+          <li>Implement circuit breakers at service boundaries to fail fast during partitions rather than hanging</li>
+          <li>Set up split-brain detection and automated remediation for CP systems</li>
+          <li>Document your runbook: what operators should do when a partition is detected</li>
+        </ul>
+      </div>
+
+      <div class="bp-card">
+        <h4>Scaling</h4>
+        <ul>
+          <li>Multi-region deployments make partitions more likely — plan for cross-region latency and asymmetric failures</li>
+          <li>Use quorum-based replication (N=3, W=2, R=2) for tunable consistency without full synchronous overhead</li>
+          <li>Consider CRDT-based data types for naturally mergeable data (counters, sets, registers)</li>
+          <li>Cache aggressively at the edge for AP reads — stale cache is often acceptable, and it absorbs partition impact</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Section 7: Scaling & Trade-offs -->
+    <section id="scaling">
+      <div class="section-header">
+        <span class="num">7</span>
+        <h2>Scaling & Trade-offs</h2>
+      </div>
+
+      <h3 style="margin-bottom:1rem;">PACELC Extension</h3>
+      <div class="card" style="margin-bottom:1.5rem;">
+        <p style="font-size:0.92rem;margin-bottom:0.75rem;">CAP only describes behavior <em>during</em> partitions. The <strong>PACELC</strong> model extends it: during a <strong>P</strong>artition, choose <strong>A</strong> or <strong>C</strong>; <strong>E</strong>lse (normal operation), choose <strong>L</strong>atency or <strong>C</strong>onsistency.</p>
+        <div style="overflow-x:auto;">
+          <table class="comp-table">
+            <thead><tr><th>System</th><th>During Partition (PA/PC)</th><th>Else (EL/EC)</th><th>Full</th></tr></thead>
+            <tbody>
+              <tr><td>DynamoDB</td><td>PA (Available)</td><td>EL (Low Latency)</td><td>PA/EL</td></tr>
+              <tr><td>Cassandra</td><td>PA (Available)</td><td>EL (Low Latency)</td><td>PA/EL</td></tr>
+              <tr><td>MongoDB</td><td>PC (Consistent)</td><td>EC (Consistent)</td><td>PC/EC</td></tr>
+              <tr><td>Spanner</td><td>PC (Consistent)</td><td>EC (Consistent)</td><td>PC/EC</td></tr>
+              <tr><td>Cosmos DB</td><td>PA (Available)</td><td>EL or EC (Tunable)</td><td>PA/EL or EC</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom:1rem;">Trade-off Spectrum</h3>
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="tradeoff-bar">
+          <span class="tradeoff-label">CP Systems</span>
+          <div style="flex:1;">
+            <div class="tradeoff-track"><div class="tradeoff-fill" style="width:90%;background:var(--accent-c);"></div></div>
+            <div class="tradeoff-ends"><span>Low Consistency</span><span>High Consistency</span></div>
+          </div>
+        </div>
+        <div class="tradeoff-bar">
+          <span class="tradeoff-label">CP Systems</span>
+          <div style="flex:1;">
+            <div class="tradeoff-track"><div class="tradeoff-fill" style="width:35%;background:var(--accent-a);"></div></div>
+            <div class="tradeoff-ends"><span>Low Availability</span><span>High Availability</span></div>
+          </div>
+        </div>
+        <div style="height:1rem;"></div>
+        <div class="tradeoff-bar">
+          <span class="tradeoff-label">AP Systems</span>
+          <div style="flex:1;">
+            <div class="tradeoff-track"><div class="tradeoff-fill" style="width:30%;background:var(--accent-c);"></div></div>
+            <div class="tradeoff-ends"><span>Low Consistency</span><span>High Consistency</span></div>
+          </div>
+        </div>
+        <div class="tradeoff-bar">
+          <span class="tradeoff-label">AP Systems</span>
+          <div style="flex:1;">
+            <div class="tradeoff-track"><div class="tradeoff-fill" style="width:95%;background:var(--accent-a);"></div></div>
+            <div class="tradeoff-ends"><span>Low Availability</span><span>High Availability</span></div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom:1rem;">Failure Scenarios</h3>
+      <div class="card-grid">
+        <div class="card">
+          <h3 style="color:var(--danger);">Network Partition</h3>
+          <p>Nodes can't communicate. CP: minority partition refuses writes, majority continues. AP: both sides accept writes, merge later.</p>
+        </div>
+        <div class="card">
+          <h3 style="color:var(--danger);">Node Failure</h3>
+          <p>CP: if failed node was part of quorum, system may become unavailable until replacement joins. AP: remaining nodes absorb traffic seamlessly.</p>
+        </div>
+        <div class="card">
+          <h3 style="color:var(--danger);">Split Brain</h3>
+          <p>Both sides of a partition believe they're the leader. CP prevents this via quorum/fencing. AP accepts it and resolves conflicts after.</p>
+        </div>
+        <div class="card">
+          <h3 style="color:var(--danger);">Cascading Failure</h3>
+          <p>One component's failure causes others to fail. CP systems are more vulnerable — a partition can cause an availability cascade. AP systems degrade more gracefully.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 8: Interactive Playground -->
+    <section id="playground">
+      <div class="section-header">
+        <span class="num">8</span>
+        <h2>Interactive Playground</h2>
+      </div>
+      <div class="playground-container">
+        <div class="pg-controls">
+          <div class="pg-control-group">
+            <label>System Type</label>
+            <select id="pgSystem">
+              <option value="cp">CP System</option>
+              <option value="ap">AP System</option>
+            </select>
+          </div>
+          <div class="pg-control-group">
+            <label>Nodes</label>
+            <select id="pgNodes">
+              <option value="3">3 Nodes</option>
+              <option value="5" selected>5 Nodes</option>
+              <option value="7">7 Nodes</option>
+            </select>
+          </div>
+          <div class="pg-control-group">
+            <label>Request Rate</label>
+            <input type="range" id="pgRate" min="1" max="10" value="4">
+            <span id="pgRateLabel" style="font-size:0.82rem;color:var(--text-secondary);">4 req/s</span>
+          </div>
+          <button class="pg-btn pg-btn-primary" id="pgStart">&#9654; Start Simulation</button>
+          <button class="pg-btn pg-btn-danger" id="pgPartition">&#9889; Trigger Partition</button>
+          <button class="pg-btn pg-btn-secondary" id="pgHeal">&#10003; Heal Partition</button>
+          <button class="pg-btn pg-btn-secondary" id="pgReset">&#8634; Reset</button>
+        </div>
+        <div class="pg-sim-area">
+          <div class="pg-vis" id="pgVis"></div>
+          <div class="pg-metrics">
+            <div class="pg-metric">
+              <div class="metric-label">Total Requests</div>
+              <div class="metric-val" id="metricTotal">0</div>
+            </div>
+            <div class="pg-metric">
+              <div class="metric-label">Successful Reads</div>
+              <div class="metric-val" id="metricReads" style="color:var(--accent-a);">0</div>
+            </div>
+            <div class="pg-metric">
+              <div class="metric-label">Successful Writes</div>
+              <div class="metric-val" id="metricWrites" style="color:var(--accent-c);">0</div>
+            </div>
+            <div class="pg-metric">
+              <div class="metric-label">Rejected / Errors</div>
+              <div class="metric-val" id="metricErrors" style="color:var(--danger);">0</div>
+            </div>
+            <div class="pg-metric">
+              <div class="metric-label">Stale Reads</div>
+              <div class="metric-val" id="metricStale" style="color:var(--warn);">0</div>
+            </div>
+            <div class="pg-metric">
+              <div class="metric-label">Availability</div>
+              <div class="metric-val" id="metricAvail">100%</div>
+            </div>
+            <div class="pg-metric">
+              <div class="metric-label">Consistency</div>
+              <div class="metric-val" id="metricConsist">100%</div>
+            </div>
+          </div>
+        </div>
+        <div class="pg-log" id="pgLog"></div>
+        <div class="pg-narration" id="pgNarration">Configure the system type and parameters, then start the simulation. Trigger a network partition to see how CP and AP systems behave differently.</div>
+        <div class="preset-btns">
+          <button class="pg-btn pg-btn-secondary" onclick="loadPreset('normal')">Normal Traffic</button>
+          <button class="pg-btn pg-btn-secondary" onclick="loadPreset('partition')">Partition Storm</button>
+          <button class="pg-btn pg-btn-secondary" onclick="loadPreset('high-load')">High Load</button>
+          <button class="pg-btn pg-btn-secondary" onclick="loadPreset('split-brain')">Split Brain</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // ========== NAV HIGHLIGHT ==========
+    const navLinks = document.querySelectorAll('.nav a');
+    const sections = document.querySelectorAll('section[id]');
+    window.addEventListener('scroll', () => {
+      let cur = '';
+      sections.forEach(s => {
+        if (window.scrollY >= s.offsetTop - 80) cur = s.id;
+      });
+      navLinks.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + cur);
+      });
+    });
+
+    // ========== SECTION 1: ARCHITECTURE DIAGRAM ==========
+    function renderArchDiagram() {
+      const wrap = document.getElementById('archSvg');
+      const w = 620, h = 460;
+      const cx = w / 2, cy = h / 2 + 20;
+      const R = 160;
+      const vertices = [
+        { x: cx, y: cy - R - 30, label: 'C', full: 'Consistency', color: '#2563eb', desc: 'Every read receives the most recent write. All nodes agree on the current value before responding.' },
+        { x: cx - R * Math.sin(Math.PI / 3), y: cy + R * Math.cos(Math.PI / 3), label: 'A', full: 'Availability', color: '#059669', desc: 'Every request receives a response. No request is rejected or times out, even during failures.' },
+        { x: cx + R * Math.sin(Math.PI / 3), y: cy + R * Math.cos(Math.PI / 3), label: 'P', full: 'Partition Tolerance', color: '#d97706', desc: 'The system continues operating despite network partitions between nodes. In practice, this is non-negotiable.' }
+      ];
+
+      const edges = [
+        { from: 0, to: 1, label: 'CP', color: '#7c3aed', desc: 'CP: Consistent + Partition-tolerant. Sacrifices availability — blocks or errors during partitions.\nExamples: ZooKeeper, etcd, HBase' },
+        { from: 1, to: 2, label: 'AP', color: '#0891b2', desc: 'AP: Available + Partition-tolerant. Sacrifices consistency — may return stale data during partitions.\nExamples: Cassandra, DynamoDB, CouchDB' },
+        { from: 0, to: 2, label: 'CA', color: '#dc2626', desc: 'CA: Consistent + Available. Cannot handle partitions — only valid for single-node systems.\nExamples: Single-node PostgreSQL, MySQL' }
+      ];
+
+      let svg = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="font-family:var(--font);">`;
+      svg += `<text x="${cx}" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#1a1e2e">The CAP Triangle</text>`;
+
+      edges.forEach(e => {
+        const f = vertices[e.from], t = vertices[e.to];
+        const mx = (f.x + t.x) / 2, my = (f.y + t.y) / 2;
+        const offset = e.label === 'CA' ? { x: 18, y: 0 } : e.label === 'CP' ? { x: -18, y: 0 } : { x: 0, y: 18 };
+        svg += `<line x1="${f.x}" y1="${f.y}" x2="${t.x}" y2="${t.y}" stroke="${e.color}" stroke-width="3" stroke-dasharray="8 4" opacity="0.5"
+          class="arch-edge" data-edge="${e.label}" style="cursor:pointer;" />`;
+        svg += `<rect x="${mx + offset.x - 20}" y="${my + offset.y - 12}" width="40" height="24" rx="12" fill="${e.color}" opacity="0.15"
+          class="arch-edge-bg" data-edge="${e.label}" style="cursor:pointer;" />`;
+        svg += `<text x="${mx + offset.x}" y="${my + offset.y + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="${e.color}"
+          class="arch-edge-label" data-edge="${e.label}" style="cursor:pointer;">${e.label}</text>`;
+      });
+
+      vertices.forEach((v, i) => {
+        svg += `<circle cx="${v.x}" cy="${v.y}" r="42" fill="white" stroke="${v.color}" stroke-width="3"
+          class="arch-node" data-idx="${i}" style="cursor:pointer;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.1));" />`;
+        svg += `<text x="${v.x}" y="${v.y + 6}" text-anchor="middle" font-size="22" font-weight="800" fill="${v.color}"
+          class="arch-node-label" data-idx="${i}" style="cursor:pointer;">${v.label}</text>`;
+        svg += `<text x="${v.x}" y="${v.y + 62}" text-anchor="middle" font-size="11" fill="#5a6178">${v.full}</text>`;
+      });
+
+      svg += `<text x="${cx}" y="${cy + 8}" text-anchor="middle" font-size="11" fill="#8b91a5" font-style="italic">Pick any two</text>`;
+      svg += `</svg>`;
+      wrap.innerHTML = svg;
+
+      const detail = document.getElementById('archDetail');
+      wrap.querySelectorAll('.arch-node, .arch-node-label').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+          const v = vertices[el.dataset.idx];
+          detail.innerHTML = `<h4 style="color:${v.color};">${v.full} (${v.label})</h4><p>${v.desc}</p>`;
+        });
+      });
+      wrap.querySelectorAll('.arch-edge, .arch-edge-bg, .arch-edge-label').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+          const e = edges.find(x => x.label === el.dataset.edge);
+          detail.innerHTML = `<h4 style="color:${e.color};">${e.label} Systems</h4><p style="white-space:pre-line;">${e.desc}</p>`;
+        });
+      });
+    }
+    renderArchDiagram();
+
+    // ========== SECTION 3: SEQUENCE DIAGRAM ==========
+    const flows = {
+      normal: {
+        title: 'Normal Operation (No Partition)',
+        lifelines: ['Client', 'Node A\n(Leader)', 'Node B', 'Node C'],
+        steps: [
+          { from: 0, to: 1, label: 'Write(x=42)', desc: 'Client sends a write request to the leader node.' },
+          { from: 1, to: 2, label: 'Replicate', desc: 'Leader replicates the write to Node B.' },
+          { from: 1, to: 3, label: 'Replicate', desc: 'Leader replicates the write to Node C.' },
+          { from: 2, to: 1, label: 'ACK', desc: 'Node B acknowledges the replication.' },
+          { from: 3, to: 1, label: 'ACK', desc: 'Node C acknowledges the replication.' },
+          { from: 1, to: 0, label: 'OK (x=42)', desc: 'Leader confirms the write — all replicas are consistent.' },
+          { from: 0, to: 2, label: 'Read(x)', desc: 'Client reads from Node B.' },
+          { from: 2, to: 0, label: 'x=42', desc: 'Node B returns the latest value. System is consistent and available.' }
+        ]
+      },
+      'cp-partition': {
+        title: 'CP System During Partition',
+        lifelines: ['Client', 'Node A\n(Leader)', 'Node B', 'Node C\n(Isolated)'],
+        steps: [
+          { from: 0, to: 1, label: 'Write(x=99)', desc: 'Client sends a write to the leader.' },
+          { from: 1, to: 2, label: 'Replicate', desc: 'Leader replicates to Node B successfully.' },
+          { from: 1, to: 3, label: 'X TIMEOUT', desc: 'Network partition! Leader cannot reach Node C.', isError: true },
+          { from: 2, to: 1, label: 'ACK', desc: 'Node B acknowledges. Quorum reached (2/3 nodes).' },
+          { from: 1, to: 0, label: 'OK (x=99)', desc: 'Leader commits with quorum. Write succeeds.' },
+          { from: 0, to: 3, label: 'Read(x)', desc: 'Client tries to read from isolated Node C.' },
+          { from: 3, to: 0, label: 'ERROR 503', desc: 'Node C rejects the read! It knows it may be stale and refuses to serve inconsistent data. CP choice: consistency over availability.', isError: true }
+        ]
+      },
+      'ap-partition': {
+        title: 'AP System During Partition',
+        lifelines: ['Client', 'Node A', 'Node B', 'Node C\n(Isolated)'],
+        steps: [
+          { from: 0, to: 1, label: 'Write(x=99)', desc: 'Client writes to Node A.' },
+          { from: 1, to: 2, label: 'Replicate', desc: 'Node A replicates to Node B.' },
+          { from: 1, to: 3, label: 'X FAIL', desc: 'Network partition! Cannot reach Node C. Node A continues anyway.', isError: true },
+          { from: 1, to: 0, label: 'OK', desc: 'Node A accepts the write. Availability preserved.' },
+          { from: 0, to: 3, label: 'Read(x)', desc: 'Client reads from isolated Node C.' },
+          { from: 3, to: 0, label: 'x=OLD', desc: 'Node C returns stale data. It\'s available but inconsistent. AP choice: availability over consistency.', isStale: true },
+          { from: 0, to: 3, label: 'Write(x=50)', desc: 'Another client writes to isolated Node C, creating a conflict.' },
+          { from: 3, to: 0, label: 'OK', desc: 'Node C accepts. When partition heals, conflict resolution (LWW, vector clocks, or merge) will reconcile x=99 and x=50.' }
+        ]
+      }
+    };
+
+    let currentFlow = 'normal';
+    let seqStep = -1;
+    let seqPlaying = false;
+    let seqTimer = null;
+
+    function renderSeqDiagram(flow, step) {
+      const svg = document.getElementById('seqSvg');
+      const f = flows[flow];
+      const n = f.lifelines.length;
+      const gap = 180;
+      const startX = 80;
+      const topY = 50;
+      const stepH = 40;
+
+      let s = '';
+      f.lifelines.forEach((ll, i) => {
+        const x = startX + i * gap;
+        const lines = ll.split('\n');
+        s += `<rect x="${x - 40}" y="10" width="80" height="${lines.length > 1 ? 40 : 30}" rx="6" fill="${i === 3 && flow !== 'normal' ? '#fee2e2' : '#f0f2f7'}" stroke="${i === 3 && flow !== 'normal' ? '#dc2626' : '#c5cad6'}" />`;
+        lines.forEach((line, li) => {
+          s += `<text x="${x}" y="${24 + li * 14}" text-anchor="middle" font-size="11" font-weight="600" fill="#1a1e2e">${line}</text>`;
+        });
+        s += `<line x1="${x}" y1="${topY}" x2="${x}" y2="${topY + (f.steps.length + 1) * stepH}" stroke="#c5cad6" stroke-width="1" stroke-dasharray="4 3" />`;
+      });
+
+      f.steps.forEach((st, i) => {
+        const y = topY + (i + 1) * stepH;
+        const x1 = startX + st.from * gap;
+        const x2 = startX + st.to * gap;
+        const active = i <= step;
+        const isCurrent = i === step;
+        const opacity = active ? 1 : 0.2;
+        const color = st.isError ? '#dc2626' : st.isStale ? '#d97706' : '#2563eb';
+        const dir = x2 > x1 ? 1 : -1;
+
+        s += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${color}" stroke-width="${isCurrent ? 2.5 : 1.5}" opacity="${opacity}" ${st.isError ? 'stroke-dasharray="6 3"' : ''} />`;
+        s += `<polygon points="${x2},${y} ${x2 - dir * 8},${y - 4} ${x2 - dir * 8},${y + 4}" fill="${color}" opacity="${opacity}" />`;
+        const lx = (x1 + x2) / 2;
+        s += `<rect x="${lx - 35}" y="${y - 14}" width="70" height="14" rx="3" fill="${isCurrent ? color : 'white'}" stroke="${color}" stroke-width="0.5" opacity="${opacity}" />`;
+        s += `<text x="${lx}" y="${y - 4}" text-anchor="middle" font-size="9" font-weight="600" fill="${isCurrent ? 'white' : color}" opacity="${opacity}">${st.label}</text>`;
+      });
+
+      svg.innerHTML = s;
+      svg.setAttribute('viewBox', `0 0 ${startX + n * gap} ${topY + (f.steps.length + 2) * stepH}`);
+
+      const narr = document.getElementById('seqNarration');
+      if (step >= 0 && step < f.steps.length) {
+        narr.textContent = `Step ${step + 1}/${f.steps.length}: ${f.steps[step].desc}`;
+      } else if (step >= f.steps.length) {
+        narr.textContent = 'Sequence complete. Try another flow or reset.';
+      } else {
+        narr.textContent = f.title + ' — Press Play or Step to begin.';
+      }
+    }
+
+    document.querySelectorAll('#seqTabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#seqTabs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFlow = btn.dataset.flow;
+        seqStep = -1;
+        stopSeq();
+        renderSeqDiagram(currentFlow, seqStep);
+      });
+    });
+
+    function stopSeq() {
+      seqPlaying = false;
+      clearInterval(seqTimer);
+      document.getElementById('seqPlay').textContent = '▶ Play';
+    }
+
+    document.getElementById('seqPlay').addEventListener('click', () => {
+      if (seqPlaying) { stopSeq(); return; }
+      seqPlaying = true;
+      document.getElementById('seqPlay').textContent = '⏸ Pause';
+      const speed = [2000, 1500, 1000, 600, 300][document.getElementById('seqSpeed').value - 1];
+      seqTimer = setInterval(() => {
+        seqStep++;
+        if (seqStep >= flows[currentFlow].steps.length) { stopSeq(); seqStep = flows[currentFlow].steps.length; }
+        renderSeqDiagram(currentFlow, seqStep);
+      }, speed);
+    });
+
+    document.getElementById('seqStep').addEventListener('click', () => {
+      stopSeq();
+      seqStep = Math.min(seqStep + 1, flows[currentFlow].steps.length - 1);
+      renderSeqDiagram(currentFlow, seqStep);
+    });
+
+    document.getElementById('seqReset').addEventListener('click', () => {
+      stopSeq();
+      seqStep = -1;
+      renderSeqDiagram(currentFlow, seqStep);
+    });
+
+    renderSeqDiagram(currentFlow, seqStep);
+
+    // ========== SECTION 8: PLAYGROUND ==========
+    const pgState = {
+      running: false,
+      partitioned: false,
+      nodes: [],
+      interval: null,
+      metrics: { total: 0, reads: 0, writes: 0, errors: 0, stale: 0 },
+      logLines: [],
+      version: 0,
+      partitionLine: -1
+    };
+
+    function initNodes() {
+      const count = parseInt(document.getElementById('pgNodes').value);
+      pgState.nodes = [];
+      pgState.version = 0;
+      pgState.partitionLine = -1;
+      pgState.partitioned = false;
+      for (let i = 0; i < count; i++) {
+        pgState.nodes.push({ id: i, value: 0, version: 0, alive: true, isolated: false, flash: '' });
+      }
+    }
+
+    function renderPlayground() {
+      const vis = document.getElementById('pgVis');
+      const nodes = pgState.nodes;
+      const n = nodes.length;
+      const w = vis.clientWidth || 500;
+      const h = vis.clientHeight || 400;
+      const cx = w / 2;
+      const cy = h / 2;
+      const R = Math.min(w, h) * 0.32;
+      const system = document.getElementById('pgSystem').value;
+
+      let svg = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="font-family:var(--font);">`;
+      svg += `<text x="${cx}" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#1a1e2e">${system.toUpperCase()} Distributed System</text>`;
+
+      if (pgState.partitioned && pgState.partitionLine >= 0) {
+        const pl = pgState.partitionLine;
+        const angle1 = (2 * Math.PI / n) * (pl + 0.5) - Math.PI / 2;
+        const x1 = cx + (R + 70) * Math.cos(angle1);
+        const y1 = cy + (R + 70) * Math.sin(angle1);
+        const x2 = cx - (R + 70) * Math.cos(angle1);
+        const y2 = cy - (R + 70) * Math.sin(angle1);
+        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#dc2626" stroke-width="3" stroke-dasharray="8 4" opacity="0.6" />`;
+        svg += `<text x="${(x1+x2)/2 + 10}" y="${(y1+y2)/2 - 10}" font-size="10" fill="#dc2626" font-weight="700">PARTITION</text>`;
+      }
+
+      nodes.forEach((node, i) => {
+        const angle = (2 * Math.PI / n) * i - Math.PI / 2;
+        const nx = cx + R * Math.cos(angle);
+        const ny = cy + R * Math.sin(angle);
+        node._x = nx;
+        node._y = ny;
+
+        nodes.forEach((other, j) => {
+          if (j <= i) return;
+          const ox = cx + R * Math.cos((2 * Math.PI / n) * j - Math.PI / 2);
+          const oy = cy + R * Math.sin((2 * Math.PI / n) * j - Math.PI / 2);
+          const broken = pgState.partitioned && (node.isolated !== other.isolated);
+          svg += `<line x1="${nx}" y1="${ny}" x2="${ox}" y2="${oy}" stroke="${broken ? '#dc2626' : '#c5cad6'}" stroke-width="${broken ? 2 : 1}" ${broken ? 'stroke-dasharray="4 4"' : ''} opacity="${broken ? 0.5 : 0.25}" />`;
+        });
+      });
+
+      nodes.forEach((node, i) => {
+        const fillColor = node.flash === 'write' ? '#dbeafe' : node.flash === 'read' ? '#d1fae5' : node.flash === 'error' ? '#fee2e2' : node.flash === 'stale' ? '#fef3c7' : 'white';
+        const strokeColor = node.isolated ? '#dc2626' : '#c5cad6';
+        svg += `<circle cx="${node._x}" cy="${node._y}" r="32" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${node.isolated ? 3 : 2}" style="transition:fill 0.3s;" />`;
+        svg += `<text x="${node._x}" y="${node._y - 6}" text-anchor="middle" font-size="11" font-weight="700" fill="#1a1e2e">Node ${i}</text>`;
+        svg += `<text x="${node._x}" y="${node._y + 8}" text-anchor="middle" font-size="9" fill="#5a6178">v${node.version}</text>`;
+        svg += `<text x="${node._x}" y="${node._y + 20}" text-anchor="middle" font-size="9" fill="${node.isolated ? '#dc2626' : '#059669'}" font-weight="600">${node.isolated ? 'ISOLATED' : 'OK'}</text>`;
+      });
+
+      svg += `</svg>`;
+      vis.innerHTML = svg;
+
+      document.getElementById('metricTotal').textContent = pgState.metrics.total;
+      document.getElementById('metricReads').textContent = pgState.metrics.reads;
+      document.getElementById('metricWrites').textContent = pgState.metrics.writes;
+      document.getElementById('metricErrors').textContent = pgState.metrics.errors;
+      document.getElementById('metricStale').textContent = pgState.metrics.stale;
+      const avail = pgState.metrics.total > 0 ? ((1 - pgState.metrics.errors / pgState.metrics.total) * 100).toFixed(1) : '100';
+      const consist = pgState.metrics.total > 0 ? ((1 - pgState.metrics.stale / pgState.metrics.total) * 100).toFixed(1) : '100';
+      document.getElementById('metricAvail').textContent = avail + '%';
+      document.getElementById('metricAvail').style.color = parseFloat(avail) > 95 ? 'var(--success)' : parseFloat(avail) > 80 ? 'var(--warn)' : 'var(--danger)';
+      document.getElementById('metricConsist').textContent = consist + '%';
+      document.getElementById('metricConsist').style.color = parseFloat(consist) > 95 ? 'var(--success)' : parseFloat(consist) > 80 ? 'var(--warn)' : 'var(--danger)';
+    }
+
+    function addLog(msg, cls) {
+      pgState.logLines.push({ msg, cls });
+      if (pgState.logLines.length > 50) pgState.logLines.shift();
+      const logEl = document.getElementById('pgLog');
+      logEl.innerHTML = pgState.logLines.map(l => `<div class="log-line ${l.cls}">${l.msg}</div>`).join('');
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function simulateRequest() {
+      const system = document.getElementById('pgSystem').value;
+      const isWrite = Math.random() < 0.4;
+      const targetIdx = Math.floor(Math.random() * pgState.nodes.length);
+      const target = pgState.nodes[targetIdx];
+      pgState.metrics.total++;
+
+      if (isWrite) {
+        pgState.version++;
+        if (pgState.partitioned && target.isolated) {
+          if (system === 'cp') {
+            pgState.metrics.errors++;
+            target.flash = 'error';
+            addLog(`[WRITE] Node ${targetIdx}: REJECTED (isolated, CP refuses write without quorum)`, 'log-err');
+            updateNarration('CP system rejected a write to an isolated node to maintain consistency.');
+          } else {
+            target.version = pgState.version;
+            target.value = pgState.version;
+            pgState.metrics.writes++;
+            pgState.metrics.stale++;
+            target.flash = 'write';
+            addLog(`[WRITE] Node ${targetIdx}: ACCEPTED (isolated, AP accepts — creates conflict)`, 'log-warn');
+            updateNarration('AP system accepted a write on an isolated node. This creates a conflict that will need resolution when the partition heals.');
+          }
+        } else if (pgState.partitioned && !target.isolated) {
+          if (system === 'cp') {
+            const quorum = Math.ceil(pgState.nodes.length / 2);
+            const reachable = pgState.nodes.filter(nd => !nd.isolated).length;
+            if (reachable >= quorum) {
+              pgState.nodes.filter(nd => !nd.isolated).forEach(nd => { nd.version = pgState.version; nd.value = pgState.version; });
+              pgState.metrics.writes++;
+              target.flash = 'write';
+              addLog(`[WRITE] Node ${targetIdx}: OK (quorum ${reachable}/${pgState.nodes.length}, majority reachable)`, 'log-ok');
+              updateNarration(`CP system achieved quorum (${reachable}/${pgState.nodes.length}) and committed the write. Isolated nodes will sync when partition heals.`);
+            } else {
+              pgState.metrics.errors++;
+              target.flash = 'error';
+              addLog(`[WRITE] Node ${targetIdx}: REJECTED (no quorum: ${reachable}/${pgState.nodes.length})`, 'log-err');
+              updateNarration('CP system cannot reach quorum. Write rejected to prevent inconsistency.');
+            }
+          } else {
+            pgState.nodes.filter(nd => !nd.isolated).forEach(nd => { nd.version = pgState.version; nd.value = pgState.version; });
+            pgState.metrics.writes++;
+            target.flash = 'write';
+            addLog(`[WRITE] Node ${targetIdx}: OK (replicated to reachable nodes)`, 'log-ok');
+            updateNarration('AP system accepted the write and replicated to all reachable nodes. Isolated nodes have stale data.');
+          }
+        } else {
+          pgState.nodes.forEach(nd => { nd.version = pgState.version; nd.value = pgState.version; });
+          pgState.metrics.writes++;
+          target.flash = 'write';
+          addLog(`[WRITE] Node ${targetIdx}: OK (all nodes updated to v${pgState.version})`, 'log-ok');
+        }
+      } else {
+        if (pgState.partitioned && target.isolated) {
+          if (system === 'cp') {
+            pgState.metrics.errors++;
+            target.flash = 'error';
+            addLog(`[READ] Node ${targetIdx}: REJECTED (isolated, CP refuses potentially stale read)`, 'log-err');
+            updateNarration('CP system rejected a read from an isolated node because it cannot guarantee the data is current.');
+          } else {
+            pgState.metrics.reads++;
+            const isStale = target.version < pgState.version;
+            if (isStale) {
+              pgState.metrics.stale++;
+              target.flash = 'stale';
+              addLog(`[READ] Node ${targetIdx}: v${target.version} (STALE — latest is v${pgState.version})`, 'log-warn');
+              updateNarration(`AP system served a stale read (v${target.version} vs latest v${pgState.version}). The data is outdated but the system stayed available.`);
+            } else {
+              target.flash = 'read';
+              addLog(`[READ] Node ${targetIdx}: v${target.version} (OK)`, 'log-ok');
+            }
+          }
+        } else {
+          pgState.metrics.reads++;
+          target.flash = 'read';
+          addLog(`[READ] Node ${targetIdx}: v${target.version} (OK)`, 'log-ok');
+        }
+      }
+
+      renderPlayground();
+      setTimeout(() => { target.flash = ''; renderPlayground(); }, 400);
+    }
+
+    function updateNarration(text) {
+      document.getElementById('pgNarration').textContent = text;
+    }
+
+    document.getElementById('pgRate').addEventListener('input', e => {
+      document.getElementById('pgRateLabel').textContent = e.target.value + ' req/s';
+    });
+
+    document.getElementById('pgStart').addEventListener('click', () => {
+      if (pgState.running) {
+        pgState.running = false;
+        clearInterval(pgState.interval);
+        document.getElementById('pgStart').textContent = '▶ Start Simulation';
+        return;
+      }
+      if (pgState.nodes.length === 0) initNodes();
+      pgState.running = true;
+      document.getElementById('pgStart').textContent = '⏸ Pause';
+      const rate = parseInt(document.getElementById('pgRate').value);
+      pgState.interval = setInterval(simulateRequest, 1000 / rate);
+    });
+
+    document.getElementById('pgPartition').addEventListener('click', () => {
+      if (pgState.nodes.length === 0) initNodes();
+      pgState.partitioned = true;
+      const n = pgState.nodes.length;
+      const isolateCount = Math.max(1, Math.floor(n * 0.4));
+      pgState.partitionLine = n - isolateCount - 1;
+      pgState.nodes.forEach((nd, i) => {
+        nd.isolated = i >= (n - isolateCount);
+      });
+      addLog(`[PARTITION] Network split! ${isolateCount} node(s) isolated.`, 'log-err');
+      updateNarration(`Network partition triggered! ${isolateCount} node(s) are now isolated. Watch how the ${document.getElementById('pgSystem').value.toUpperCase()} system handles requests to both sides.`);
+      renderPlayground();
+    });
+
+    document.getElementById('pgHeal').addEventListener('click', () => {
+      if (!pgState.partitioned) return;
+      pgState.partitioned = false;
+      pgState.partitionLine = -1;
+      const maxV = Math.max(...pgState.nodes.map(n => n.version));
+      pgState.nodes.forEach(nd => { nd.isolated = false; nd.version = maxV; nd.value = maxV; });
+      addLog(`[HEALED] Partition resolved. All nodes synced to v${maxV}.`, 'log-info');
+      updateNarration('Partition healed. All nodes have been synchronized to the latest version. In a real AP system, conflict resolution would run to merge divergent writes.');
+      renderPlayground();
+    });
+
+    document.getElementById('pgReset').addEventListener('click', () => {
+      pgState.running = false;
+      clearInterval(pgState.interval);
+      pgState.metrics = { total: 0, reads: 0, writes: 0, errors: 0, stale: 0 };
+      pgState.logLines = [];
+      pgState.version = 0;
+      document.getElementById('pgLog').innerHTML = '';
+      document.getElementById('pgStart').textContent = '▶ Start Simulation';
+      initNodes();
+      updateNarration('Simulation reset. Configure settings and start again.');
+      renderPlayground();
+    });
+
+    document.getElementById('pgSystem').addEventListener('change', () => {
+      document.getElementById('pgReset').click();
+    });
+
+    document.getElementById('pgNodes').addEventListener('change', () => {
+      document.getElementById('pgReset').click();
+    });
+
+    function loadPreset(name) {
+      document.getElementById('pgReset').click();
+      if (name === 'normal') {
+        document.getElementById('pgSystem').value = 'ap';
+        document.getElementById('pgRate').value = 4;
+        document.getElementById('pgRateLabel').textContent = '4 req/s';
+        initNodes();
+        renderPlayground();
+        document.getElementById('pgStart').click();
+        updateNarration('Normal traffic preset: AP system with moderate load, no partitions. All requests should succeed.');
+      } else if (name === 'partition') {
+        document.getElementById('pgSystem').value = 'cp';
+        document.getElementById('pgRate').value = 6;
+        document.getElementById('pgRateLabel').textContent = '6 req/s';
+        initNodes();
+        renderPlayground();
+        document.getElementById('pgStart').click();
+        setTimeout(() => document.getElementById('pgPartition').click(), 2000);
+        updateNarration('Partition storm: CP system under load. Partition will trigger in 2 seconds — watch errors spike on isolated nodes.');
+      } else if (name === 'high-load') {
+        document.getElementById('pgSystem').value = 'ap';
+        document.getElementById('pgNodes').value = '7';
+        document.getElementById('pgRate').value = 10;
+        document.getElementById('pgRateLabel').textContent = '10 req/s';
+        initNodes();
+        renderPlayground();
+        document.getElementById('pgStart').click();
+        updateNarration('High load preset: 7-node AP system at max request rate. Trigger a partition to see stale reads.');
+      } else if (name === 'split-brain') {
+        document.getElementById('pgSystem').value = 'ap';
+        document.getElementById('pgNodes').value = '5';
+        document.getElementById('pgRate').value = 5;
+        document.getElementById('pgRateLabel').textContent = '5 req/s';
+        initNodes();
+        renderPlayground();
+        document.getElementById('pgStart').click();
+        setTimeout(() => {
+          pgState.partitioned = true;
+          pgState.partitionLine = 2;
+          pgState.nodes.forEach((nd, i) => { nd.isolated = i >= 3; });
+          addLog('[SPLIT BRAIN] Even split — both sides accept writes!', 'log-err');
+          updateNarration('Split brain scenario: AP system split nearly evenly. Both partitions accept writes, creating divergent state. This is the classic AP trade-off.');
+          renderPlayground();
+        }, 2000);
+      }
+    }
+
+    initNodes();
+    renderPlayground();
+  </script>
+</body>
+</html>

@@ -1,0 +1,2046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Thread Synchronization — Visualizer</title>
+<style>
+:root {
+  --bg: #f8f9fc;
+  --surface: #ffffff;
+  --surface-alt: #f0f2f8;
+  --border: #e2e6ef;
+  --border-strong: #c5cad8;
+  --text: #1a1d2e;
+  --text-secondary: #5a6178;
+  --text-muted: #8b91a8;
+  --accent: #4f46e5;
+  --accent-light: #e0e0ff;
+  --accent-bg: #eef2ff;
+  --green: #059669;
+  --green-light: #d1fae5;
+  --green-bg: #ecfdf5;
+  --amber: #d97706;
+  --amber-light: #fef3c7;
+  --amber-bg: #fffbeb;
+  --red: #dc2626;
+  --red-light: #fee2e2;
+  --red-bg: #fef2f2;
+  --blue: #2563eb;
+  --blue-light: #dbeafe;
+  --purple: #7c3aed;
+  --purple-light: #ede9fe;
+  --teal: #0d9488;
+  --teal-light: #ccfbf1;
+  --cyan: #0891b2;
+  --pink: #db2777;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* Sticky Nav */
+.sticky-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  box-shadow: var(--shadow-sm);
+}
+.sticky-nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sticky-nav-inner::-webkit-scrollbar { display: none; }
+.sticky-nav .nav-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--accent);
+  white-space: nowrap;
+  padding: 0.75rem 0.5rem 0.75rem 0;
+  border-right: 1px solid var(--border);
+  margin-right: 0.5rem;
+  letter-spacing: -0.01em;
+}
+.sticky-nav a {
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.75rem 0.6rem;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.sticky-nav a:hover, .sticky-nav a.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* Main */
+.main-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Section styles */
+.section {
+  margin-bottom: 3rem;
+  scroll-margin-top: 60px;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.section-number {
+  background: var(--accent);
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+.card + .card { margin-top: 1rem; }
+
+/* Architecture Diagram */
+.arch-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+  overflow-x: auto;
+}
+.arch-svg {
+  width: 100%;
+  min-width: 800px;
+  height: 520px;
+}
+.arch-svg text {
+  font-family: var(--font-sans);
+}
+.arch-svg .node-box {
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+.arch-svg .node-box:hover {
+  filter: brightness(0.95);
+}
+.arch-tooltip {
+  position: absolute;
+  background: var(--text);
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  max-width: 280px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 50;
+  line-height: 1.4;
+}
+.arch-tooltip.visible { opacity: 1; }
+
+/* Component Grid */
+.comp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1rem;
+}
+.comp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s;
+}
+.comp-card:hover { box-shadow: var(--shadow-md); }
+.comp-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+.comp-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.comp-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.comp-card p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+.comp-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 100px;
+  margin-right: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+/* Sequence Diagram */
+.seq-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+.seq-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.seq-controls select {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  background: var(--surface);
+  cursor: pointer;
+}
+.seq-svg {
+  width: 100%;
+  min-width: 700px;
+  overflow-x: auto;
+}
+.seq-narration {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--accent-bg);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 500;
+  min-height: 2.5rem;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn:hover { background: var(--surface-alt); border-color: var(--border-strong); }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.primary:hover { background: #4338ca; }
+.btn.active { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+
+/* Comparison Table */
+.comp-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.comp-table th {
+  background: var(--surface-alt);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 700;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+.comp-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.comp-table tr:last-child td { border-bottom: none; }
+.comp-table tr.highlighted { background: var(--accent-bg); }
+.chosen-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  border-radius: 100px;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+/* Pitfall / Best Practice cards */
+.pitfall-card, .bp-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+.pitfall-header, .bp-header {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  user-select: none;
+}
+.pitfall-header { background: var(--amber-bg); color: var(--amber); }
+.pitfall-header .icon { color: var(--red); }
+.bp-header { background: var(--green-bg); color: var(--green); }
+.pitfall-body, .bp-body {
+  padding: 0 1rem;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+.pitfall-body.open, .bp-body.open {
+  padding: 1rem;
+  max-height: 600px;
+}
+.pitfall-body strong, .bp-body strong { color: var(--text); }
+.chevron {
+  margin-left: auto;
+  transition: transform 0.2s;
+  font-size: 0.7rem;
+}
+.open-parent .chevron { transform: rotate(90deg); }
+
+/* Scaling section */
+.est-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.est-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+}
+.est-card .value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+.est-card .label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+/* Playground */
+.playground-container {
+  background: var(--surface-alt);
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+.playground-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.playground-tab {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.playground-tab:hover { border-color: var(--accent); color: var(--accent); }
+.playground-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.playground-panel { display: none; }
+.playground-panel.active { display: block; }
+
+.sim-canvas {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 300px;
+  position: relative;
+  overflow: hidden;
+}
+
+.sim-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.sim-controls label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.sim-controls input[type="range"] {
+  width: 120px;
+  accent-color: var(--accent);
+}
+.sim-controls select {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  background: var(--surface);
+}
+
+.metrics-row {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+.metric-box {
+  flex: 1;
+  min-width: 120px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem;
+  text-align: center;
+}
+.metric-box .val {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+.metric-box .lbl {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.what-happening {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--accent-bg);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Code blocks */
+code, .code {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  background: var(--surface-alt);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  color: var(--accent);
+}
+pre.code-block {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.7;
+  margin: 0.75rem 0;
+}
+pre.code-block .kw { color: #cba6f7; }
+pre.code-block .fn { color: #89b4fa; }
+pre.code-block .str { color: #a6e3a1; }
+pre.code-block .cmt { color: #6c7086; font-style: italic; }
+pre.code-block .num { color: #fab387; }
+pre.code-block .hl { background: rgba(203,166,247,0.15); display: inline-block; width: 100%; margin: 0 -1.25rem; padding: 0 1.25rem; }
+
+/* Use-case cards */
+.uc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+.uc-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.uc-card h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+.uc-card p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .main-container { padding: 1rem; }
+  .comp-grid { grid-template-columns: 1fr; }
+  .est-grid { grid-template-columns: repeat(2, 1fr); }
+  .arch-svg { min-width: 600px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="sticky-nav">
+  <div class="sticky-nav-inner">
+    <span class="nav-title">Python Thread Sync</span>
+    <a href="#architecture">Architecture</a>
+    <a href="#components">Components</a>
+    <a href="#request-flow">Request Flow</a>
+    <a href="#comparisons">Comparisons</a>
+    <a href="#use-cases">Use Cases & Pitfalls</a>
+    <a href="#best-practices">Best Practices</a>
+    <a href="#scaling">Scaling & Trade-offs</a>
+    <a href="#playground">Playground</a>
+  </div>
+</nav>
+
+<div class="arch-tooltip" id="archTooltip"></div>
+
+<div class="main-container">
+
+<!-- ===================== SECTION 1: ARCHITECTURE ===================== -->
+<div class="section" id="architecture">
+  <div class="section-header">
+    <div class="section-number">1</div>
+    <h2 class="section-title">Architecture Diagram</h2>
+  </div>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:1rem;">
+    Python's threading model revolves around the <strong>Global Interpreter Lock (GIL)</strong> — a mutex that protects access to Python objects, preventing multiple native threads from executing Python bytecodes simultaneously. Synchronization primitives let threads coordinate safely despite this constraint.
+  </p>
+  <div class="arch-container">
+    <svg class="arch-svg" viewBox="0 0 900 520" id="archSvg">
+      <defs>
+        <marker id="arrowHead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6 Z" fill="#8b91a8"/>
+        </marker>
+        <marker id="arrowAccent" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6 Z" fill="#4f46e5"/>
+        </marker>
+        <filter id="shadowF">
+          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+        </filter>
+      </defs>
+
+      <!-- Background groups -->
+      <rect x="20" y="15" width="250" height="490" rx="12" fill="#eef2ff" stroke="#c7d2fe" stroke-dasharray="6,3"/>
+      <text x="145" y="40" text-anchor="middle" font-size="11" font-weight="700" fill="#4f46e5">THREAD LAYER</text>
+
+      <rect x="300" y="15" width="280" height="490" rx="12" fill="#ecfdf5" stroke="#a7f3d0" stroke-dasharray="6,3"/>
+      <text x="440" y="40" text-anchor="middle" font-size="11" font-weight="700" fill="#059669">SYNCHRONIZATION PRIMITIVES</text>
+
+      <rect x="610" y="15" width="275" height="490" rx="12" fill="#fef3c7" stroke="#fcd34d" stroke-dasharray="6,3"/>
+      <text x="747" y="40" text-anchor="middle" font-size="11" font-weight="700" fill="#d97706">SHARED RESOURCES</text>
+
+      <!-- GIL - hexagon -->
+      <g class="node-box" data-tip="Global Interpreter Lock: A mutex in CPython that allows only one thread to execute Python bytecode at a time. Released during I/O operations and C extensions.">
+        <polygon points="145,90 195,70 245,90 245,130 195,150 145,130" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2" filter="url(#shadowF)"/>
+        <text x="195" y="107" text-anchor="middle" font-size="12" font-weight="800" fill="#7c3aed">GIL</text>
+        <text x="195" y="123" text-anchor="middle" font-size="8.5" fill="#7c3aed">Global Lock</text>
+      </g>
+
+      <!-- Thread 1 -->
+      <g class="node-box" data-tip="Thread 1: A worker thread created via threading.Thread(). Competes for the GIL to execute Python bytecode. Can be blocked by synchronization primitives.">
+        <rect x="40" y="185" width="130" height="55" rx="8" fill="#fff" stroke="#4f46e5" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="105" y="208" text-anchor="middle" font-size="11" font-weight="700" fill="#4f46e5">Thread 1</text>
+        <text x="105" y="225" text-anchor="middle" font-size="8.5" fill="#5a6178">Worker</text>
+      </g>
+
+      <!-- Thread 2 -->
+      <g class="node-box" data-tip="Thread 2: Another worker thread running concurrently. Shares the same process memory space with Thread 1. Must synchronize access to shared data.">
+        <rect x="40" y="265" width="130" height="55" rx="8" fill="#fff" stroke="#4f46e5" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="105" y="288" text-anchor="middle" font-size="11" font-weight="700" fill="#4f46e5">Thread 2</text>
+        <text x="105" y="305" text-anchor="middle" font-size="8.5" fill="#5a6178">Worker</text>
+      </g>
+
+      <!-- Thread N -->
+      <g class="node-box" data-tip="Thread N: Additional threads. Python supports an arbitrary number of threads, but only one executes Python bytecode at a time due to the GIL.">
+        <rect x="40" y="345" width="130" height="55" rx="8" fill="#fff" stroke="#4f46e5" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="105" y="368" text-anchor="middle" font-size="11" font-weight="700" fill="#4f46e5">Thread N</text>
+        <text x="105" y="385" text-anchor="middle" font-size="8.5" fill="#5a6178">Worker</text>
+      </g>
+
+      <!-- Main Thread -->
+      <g class="node-box" data-tip="Main Thread: The primary thread of execution. Creates and manages worker threads. If it exits, daemon threads are killed automatically.">
+        <rect x="40" y="430" width="130" height="55" rx="8" fill="#eef2ff" stroke="#4f46e5" stroke-width="2" filter="url(#shadowF)"/>
+        <text x="105" y="453" text-anchor="middle" font-size="11" font-weight="800" fill="#4f46e5">Main Thread</text>
+        <text x="105" y="470" text-anchor="middle" font-size="8.5" fill="#4f46e5">Orchestrator</text>
+      </g>
+
+      <!-- Lock -->
+      <g class="node-box" data-tip="threading.Lock: The simplest mutual exclusion primitive. Only one thread can hold it. Non-reentrant — acquiring it again from the same thread causes a deadlock.">
+        <rect x="320" y="65" width="110" height="50" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="375" y="88" text-anchor="middle" font-size="11" font-weight="700" fill="#059669">Lock</text>
+        <text x="375" y="103" text-anchor="middle" font-size="8" fill="#5a6178">Mutex</text>
+      </g>
+
+      <!-- RLock -->
+      <g class="node-box" data-tip="threading.RLock: Reentrant lock — the same thread can acquire it multiple times without deadlocking. Must be released the same number of times it was acquired.">
+        <rect x="450" y="65" width="110" height="50" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="505" y="88" text-anchor="middle" font-size="11" font-weight="700" fill="#059669">RLock</text>
+        <text x="505" y="103" text-anchor="middle" font-size="8" fill="#5a6178">Reentrant</text>
+      </g>
+
+      <!-- Semaphore -->
+      <g class="node-box" data-tip="threading.Semaphore: Manages an internal counter. acquire() decrements, release() increments. When counter reaches 0, acquire() blocks. Used to limit concurrent access.">
+        <rect x="320" y="140" width="110" height="50" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="375" y="163" text-anchor="middle" font-size="11" font-weight="700" fill="#059669">Semaphore</text>
+        <text x="375" y="178" text-anchor="middle" font-size="8" fill="#5a6178">Counter-based</text>
+      </g>
+
+      <!-- Condition -->
+      <g class="node-box" data-tip="threading.Condition: Allows threads to wait for a specific condition. Built on top of a Lock. Supports wait(), notify(), and notify_all() for producer-consumer patterns.">
+        <rect x="450" y="140" width="110" height="50" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="505" y="163" text-anchor="middle" font-size="11" font-weight="700" fill="#059669">Condition</text>
+        <text x="505" y="178" text-anchor="middle" font-size="8" fill="#5a6178">Wait/Notify</text>
+      </g>
+
+      <!-- Event -->
+      <g class="node-box" data-tip="threading.Event: A simple flag. Threads call wait() to block until the flag is set. set() wakes all waiting threads. clear() resets it. Good for one-time signals.">
+        <rect x="320" y="215" width="110" height="50" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="375" y="238" text-anchor="middle" font-size="11" font-weight="700" fill="#059669">Event</text>
+        <text x="375" y="253" text-anchor="middle" font-size="8" fill="#5a6178">Flag Signal</text>
+      </g>
+
+      <!-- Barrier -->
+      <g class="node-box" data-tip="threading.Barrier: Blocks N threads until all have called wait(). Once all arrive, all are released simultaneously. Useful for phased parallel computation.">
+        <rect x="450" y="215" width="110" height="50" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="505" y="238" text-anchor="middle" font-size="11" font-weight="700" fill="#059669">Barrier</text>
+        <text x="505" y="253" text-anchor="middle" font-size="8" fill="#5a6178">Sync Point</text>
+      </g>
+
+      <!-- Timer -->
+      <g class="node-box" data-tip="threading.Timer: A thread that waits a specified interval before executing a function. Can be cancelled before it fires. Useful for delayed actions and timeouts.">
+        <rect x="320" y="290" width="110" height="50" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="375" y="313" text-anchor="middle" font-size="11" font-weight="700" fill="#059669">Timer</text>
+        <text x="375" y="328" text-anchor="middle" font-size="8" fill="#5a6178">Delayed Action</text>
+      </g>
+
+      <!-- Queue -->
+      <g class="node-box" data-tip="queue.Queue: Thread-safe FIFO queue with built-in locking. put() and get() are atomic. Supports blocking and timeouts. The go-to for producer-consumer patterns.">
+        <rect x="450" y="290" width="110" height="50" rx="8" fill="#fff" stroke="#0d9488" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="505" y="313" text-anchor="middle" font-size="11" font-weight="700" fill="#0d9488">Queue</text>
+        <text x="505" y="328" text-anchor="middle" font-size="8" fill="#5a6178">Thread-safe</text>
+      </g>
+
+      <!-- ThreadPoolExecutor -->
+      <g class="node-box" data-tip="concurrent.futures.ThreadPoolExecutor: High-level API for managing a pool of worker threads. submit() returns Future objects. Handles lifecycle, exception propagation, and result collection.">
+        <rect x="340" y="370" width="210" height="50" rx="8" fill="#fff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="445" y="393" text-anchor="middle" font-size="11" font-weight="700" fill="#2563eb">ThreadPoolExecutor</text>
+        <text x="445" y="408" text-anchor="middle" font-size="8" fill="#5a6178">concurrent.futures</text>
+      </g>
+
+      <!-- with statement -->
+      <g class="node-box" data-tip="Context Manager (with statement): All locks support 'with lock:' syntax for automatic acquire/release. Prevents forgetting to release a lock, even if an exception occurs.">
+        <rect x="340" y="440" width="210" height="50" rx="8" fill="#f0f2f8" stroke="#8b91a8" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="445" y="460" text-anchor="middle" font-size="10" font-weight="700" fill="#5a6178">with lock:</text>
+        <text x="445" y="477" text-anchor="middle" font-size="8" fill="#8b91a8">Context Manager Pattern</text>
+      </g>
+
+      <!-- Shared Variable -->
+      <g class="node-box" data-tip="Shared Variables: Any Python object accessible by multiple threads. Without synchronization, concurrent reads/writes can cause race conditions and corrupted state.">
+        <rect x="640" y="80" width="120" height="55" rx="8" fill="#fff" stroke="#d97706" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="700" y="103" text-anchor="middle" font-size="11" font-weight="700" fill="#d97706">Shared Var</text>
+        <text x="700" y="120" text-anchor="middle" font-size="8.5" fill="#5a6178">counter, list, dict</text>
+      </g>
+
+      <!-- Shared File/IO -->
+      <g class="node-box" data-tip="Shared Files & I/O: File handles, sockets, and database connections shared across threads. The GIL is released during I/O, so explicit synchronization is needed.">
+        <rect x="770" y="80" width="100" height="55" rx="8" fill="#fff" stroke="#d97706" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="820" y="103" text-anchor="middle" font-size="11" font-weight="700" fill="#d97706">File / I/O</text>
+        <text x="820" y="120" text-anchor="middle" font-size="8.5" fill="#5a6178">socket, file</text>
+      </g>
+
+      <!-- Critical Section -->
+      <g class="node-box" data-tip="Critical Section: The code region that accesses shared resources. Only one thread should execute the critical section at a time, enforced by locks or other primitives.">
+        <rect x="640" y="175" width="225" height="60" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="2" filter="url(#shadowF)"/>
+        <text x="752" y="200" text-anchor="middle" font-size="12" font-weight="800" fill="#d97706">Critical Section</text>
+        <text x="752" y="218" text-anchor="middle" font-size="8.5" fill="#92400e">Protected code region</text>
+      </g>
+
+      <!-- Data Structures -->
+      <g class="node-box" data-tip="Thread-Safe Collections: collections like queue.Queue, collections.deque (with caveats). Standard list/dict operations are GIL-protected per-bytecode, but compound operations (read-modify-write) are not.">
+        <rect x="640" y="270" width="225" height="55" rx="8" fill="#fff" stroke="#d97706" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="752" y="293" text-anchor="middle" font-size="11" font-weight="700" fill="#d97706">Data Structures</text>
+        <text x="752" y="310" text-anchor="middle" font-size="8.5" fill="#5a6178">list, dict, set, deque</text>
+      </g>
+
+      <!-- Database / Network -->
+      <g class="node-box" data-tip="External Resources: Database connections, network sockets, APIs. GIL is released during blocking I/O, making threading beneficial for I/O-bound tasks.">
+        <rect x="640" y="360" width="225" height="55" rx="8" fill="#fff" stroke="#d97706" stroke-width="1.5" filter="url(#shadowF)"/>
+        <text x="752" y="383" text-anchor="middle" font-size="11" font-weight="700" fill="#d97706">External Resources</text>
+        <text x="752" y="400" text-anchor="middle" font-size="8.5" fill="#5a6178">DB, Network, APIs</text>
+      </g>
+
+      <!-- Deadlock zone -->
+      <g class="node-box" data-tip="Deadlock: When two or more threads each hold a lock and wait for the other's lock. The program hangs forever. Prevented by consistent lock ordering and timeout-based acquisition.">
+        <rect x="640" y="440" width="225" height="55" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5,3" filter="url(#shadowF)"/>
+        <text x="752" y="463" text-anchor="middle" font-size="12" font-weight="800" fill="#dc2626">Deadlock Zone</text>
+        <text x="752" y="480" text-anchor="middle" font-size="8.5" fill="#dc2626">Circular wait hazard</text>
+      </g>
+
+      <!-- Arrows -->
+      <!-- GIL to threads -->
+      <line x1="170" y1="150" x2="105" y2="185" stroke="#7c3aed" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrowAccent)"/>
+      <line x1="195" y1="150" x2="105" y2="265" stroke="#7c3aed" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrowAccent)"/>
+      <line x1="220" y1="150" x2="105" y2="345" stroke="#7c3aed" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrowAccent)"/>
+
+      <!-- Threads to primitives -->
+      <line x1="170" y1="212" x2="320" y2="90" stroke="#8b91a8" stroke-width="1" marker-end="url(#arrowHead)"/>
+      <line x1="170" y1="292" x2="320" y2="165" stroke="#8b91a8" stroke-width="1" marker-end="url(#arrowHead)"/>
+      <line x1="170" y1="372" x2="320" y2="240" stroke="#8b91a8" stroke-width="1" marker-end="url(#arrowHead)"/>
+
+      <!-- Primitives to shared resources -->
+      <line x1="430" y1="90" x2="640" y2="107" stroke="#8b91a8" stroke-width="1" marker-end="url(#arrowHead)"/>
+      <line x1="560" y1="165" x2="640" y2="195" stroke="#8b91a8" stroke-width="1" marker-end="url(#arrowHead)"/>
+      <line x1="560" y1="315" x2="640" y2="297" stroke="#8b91a8" stroke-width="1" marker-end="url(#arrowHead)"/>
+
+      <!-- Main Thread to threads -->
+      <line x1="105" y1="430" x2="105" y2="400" stroke="#4f46e5" stroke-width="1.2" marker-end="url(#arrowAccent)"/>
+      <text x="120" y="418" font-size="7.5" fill="#4f46e5" font-weight="600">manages</text>
+
+      <!-- GIL label -->
+      <text x="140" y="170" font-size="7" fill="#7c3aed" font-weight="600">serializes</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ===================== SECTION 2: COMPONENTS ===================== -->
+<div class="section" id="components">
+  <div class="section-header">
+    <div class="section-number">2</div>
+    <h2 class="section-title">Component Breakdown</h2>
+  </div>
+  <div class="comp-grid" id="compGrid"></div>
+</div>
+
+<!-- ===================== SECTION 3: REQUEST FLOW ===================== -->
+<div class="section" id="request-flow">
+  <div class="section-header">
+    <div class="section-number">3</div>
+    <h2 class="section-title">Request Flow / Sequence Diagram</h2>
+  </div>
+  <div class="seq-container">
+    <div class="seq-controls">
+      <select id="flowSelect">
+        <option value="lock">Lock Acquire/Release</option>
+        <option value="producer-consumer">Producer-Consumer (Condition)</option>
+        <option value="deadlock">Deadlock Scenario</option>
+        <option value="rlock">RLock Reentrant</option>
+      </select>
+      <button class="btn primary" id="seqPlay">&#9654; Play</button>
+      <button class="btn" id="seqStep">Step</button>
+      <button class="btn" id="seqReset">Reset</button>
+      <label style="font-size:0.8rem;color:var(--text-secondary);margin-left:auto;">Speed</label>
+      <input type="range" min="1" max="5" value="3" id="seqSpeed" style="width:100px;accent-color:var(--accent);">
+    </div>
+    <div style="overflow-x:auto;">
+      <svg id="seqSvg" class="seq-svg" viewBox="0 0 800 400" style="width:100%;min-width:700px;"></svg>
+    </div>
+    <div class="seq-narration" id="seqNarration">Select a flow and press Play to see the sequence animation.</div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 4: COMPARISONS ===================== -->
+<div class="section" id="comparisons">
+  <div class="section-header">
+    <div class="section-number">4</div>
+    <h2 class="section-title">Comparisons with Alternatives</h2>
+  </div>
+  <p style="color:var(--text-secondary);font-size:0.88rem;margin-bottom:1rem;">
+    Python offers several concurrency models. The right choice depends on whether your workload is I/O-bound or CPU-bound.
+  </p>
+  <div class="comp-table-wrap">
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Approach</th>
+          <th>Key Idea</th>
+          <th>Pros</th>
+          <th>Cons</th>
+          <th>Best For</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="highlighted">
+          <td><strong>threading</strong> <span class="chosen-badge">FOCUS</span></td>
+          <td>OS threads sharing process memory, serialized by GIL</td>
+          <td>Simple shared state; great for I/O-bound; low overhead</td>
+          <td>GIL limits CPU parallelism; race conditions; deadlocks</td>
+          <td>Web scraping, file I/O, network calls</td>
+        </tr>
+        <tr>
+          <td><strong>multiprocessing</strong></td>
+          <td>Separate processes with their own GIL and memory space</td>
+          <td>True CPU parallelism; no GIL constraint; fault isolation</td>
+          <td>High memory usage; IPC overhead; pickling constraints</td>
+          <td>CPU-bound: math, image processing, ML training</td>
+        </tr>
+        <tr>
+          <td><strong>asyncio</strong></td>
+          <td>Single-threaded event loop with cooperative multitasking</td>
+          <td>Extremely lightweight; no locks needed; high concurrency</td>
+          <td>Requires async/await everywhere; can't use blocking calls; ecosystem gaps</td>
+          <td>High-concurrency I/O: web servers, chat, APIs</td>
+        </tr>
+        <tr>
+          <td><strong>concurrent.futures</strong></td>
+          <td>High-level API wrapping both threading and multiprocessing</td>
+          <td>Clean Future-based API; easy to swap Thread/Process pools</td>
+          <td>Less control than raw primitives; abstraction overhead</td>
+          <td>Map-reduce style: batch processing, parallel downloads</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:1.5rem;">
+    <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.75rem;">When to pick each</h3>
+    <div class="uc-grid">
+      <div class="uc-card" style="border-left:3px solid var(--accent);">
+        <h4>Choose <code>threading</code> when...</h4>
+        <p>Your workload is I/O-bound (HTTP requests, file ops, DB queries) and you need shared mutable state between tasks without serialization overhead.</p>
+      </div>
+      <div class="uc-card" style="border-left:3px solid var(--green);">
+        <h4>Choose <code>multiprocessing</code> when...</h4>
+        <p>You need true CPU parallelism — heavy computation, data crunching, or number-crunching that the GIL would serialize.</p>
+      </div>
+      <div class="uc-card" style="border-left:3px solid var(--teal);">
+        <h4>Choose <code>asyncio</code> when...</h4>
+        <p>You have thousands of concurrent I/O operations and need maximum throughput with minimal memory (e.g., a web server handling 10k connections).</p>
+      </div>
+      <div class="uc-card" style="border-left:3px solid var(--blue);">
+        <h4>Choose <code>concurrent.futures</code> when...</h4>
+        <p>You want a clean, high-level API and don't need fine-grained control over synchronization primitives. Great for "fan-out and collect results" patterns.</p>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:1.5rem;">
+    <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.75rem;">Synchronization Primitives Comparison</h3>
+    <div class="comp-table-wrap">
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>Primitive</th>
+            <th>Reentrant?</th>
+            <th>Blocking?</th>
+            <th>Counter?</th>
+            <th>Pattern</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Lock</strong></td><td>No</td><td>Yes</td><td>No</td><td>Mutual exclusion (simple)</td></tr>
+          <tr><td><strong>RLock</strong></td><td>Yes</td><td>Yes</td><td>Depth counter</td><td>Nested locking / recursive functions</td></tr>
+          <tr><td><strong>Semaphore</strong></td><td>No</td><td>Conditional</td><td>Yes (N)</td><td>Limit concurrent access to N</td></tr>
+          <tr><td><strong>BoundedSemaphore</strong></td><td>No</td><td>Conditional</td><td>Yes (bounded)</td><td>Semaphore that errors on over-release</td></tr>
+          <tr><td><strong>Condition</strong></td><td>No</td><td>Yes (wait)</td><td>No</td><td>Producer-consumer, wait for state</td></tr>
+          <tr><td><strong>Event</strong></td><td>N/A</td><td>Yes (wait)</td><td>No (flag)</td><td>One-shot signal / ready notification</td></tr>
+          <tr><td><strong>Barrier</strong></td><td>N/A</td><td>Yes (wait)</td><td>Party counter</td><td>Sync N threads at a rendezvous point</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 5: USE CASES & PITFALLS ===================== -->
+<div class="section" id="use-cases">
+  <div class="section-header">
+    <div class="section-number">5</div>
+    <h2 class="section-title">Use Cases & Common Pitfalls</h2>
+  </div>
+
+  <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.75rem;">Primary Use Cases</h3>
+  <div class="uc-grid" style="margin-bottom:1.5rem;">
+    <div class="uc-card">
+      <h4>Web Scraping / API Calls</h4>
+      <p>Fetch hundreds of URLs concurrently. Threads block on network I/O while others proceed. A <code>Semaphore(10)</code> can limit concurrent connections to avoid overwhelming the server.</p>
+    </div>
+    <div class="uc-card">
+      <h4>Producer-Consumer Pipelines</h4>
+      <p>One thread reads data, another processes it. Use <code>queue.Queue</code> or <code>Condition</code> variables to coordinate handoff without busy-waiting.</p>
+    </div>
+    <div class="uc-card">
+      <h4>GUI Background Tasks</h4>
+      <p>Keep the UI responsive while performing I/O in a background thread. Use <code>Event</code> to signal completion back to the main thread.</p>
+    </div>
+    <div class="uc-card">
+      <h4>Periodic Background Jobs</h4>
+      <p>Use <code>Timer</code> threads or daemon threads for heartbeats, health checks, and cache refreshes that run alongside the main application.</p>
+    </div>
+    <div class="uc-card">
+      <h4>Connection Pooling</h4>
+      <p>Manage a fixed pool of database connections with <code>BoundedSemaphore(pool_size)</code>. Threads acquire a connection, use it, then release it back.</p>
+    </div>
+    <div class="uc-card">
+      <h4>Parallel File Processing</h4>
+      <p>Process multiple log files or data files simultaneously. Each thread handles one file; a shared <code>Lock</code> protects aggregate counters or output.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.5rem;color:var(--red);">Anti-Use-Cases</h3>
+  <div class="uc-grid" style="margin-bottom:2rem;">
+    <div class="uc-card" style="border-left:3px solid var(--red);">
+      <h4>CPU-bound computation</h4>
+      <p>Threads are serialized by the GIL. Use <code>multiprocessing</code> or C extensions instead. Threading will actually be slower than single-threaded due to context switching overhead.</p>
+    </div>
+    <div class="uc-card" style="border-left:3px solid var(--red);">
+      <h4>10,000+ concurrent connections</h4>
+      <p>OS threads are heavy (~8MB stack each). Use <code>asyncio</code> for this scale. Threading works up to hundreds of concurrent tasks, not thousands.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.75rem;color:var(--amber);">Common Pitfalls</h3>
+  <div id="pitfallsContainer"></div>
+</div>
+
+<!-- ===================== SECTION 6: BEST PRACTICES ===================== -->
+<div class="section" id="best-practices">
+  <div class="section-header">
+    <div class="section-number">6</div>
+    <h2 class="section-title">Best Practices</h2>
+  </div>
+  <div id="bpContainer"></div>
+</div>
+
+<!-- ===================== SECTION 7: SCALING & TRADE-OFFS ===================== -->
+<div class="section" id="scaling">
+  <div class="section-header">
+    <div class="section-number">7</div>
+    <h2 class="section-title">Scaling & Trade-offs</h2>
+  </div>
+
+  <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.75rem;">Thread Overhead Estimates</h3>
+  <div class="est-grid" style="margin-bottom:1.5rem;">
+    <div class="est-card">
+      <div class="value">~8 MB</div>
+      <div class="label">Stack per thread (default)</div>
+    </div>
+    <div class="est-card">
+      <div class="value">~50 &mu;s</div>
+      <div class="label">Context switch cost</div>
+    </div>
+    <div class="est-card">
+      <div class="value">~5 ms</div>
+      <div class="label">GIL switch interval</div>
+    </div>
+    <div class="est-card">
+      <div class="value">100-500</div>
+      <div class="label">Practical thread limit</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.75rem;">Trade-off Analysis</h3>
+    <div class="comp-table-wrap">
+      <table class="comp-table">
+        <thead><tr><th>Trade-off</th><th>Option A</th><th>Option B</th><th>Guidance</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Fine-grained vs Coarse-grained locking</strong></td>
+            <td>One lock per data field &mdash; maximum concurrency</td>
+            <td>One lock for entire object &mdash; simpler, fewer bugs</td>
+            <td>Start coarse; profile; refine only if contention is proven</td>
+          </tr>
+          <tr>
+            <td><strong>Lock vs Queue</strong></td>
+            <td>Explicit locks on shared state &mdash; flexible but error-prone</td>
+            <td>Thread-safe Queue &mdash; no manual locking, message-passing style</td>
+            <td>Prefer Queue for producer-consumer; Lock for in-place updates</td>
+          </tr>
+          <tr>
+            <td><strong>Threads vs Async</strong></td>
+            <td>OS threads &mdash; works with blocking libraries</td>
+            <td>asyncio &mdash; lighter, higher concurrency ceiling</td>
+            <td>Threads when using legacy blocking code; async for greenfield I/O</td>
+          </tr>
+          <tr>
+            <td><strong>Daemon vs Non-daemon threads</strong></td>
+            <td>Daemon threads die when main exits &mdash; no cleanup</td>
+            <td>Non-daemon threads keep the process alive &mdash; clean shutdown</td>
+            <td>Use daemon for background tasks; non-daemon when data integrity matters</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.75rem;">Failure Scenarios</h3>
+    <div class="comp-grid">
+      <div class="comp-card" style="border-left:3px solid var(--red);">
+        <h3 style="color:var(--red);font-size:0.95rem;">Thread Starvation</h3>
+        <p>A high-priority thread or tight lock acquisition loop prevents other threads from making progress. Mitigate with fair locking and bounded waits.</p>
+      </div>
+      <div class="comp-card" style="border-left:3px solid var(--red);">
+        <h3 style="color:var(--red);font-size:0.95rem;">Deadlock</h3>
+        <p>Two threads each hold a lock the other needs. The program hangs silently. Prevent by always acquiring locks in the same global order.</p>
+      </div>
+      <div class="comp-card" style="border-left:3px solid var(--red);">
+        <h3 style="color:var(--red);font-size:0.95rem;">Livelock</h3>
+        <p>Threads keep reacting to each other's state changes without making progress (e.g., both back off and retry simultaneously). Add random jitter to retries.</p>
+      </div>
+      <div class="comp-card" style="border-left:3px solid var(--red);">
+        <h3 style="color:var(--red);font-size:0.95rem;">GIL Contention</h3>
+        <p>CPU-bound threads fight over the GIL, causing worse performance than single-threaded. Solution: use multiprocessing or release the GIL in C extensions.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 8: PLAYGROUND ===================== -->
+<div class="section" id="playground">
+  <div class="section-header">
+    <div class="section-number">8</div>
+    <h2 class="section-title">Interactive Playground</h2>
+  </div>
+
+  <div class="playground-container">
+    <div class="playground-tabs">
+      <button class="playground-tab active" data-tab="race">Race Condition</button>
+      <button class="playground-tab" data-tab="lock">Lock Simulator</button>
+      <button class="playground-tab" data-tab="deadlock">Deadlock Detector</button>
+      <button class="playground-tab" data-tab="semaphore">Semaphore Pool</button>
+    </div>
+
+    <!-- Race Condition Tab -->
+    <div class="playground-panel active" id="panel-race">
+      <div class="sim-controls">
+        <label>Threads: <strong id="raceThreadCount">4</strong></label>
+        <input type="range" min="2" max="12" value="4" id="raceThreads">
+        <label>Increments per thread: <strong id="raceIncCount">100</strong></label>
+        <input type="range" min="10" max="500" value="100" step="10" id="raceIncrements">
+        <button class="btn primary" id="raceRun">Run Without Lock</button>
+        <button class="btn" id="raceRunLock" style="border-color:var(--green);color:var(--green);">Run With Lock</button>
+        <button class="btn" id="raceReset">Reset</button>
+      </div>
+      <div class="sim-canvas" id="raceCanvas" style="min-height:250px;padding:1rem;"></div>
+      <div class="metrics-row">
+        <div class="metric-box"><div class="val" id="raceExpected">0</div><div class="lbl">Expected Value</div></div>
+        <div class="metric-box"><div class="val" id="raceActual">0</div><div class="lbl">Actual Value</div></div>
+        <div class="metric-box"><div class="val" id="raceLost">0</div><div class="lbl">Lost Updates</div></div>
+        <div class="metric-box"><div class="val" id="raceStatus">-</div><div class="lbl">Status</div></div>
+      </div>
+      <div class="what-happening" id="raceWhy">
+        Adjust parameters and press "Run Without Lock" to see a race condition in action, or "Run With Lock" to see how a Lock prevents it.
+      </div>
+    </div>
+
+    <!-- Lock Simulator Tab -->
+    <div class="playground-panel" id="panel-lock">
+      <div class="sim-controls">
+        <label>Threads:</label>
+        <input type="range" min="2" max="6" value="3" id="lockThreads">
+        <strong id="lockThreadCount">3</strong>
+        <label>Lock type:</label>
+        <select id="lockType">
+          <option value="lock">Lock</option>
+          <option value="rlock">RLock</option>
+        </select>
+        <button class="btn primary" id="lockRun">&#9654; Simulate</button>
+        <button class="btn" id="lockReset">Reset</button>
+      </div>
+      <div class="sim-canvas" id="lockCanvas" style="min-height:280px;padding:1rem;"></div>
+      <div class="what-happening" id="lockWhy">Configure the number of threads and lock type, then press Simulate to watch threads compete for the lock.</div>
+    </div>
+
+    <!-- Deadlock Detector Tab -->
+    <div class="playground-panel" id="panel-deadlock">
+      <div class="sim-controls">
+        <label>Scenario:</label>
+        <select id="deadlockScenario">
+          <option value="classic">Classic ABBA Deadlock</option>
+          <option value="ordered">Ordered Acquisition (Safe)</option>
+          <option value="timeout">Timeout-Based (Safe)</option>
+        </select>
+        <button class="btn primary" id="deadlockRun">&#9654; Simulate</button>
+        <button class="btn" id="deadlockReset">Reset</button>
+      </div>
+      <div class="sim-canvas" id="deadlockCanvas" style="min-height:280px;padding:1rem;"></div>
+      <div class="what-happening" id="deadlockWhy">Select a deadlock scenario to visualize how threads can get stuck — and how to prevent it.</div>
+    </div>
+
+    <!-- Semaphore Pool Tab -->
+    <div class="playground-panel" id="panel-semaphore">
+      <div class="sim-controls">
+        <label>Pool size (Semaphore value):</label>
+        <input type="range" min="1" max="5" value="3" id="semPoolSize">
+        <strong id="semPoolVal">3</strong>
+        <label>Requesting threads:</label>
+        <input type="range" min="3" max="10" value="6" id="semThreads">
+        <strong id="semThreadVal">6</strong>
+        <button class="btn primary" id="semRun">&#9654; Simulate</button>
+        <button class="btn" id="semReset">Reset</button>
+      </div>
+      <div class="sim-canvas" id="semCanvas" style="min-height:280px;padding:1rem;"></div>
+      <div class="metrics-row">
+        <div class="metric-box"><div class="val" id="semActive">0</div><div class="lbl">Active</div></div>
+        <div class="metric-box"><div class="val" id="semWaiting">0</div><div class="lbl">Waiting</div></div>
+        <div class="metric-box"><div class="val" id="semCompleted">0</div><div class="lbl">Completed</div></div>
+      </div>
+      <div class="what-happening" id="semWhy">A Semaphore limits how many threads can access a resource concurrently. Adjust the pool size and thread count to see the effect.</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end main-container -->
+
+<script>
+// ===================== NAV HIGHLIGHT =====================
+const navLinks = document.querySelectorAll('.sticky-nav a');
+const sections = document.querySelectorAll('.section');
+const observerOpts = { rootMargin: '-80px 0px -60% 0px', threshold: 0 };
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const id = e.target.id;
+      const link = document.querySelector(`.sticky-nav a[href="#${id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, observerOpts);
+sections.forEach(s => observer.observe(s));
+
+// ===================== ARCH TOOLTIP =====================
+const tooltip = document.getElementById('archTooltip');
+document.querySelectorAll('.node-box[data-tip]').forEach(node => {
+  node.addEventListener('mouseenter', e => {
+    tooltip.textContent = node.getAttribute('data-tip');
+    tooltip.classList.add('visible');
+  });
+  node.addEventListener('mousemove', e => {
+    tooltip.style.left = (e.pageX + 14) + 'px';
+    tooltip.style.top = (e.pageY - 10) + 'px';
+  });
+  node.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('visible');
+  });
+});
+
+// ===================== COMPONENT CARDS =====================
+const components = [
+  {
+    name: 'Global Interpreter Lock (GIL)',
+    icon: '🔒', color: '#7c3aed', bg: '#f5f3ff',
+    purpose: 'A mutex in CPython that allows only one thread to execute Python bytecode at a time.',
+    tech: 'Built into CPython — not a feature of the language spec. PyPy and Jython handle this differently.',
+    decisions: 'Released during blocking I/O (socket, file ops) and when calling C extensions that explicitly release it.',
+    tags: [{ text: 'CPython', color: '#7c3aed', bg: '#ede9fe' }, { text: 'Per-process', color: '#0d9488', bg: '#ccfbf1' }]
+  },
+  {
+    name: 'threading.Lock',
+    icon: '🔐', color: '#059669', bg: '#ecfdf5',
+    purpose: 'The simplest mutual exclusion primitive. Only one thread can hold it at a time.',
+    tech: 'Non-reentrant — the same thread acquiring it twice causes a deadlock. Use with "with" statement for safety.',
+    decisions: 'Use for simple critical sections. Prefer RLock when code might be called recursively.',
+    tags: [{ text: 'Mutex', color: '#059669', bg: '#d1fae5' }, { text: 'Non-reentrant', color: '#d97706', bg: '#fef3c7' }]
+  },
+  {
+    name: 'threading.RLock',
+    icon: '🔄', color: '#2563eb', bg: '#dbeafe',
+    purpose: 'Reentrant lock — the same thread can acquire it multiple times without deadlocking.',
+    tech: 'Tracks owner thread and acquisition count. Must be released the same number of times it was acquired.',
+    decisions: 'Slightly more overhead than Lock. Use when protecting methods that call other protected methods.',
+    tags: [{ text: 'Reentrant', color: '#2563eb', bg: '#dbeafe' }, { text: 'Depth-counted', color: '#7c3aed', bg: '#ede9fe' }]
+  },
+  {
+    name: 'threading.Semaphore',
+    icon: '🚦', color: '#0891b2', bg: '#e0f2fe',
+    purpose: 'Manages an internal counter. Allows up to N threads to access a resource concurrently.',
+    tech: 'acquire() decrements counter (blocks at 0); release() increments. BoundedSemaphore prevents over-release.',
+    decisions: 'Perfect for connection pools, rate limiting concurrent access, and resource pooling patterns.',
+    tags: [{ text: 'Counter', color: '#0891b2', bg: '#e0f2fe' }, { text: 'Bounded variant', color: '#d97706', bg: '#fef3c7' }]
+  },
+  {
+    name: 'threading.Condition',
+    icon: '📡', color: '#db2777', bg: '#fce7f3',
+    purpose: 'Allows threads to wait until a particular condition is met. Built on top of a Lock.',
+    tech: 'wait() releases the lock and blocks; notify() or notify_all() wakes waiting threads. Always check condition in a while loop.',
+    decisions: 'The foundation of producer-consumer patterns. More flexible than Event for complex state coordination.',
+    tags: [{ text: 'Wait/Notify', color: '#db2777', bg: '#fce7f3' }, { text: 'Producer-Consumer', color: '#059669', bg: '#d1fae5' }]
+  },
+  {
+    name: 'threading.Event',
+    icon: '🚩', color: '#d97706', bg: '#fef3c7',
+    purpose: 'A simple boolean flag. Threads call wait() to block until the flag is set by another thread.',
+    tech: 'set() wakes all waiters; clear() resets the flag; is_set() checks without blocking. Simpler than Condition.',
+    decisions: 'Use for one-time "ready" signals: initialization complete, shutdown requested, data available.',
+    tags: [{ text: 'Flag', color: '#d97706', bg: '#fef3c7' }, { text: 'Broadcast', color: '#2563eb', bg: '#dbeafe' }]
+  },
+  {
+    name: 'threading.Barrier',
+    icon: '🚧', color: '#dc2626', bg: '#fee2e2',
+    purpose: 'Blocks N threads until all have reached the barrier point, then releases all simultaneously.',
+    tech: 'Barrier(parties=N) — each thread calls wait(). After all N arrive, all proceed. Can optionally run an action on release.',
+    decisions: 'Use for phased computation where all workers must finish step K before any starts step K+1.',
+    tags: [{ text: 'Sync point', color: '#dc2626', bg: '#fee2e2' }, { text: 'N-party', color: '#7c3aed', bg: '#ede9fe' }]
+  },
+  {
+    name: 'queue.Queue',
+    icon: '📬', color: '#0d9488', bg: '#ccfbf1',
+    purpose: 'Thread-safe FIFO queue. The preferred way to pass data between threads without explicit locking.',
+    tech: 'put() and get() are atomic with optional blocking and timeouts. Also: LifoQueue, PriorityQueue.',
+    decisions: 'Always prefer Queue over manual lock + list for producer-consumer. Built-in task_done() / join() for completion tracking.',
+    tags: [{ text: 'Thread-safe', color: '#0d9488', bg: '#ccfbf1' }, { text: 'FIFO/LIFO/Priority', color: '#2563eb', bg: '#dbeafe' }]
+  },
+];
+
+const compGrid = document.getElementById('compGrid');
+components.forEach(c => {
+  const tagsHtml = c.tags.map(t => `<span class="comp-tag" style="background:${t.bg};color:${t.color}">${t.text}</span>`).join('');
+  compGrid.innerHTML += `
+    <div class="comp-card">
+      <div class="comp-card-header">
+        <div class="comp-icon" style="background:${c.bg};color:${c.color}">${c.icon}</div>
+        <h3>${c.name}</h3>
+      </div>
+      <p><strong>Purpose:</strong> ${c.purpose}</p>
+      <p><strong>Tech:</strong> ${c.tech}</p>
+      <p><strong>Key decisions:</strong> ${c.decisions}</p>
+      <div>${tagsHtml}</div>
+    </div>`;
+});
+
+// ===================== SEQUENCE DIAGRAM =====================
+const seqSvg = document.getElementById('seqSvg');
+const seqNarration = document.getElementById('seqNarration');
+let seqAnimating = false, seqInterval = null, seqCurrentStep = 0, seqSteps = [];
+
+const flows = {
+  'lock': {
+    actors: ['Thread A', 'Lock', 'Shared Var', 'Thread B'],
+    steps: [
+      { from: 0, to: 1, label: 'acquire()', desc: 'Thread A requests the lock.' },
+      { from: 1, to: 0, label: 'acquired ✓', desc: 'Lock is free — Thread A acquires it immediately.', color: '#059669' },
+      { from: 3, to: 1, label: 'acquire()', desc: 'Thread B tries to acquire the same lock.', color: '#d97706' },
+      { from: 1, to: 3, label: 'BLOCKED ⏳', desc: 'Lock is held by Thread A — Thread B must wait.', color: '#dc2626' },
+      { from: 0, to: 2, label: 'counter += 1', desc: 'Thread A safely modifies the shared variable inside the critical section.' },
+      { from: 2, to: 0, label: 'counter = 1', desc: 'Read-modify-write completes atomically (protected by lock).', color: '#059669' },
+      { from: 0, to: 1, label: 'release()', desc: 'Thread A releases the lock.' },
+      { from: 1, to: 3, label: 'acquired ✓', desc: 'Thread B is unblocked and acquires the lock.', color: '#059669' },
+      { from: 3, to: 2, label: 'counter += 1', desc: 'Thread B now safely modifies the shared variable.' },
+      { from: 3, to: 1, label: 'release()', desc: 'Thread B releases the lock. Both threads completed safely.' },
+    ]
+  },
+  'producer-consumer': {
+    actors: ['Producer', 'Condition', 'Buffer', 'Consumer'],
+    steps: [
+      { from: 0, to: 1, label: 'acquire()', desc: 'Producer acquires the condition\'s underlying lock.' },
+      { from: 0, to: 2, label: 'buffer.append(item)', desc: 'Producer adds an item to the shared buffer.' },
+      { from: 0, to: 1, label: 'notify()', desc: 'Producer notifies one waiting consumer that data is available.' },
+      { from: 0, to: 1, label: 'release()', desc: 'Producer releases the lock.' },
+      { from: 3, to: 1, label: 'acquire()', desc: 'Consumer acquires the condition\'s lock.' },
+      { from: 3, to: 1, label: 'wait() [if empty]', desc: 'If buffer is empty, consumer releases lock and waits. Otherwise proceeds.', color: '#d97706' },
+      { from: 1, to: 3, label: 'woken up ✓', desc: 'Consumer is notified and re-acquires the lock.', color: '#059669' },
+      { from: 3, to: 2, label: 'buffer.pop()', desc: 'Consumer removes an item from the buffer.' },
+      { from: 3, to: 1, label: 'release()', desc: 'Consumer releases the lock. One produce-consume cycle complete.' },
+    ]
+  },
+  'deadlock': {
+    actors: ['Thread A', 'Lock X', 'Lock Y', 'Thread B'],
+    steps: [
+      { from: 0, to: 1, label: 'acquire(X)', desc: 'Thread A acquires Lock X.' },
+      { from: 1, to: 0, label: 'acquired ✓', desc: 'Thread A holds Lock X.', color: '#059669' },
+      { from: 3, to: 2, label: 'acquire(Y)', desc: 'Thread B acquires Lock Y.' },
+      { from: 2, to: 3, label: 'acquired ✓', desc: 'Thread B holds Lock Y.', color: '#059669' },
+      { from: 0, to: 2, label: 'acquire(Y)', desc: 'Thread A tries to acquire Lock Y — but Thread B holds it!', color: '#d97706' },
+      { from: 2, to: 0, label: 'BLOCKED ⏳', desc: 'Thread A is blocked, waiting for Lock Y.', color: '#dc2626' },
+      { from: 3, to: 1, label: 'acquire(X)', desc: 'Thread B tries to acquire Lock X — but Thread A holds it!', color: '#d97706' },
+      { from: 1, to: 3, label: 'BLOCKED ⏳', desc: 'Thread B is blocked, waiting for Lock X.', color: '#dc2626' },
+      { from: -1, to: -1, label: '', desc: '💀 DEADLOCK! Both threads are waiting for each other. The program hangs forever. Solution: always acquire locks in a consistent global order (e.g., X before Y).' },
+    ]
+  },
+  'rlock': {
+    actors: ['Thread A', 'RLock', 'Method outer()', 'Method inner()'],
+    steps: [
+      { from: 0, to: 1, label: 'acquire() [1st]', desc: 'Thread A acquires the RLock for the first time. Depth = 1.' },
+      { from: 1, to: 0, label: 'acquired (depth=1)', desc: 'RLock is free — acquired. Owner set to Thread A.', color: '#059669' },
+      { from: 0, to: 2, label: 'call outer()', desc: 'Thread A enters outer(), which is protected by the RLock.' },
+      { from: 2, to: 3, label: 'call inner()', desc: 'outer() calls inner(), which also needs the same RLock.' },
+      { from: 0, to: 1, label: 'acquire() [2nd]', desc: 'Thread A acquires the RLock again. Since it\'s reentrant, this succeeds! Depth = 2.', color: '#2563eb' },
+      { from: 1, to: 0, label: 'acquired (depth=2)', desc: 'Same thread — RLock increments depth counter instead of blocking.', color: '#059669' },
+      { from: 3, to: 0, label: 'return from inner()', desc: 'inner() completes its work.' },
+      { from: 0, to: 1, label: 'release() [depth→1]', desc: 'First release — depth decremented to 1. Lock still held.', color: '#d97706' },
+      { from: 2, to: 0, label: 'return from outer()', desc: 'outer() completes its work.' },
+      { from: 0, to: 1, label: 'release() [depth→0]', desc: 'Second release — depth reaches 0. Lock fully released. Other threads can now acquire it.', color: '#059669' },
+    ]
+  }
+};
+
+function drawSequence(flowKey) {
+  const flow = flows[flowKey];
+  const actors = flow.actors;
+  seqSteps = flow.steps;
+  seqCurrentStep = 0;
+  const w = 800, h = 400;
+  const actorGap = w / (actors.length + 1);
+  const startY = 60;
+  const stepH = (h - startY - 30) / Math.max(seqSteps.length, 1);
+
+  let svg = '';
+  actors.forEach((a, i) => {
+    const x = actorGap * (i + 1);
+    svg += `<rect x="${x - 45}" y="10" width="90" height="32" rx="6" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.2"/>`;
+    svg += `<text x="${x}" y="31" text-anchor="middle" font-size="10.5" font-weight="700" fill="#4f46e5" font-family="var(--font-sans)">${a}</text>`;
+    svg += `<line x1="${x}" y1="42" x2="${x}" y2="${h - 10}" stroke="#c5cad8" stroke-width="1" stroke-dasharray="4,3"/>`;
+  });
+
+  seqSteps.forEach((s, i) => {
+    const y = startY + i * stepH + stepH / 2;
+    const id = `seq-step-${i}`;
+    if (s.from === -1) {
+      svg += `<g id="${id}" opacity="0.15">`;
+      svg += `<rect x="50" y="${y - 12}" width="${w - 100}" height="24" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="1"/>`;
+      svg += `<text x="${w/2}" y="${y + 4}" text-anchor="middle" font-size="10" font-weight="800" fill="#dc2626" font-family="var(--font-sans)">DEADLOCK</text>`;
+      svg += `</g>`;
+      return;
+    }
+    const x1 = actorGap * (s.from + 1);
+    const x2 = actorGap * (s.to + 1);
+    const dir = x2 > x1 ? 1 : -1;
+    const col = s.color || '#8b91a8';
+    svg += `<g id="${id}" opacity="0.15">`;
+    svg += `<line x1="${x1}" y1="${y}" x2="${x2 - dir * 8}" y2="${y}" stroke="${col}" stroke-width="1.5" marker-end="url(#arrowHead)"/>`;
+    const labelX = (x1 + x2) / 2;
+    svg += `<text x="${labelX}" y="${y - 6}" text-anchor="middle" font-size="8.5" fill="${col}" font-weight="600" font-family="var(--font-mono)">${s.label}</text>`;
+    svg += `</g>`;
+  });
+
+  seqSvg.innerHTML = `<defs><marker id="arrowHead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8b91a8"/></marker></defs>` + svg;
+  seqSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  seqNarration.textContent = 'Press Play or Step to begin the animation.';
+}
+
+function highlightStep(idx) {
+  seqSteps.forEach((_, i) => {
+    const el = document.getElementById(`seq-step-${i}`);
+    if (el) el.setAttribute('opacity', i <= idx ? '1' : '0.15');
+  });
+  if (seqSteps[idx]) {
+    seqNarration.textContent = `Step ${idx + 1}: ${seqSteps[idx].desc}`;
+  }
+}
+
+document.getElementById('flowSelect').addEventListener('change', function() {
+  stopSeq();
+  drawSequence(this.value);
+});
+
+document.getElementById('seqPlay').addEventListener('click', () => {
+  if (seqAnimating) { stopSeq(); return; }
+  seqAnimating = true;
+  document.getElementById('seqPlay').innerHTML = '⏸ Pause';
+  const speed = [1500, 1100, 800, 500, 300][document.getElementById('seqSpeed').value - 1];
+  seqInterval = setInterval(() => {
+    if (seqCurrentStep >= seqSteps.length) { stopSeq(); return; }
+    highlightStep(seqCurrentStep);
+    seqCurrentStep++;
+  }, speed);
+});
+
+document.getElementById('seqStep').addEventListener('click', () => {
+  stopSeq();
+  if (seqCurrentStep < seqSteps.length) {
+    highlightStep(seqCurrentStep);
+    seqCurrentStep++;
+  }
+});
+
+document.getElementById('seqReset').addEventListener('click', () => {
+  stopSeq();
+  drawSequence(document.getElementById('flowSelect').value);
+});
+
+function stopSeq() {
+  seqAnimating = false;
+  clearInterval(seqInterval);
+  document.getElementById('seqPlay').innerHTML = '&#9654; Play';
+}
+
+drawSequence('lock');
+
+// ===================== PITFALLS =====================
+const pitfalls = [
+  {
+    title: 'Race condition on compound operations',
+    mistake: 'Assuming x += 1 is atomic. In Python, it\'s actually LOAD x → ADD 1 → STORE x (three bytecodes). The GIL can release between any of these.',
+    why: 'The GIL protects individual bytecodes, so people assume all operations are atomic. But compound operations involve multiple bytecodes.',
+    consequence: 'Lost updates. If two threads read the same value, increment, and write back, one increment is lost. With 1000 increments across 10 threads, you might see only 8500 instead of 10000.',
+    fix: 'Wrap compound operations in a Lock. Use queue.Queue for passing data. Use threading.Lock\'s context manager: "with lock: x += 1".'
+  },
+  {
+    title: 'Forgetting to release a lock on exception',
+    mistake: 'Using lock.acquire() and lock.release() in separate statements without try/finally or a "with" block.',
+    why: 'Developers focus on the happy path and forget that exceptions can happen between acquire and release.',
+    consequence: 'If an exception occurs while the lock is held, it\'s never released. All other threads waiting on that lock are blocked forever — a form of deadlock.',
+    fix: 'Always use the context manager pattern: "with lock:" — it guarantees release even on exception. Never call acquire/release manually.'
+  },
+  {
+    title: 'Acquiring locks in inconsistent order',
+    mistake: 'Thread A acquires Lock X then Lock Y; Thread B acquires Lock Y then Lock X.',
+    why: 'Each thread\'s acquisition order seems logical in isolation. The circular dependency only manifests under concurrent execution.',
+    consequence: 'Classic ABBA deadlock. Both threads block forever. The program hangs with no error message — just silence.',
+    fix: 'Establish a global lock ordering. Always acquire locks in the same order (e.g., alphabetically). Document the ordering. Use timeout-based acquisition as a safety net.'
+  },
+  {
+    title: 'Using threading for CPU-bound work',
+    mistake: 'Spawning threads for heavy computation (matrix multiplication, image processing, sorting) expecting a speedup.',
+    why: 'In most languages, threads enable CPU parallelism. Python\'s GIL makes this a false assumption.',
+    consequence: 'Performance worse than single-threaded due to GIL contention and context switching overhead. Each thread fights for the GIL every 5ms.',
+    fix: 'Use multiprocessing.Pool for CPU-bound work. Or use C extensions (NumPy, Cython) that release the GIL during computation.'
+  },
+  {
+    title: 'Spurious wakeups with Condition.wait()',
+    mistake: 'Using "if" instead of "while" to check the condition after wait() returns.',
+    why: 'Developers assume wait() only returns when notify() is called. But POSIX threads (and Python) can wake spuriously.',
+    consequence: 'Thread proceeds when the condition isn\'t actually met, consuming data that isn\'t there or operating on invalid state.',
+    fix: 'Always use "while not condition: cv.wait()" — never "if not condition: cv.wait()". The while loop re-checks after every wakeup.'
+  },
+  {
+    title: 'Daemon threads and data loss',
+    mistake: 'Setting threads as daemon (thread.daemon = True) that are writing data or doing cleanup.',
+    why: 'Daemon threads conveniently die when the main thread exits, avoiding the need for explicit shutdown logic.',
+    consequence: 'When the main thread exits, daemon threads are killed immediately — mid-write, mid-transaction, mid-flush. Data corruption or loss.',
+    fix: 'Only use daemon threads for truly dispensable background work (monitoring, heartbeats). For anything writing data, use non-daemon threads with explicit shutdown signals (Event).'
+  },
+];
+
+const pitfallsContainer = document.getElementById('pitfallsContainer');
+pitfalls.forEach((p, i) => {
+  pitfallsContainer.innerHTML += `
+    <div class="pitfall-card" id="pitfall-${i}">
+      <div class="pitfall-header" onclick="toggleCollapse('pitfall-${i}')">
+        <span class="icon">&#9888;</span>
+        <span>${p.title}</span>
+        <span class="chevron">&#9654;</span>
+      </div>
+      <div class="pitfall-body" id="pitfall-body-${i}">
+        <p><strong>The mistake:</strong> ${p.mistake}</p>
+        <p style="margin-top:0.4rem;"><strong>Why it happens:</strong> ${p.why}</p>
+        <p style="margin-top:0.4rem;"><strong>The consequence:</strong> ${p.consequence}</p>
+        <p style="margin-top:0.4rem;"><strong>The fix:</strong> ${p.fix}</p>
+      </div>
+    </div>`;
+});
+
+// ===================== BEST PRACTICES =====================
+const bestPractices = [
+  {
+    title: 'Always use context managers for locks',
+    detail: 'Use "with lock:" instead of manual acquire/release. This guarantees the lock is released even if an exception is raised, preventing accidental deadlocks from error paths.'
+  },
+  {
+    title: 'Prefer queue.Queue over Lock + shared list',
+    detail: 'Queue encapsulates all synchronization internally. It supports blocking get/put, timeouts, and task_done()/join() for completion tracking. It eliminates an entire class of bugs.'
+  },
+  {
+    title: 'Minimize time spent holding locks',
+    detail: 'Compute results outside the lock, then only hold the lock briefly to update shared state. Long critical sections increase contention and reduce concurrency.'
+  },
+  {
+    title: 'Use threading.Event for shutdown signals',
+    detail: 'Create a shutdown_event = Event(). Workers check shutdown_event.is_set() in their loops. Main thread calls shutdown_event.set() to trigger clean shutdown.'
+  },
+  {
+    title: 'Use ThreadPoolExecutor for fire-and-forget tasks',
+    detail: 'concurrent.futures.ThreadPoolExecutor manages thread lifecycle, exception propagation, and result collection. Use executor.map() for batch processing and executor.submit() for individual tasks.'
+  },
+  {
+    title: 'Profile before adding threads',
+    detail: 'Measure whether your bottleneck is I/O-bound (threading helps) or CPU-bound (threading hurts). Use cProfile, time.perf_counter, or line_profiler to identify the actual bottleneck.'
+  },
+  {
+    title: 'Use logging, not print, in threaded code',
+    detail: 'print() is not thread-safe — output from concurrent threads can interleave mid-line. The logging module is thread-safe and includes timestamps and thread names automatically.'
+  },
+  {
+    title: 'Set timeouts on lock acquisition',
+    detail: 'Use lock.acquire(timeout=5) instead of blocking indefinitely. If the timeout expires, handle the failure gracefully. This prevents silent deadlocks from hanging the program forever.'
+  },
+  {
+    title: 'Document lock ordering',
+    detail: 'If your code uses multiple locks, document the required acquisition order in a comment at the module level. This prevents deadlocks from creeping in as the codebase grows.'
+  },
+  {
+    title: 'Test concurrent code with stress tests',
+    detail: 'Race conditions are timing-dependent. Run concurrent code thousands of times with random sleep injections. Use tools like ThreadSanitizer (via C extensions) or concurrency-testing frameworks.'
+  },
+];
+
+const bpContainer = document.getElementById('bpContainer');
+bestPractices.forEach((bp, i) => {
+  bpContainer.innerHTML += `
+    <div class="bp-card" id="bp-${i}">
+      <div class="bp-header" onclick="toggleCollapse('bp-${i}')">
+        <span>&#10003;</span>
+        <span>${bp.title}</span>
+        <span class="chevron">&#9654;</span>
+      </div>
+      <div class="bp-body" id="bp-body-${i}">
+        <p>${bp.detail}</p>
+      </div>
+    </div>`;
+});
+
+function toggleCollapse(id) {
+  const card = document.getElementById(id);
+  const body = card.querySelector('.pitfall-body, .bp-body');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open');
+  card.classList.toggle('open-parent');
+}
+
+// ===================== PLAYGROUND: TABS =====================
+document.querySelectorAll('.playground-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.playground-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.playground-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+  });
+});
+
+// ===================== PLAYGROUND: RACE CONDITION =====================
+const raceThreadsSlider = document.getElementById('raceThreads');
+const raceIncSlider = document.getElementById('raceIncrements');
+raceThreadsSlider.addEventListener('input', () => document.getElementById('raceThreadCount').textContent = raceThreadsSlider.value);
+raceIncSlider.addEventListener('input', () => document.getElementById('raceIncCount').textContent = raceIncSlider.value);
+
+function simulateRace(useLock) {
+  const nThreads = parseInt(raceThreadsSlider.value);
+  const nInc = parseInt(raceIncSlider.value);
+  const expected = nThreads * nInc;
+  let sharedCounter = 0;
+  let locked = false;
+  const canvas = document.getElementById('raceCanvas');
+  const threadStates = [];
+
+  for (let i = 0; i < nThreads; i++) {
+    threadStates.push({ id: i, done: 0, color: `hsl(${(i * 360 / nThreads) + 200}, 70%, 55%)` });
+  }
+
+  const steps = [];
+  const order = [];
+  for (let inc = 0; inc < nInc; inc++) {
+    for (let t = 0; t < nThreads; t++) order.push(t);
+  }
+  if (!useLock) {
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+  }
+
+  let counter = 0;
+  const readValues = {};
+  const doneCounts = new Array(nThreads).fill(0);
+
+  order.forEach(tid => {
+    if (useLock) {
+      counter++;
+      doneCounts[tid]++;
+      steps.push({ tid, counter, done: [...doneCounts] });
+    } else {
+      const readVal = counter;
+      if (!(tid in readValues)) readValues[tid] = null;
+      if (Math.random() < 0.3 && !useLock) {
+        readValues[tid] = readVal;
+        steps.push({ tid, counter, done: [...doneCounts], type: 'read' });
+        return;
+      }
+      if (readValues[tid] !== null) {
+        counter = readValues[tid] + 1;
+        readValues[tid] = null;
+      } else {
+        counter++;
+      }
+      doneCounts[tid]++;
+      steps.push({ tid, counter, done: [...doneCounts] });
+    }
+  });
+
+  const finalVal = counter;
+  const lost = expected - finalVal;
+
+  document.getElementById('raceExpected').textContent = expected;
+
+  let stepIdx = 0;
+  const barWidth = Math.max(20, Math.floor((canvas.clientWidth - 40) / nThreads) - 8);
+  const maxBarH = 180;
+
+  function render() {
+    if (stepIdx >= steps.length) {
+      document.getElementById('raceActual').textContent = finalVal;
+      document.getElementById('raceLost').textContent = lost;
+      document.getElementById('raceStatus').textContent = useLock ? '✓ Safe' : (lost > 0 ? '✗ Race!' : '✓ Lucky');
+      document.getElementById('raceStatus').style.color = (useLock || lost === 0) ? 'var(--green)' : 'var(--red)';
+      document.getElementById('raceWhy').textContent = useLock
+        ? `With a Lock, every increment is atomic. All ${expected} updates are preserved.`
+        : (lost > 0 ? `Without synchronization, ${lost} updates were lost! Threads read stale values and overwrote each other's increments.` : `Got lucky this time — but run again and you'll likely see lost updates.`);
+      return;
+    }
+
+    const batchSize = Math.max(1, Math.floor(steps.length / 80));
+    for (let b = 0; b < batchSize && stepIdx < steps.length; b++, stepIdx++) {
+      // just advance
+    }
+
+    const s = steps[Math.min(stepIdx - 1, steps.length - 1)];
+    document.getElementById('raceActual').textContent = s.counter;
+    document.getElementById('raceLost').textContent = Math.max(0, (stepIdx) - s.counter);
+
+    let html = '<div style="display:flex;gap:8px;align-items:flex-end;height:200px;padding:10px;">';
+    for (let t = 0; t < nThreads; t++) {
+      const pct = s.done[t] / nInc;
+      const h = Math.max(4, pct * maxBarH);
+      html += `<div style="display:flex;flex-direction:column;align-items:center;flex:1;">
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">${s.done[t]}</div>
+        <div style="width:${barWidth}px;height:${h}px;background:${threadStates[t].color};border-radius:4px 4px 0 0;transition:height 0.05s;"></div>
+        <div style="font-size:0.72rem;font-weight:600;margin-top:4px;color:var(--text-secondary);">T${t+1}</div>
+      </div>`;
+    }
+    html += '</div>';
+    html += `<div style="text-align:center;margin-top:8px;font-size:0.85rem;font-weight:600;color:var(--accent);">Counter: ${s.counter}</div>`;
+    canvas.innerHTML = html;
+
+    requestAnimationFrame(render);
+  }
+
+  canvas.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--text-muted);">Simulating...</div>';
+  document.getElementById('raceStatus').textContent = '...';
+  document.getElementById('raceStatus').style.color = 'var(--text-muted)';
+  requestAnimationFrame(render);
+}
+
+document.getElementById('raceRun').addEventListener('click', () => simulateRace(false));
+document.getElementById('raceRunLock').addEventListener('click', () => simulateRace(true));
+document.getElementById('raceReset').addEventListener('click', () => {
+  document.getElementById('raceCanvas').innerHTML = '';
+  ['raceExpected','raceActual','raceLost'].forEach(id => document.getElementById(id).textContent = '0');
+  document.getElementById('raceStatus').textContent = '-';
+  document.getElementById('raceStatus').style.color = 'var(--text)';
+  document.getElementById('raceWhy').textContent = 'Adjust parameters and press "Run Without Lock" to see a race condition in action, or "Run With Lock" to see how a Lock prevents it.';
+});
+
+// ===================== PLAYGROUND: LOCK SIMULATOR =====================
+const lockThreadsSlider = document.getElementById('lockThreads');
+lockThreadsSlider.addEventListener('input', () => document.getElementById('lockThreadCount').textContent = lockThreadsSlider.value);
+
+document.getElementById('lockRun').addEventListener('click', () => {
+  const n = parseInt(lockThreadsSlider.value);
+  const lockType = document.getElementById('lockType').value;
+  const canvas = document.getElementById('lockCanvas');
+  const colors = Array.from({length: n}, (_, i) => `hsl(${(i * 360 / n) + 210}, 65%, 50%)`);
+
+  const totalSteps = n * 3;
+  const steps = [];
+  const order = Array.from({length: n}, (_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+
+  let lockHolder = -1;
+  let lockDepth = 0;
+  const waiting = new Set(order);
+  const done = new Set();
+
+  order.forEach(tid => {
+    steps.push({ type: 'request', tid, holder: lockHolder });
+    if (lockHolder === -1 || (lockType === 'rlock' && lockHolder === tid)) {
+      lockHolder = tid;
+      lockDepth++;
+      waiting.delete(tid);
+      steps.push({ type: 'acquire', tid, holder: tid, depth: lockDepth, waiting: new Set(waiting), done: new Set(done) });
+      steps.push({ type: 'work', tid, holder: tid });
+      if (lockType === 'rlock' && lockDepth < 2) {
+        lockDepth++;
+        steps.push({ type: 'reacquire', tid, holder: tid, depth: lockDepth });
+        lockDepth--;
+        steps.push({ type: 'release-inner', tid, holder: tid, depth: lockDepth });
+      }
+      lockDepth--;
+      if (lockDepth === 0) lockHolder = -1;
+      done.add(tid);
+      steps.push({ type: 'release', tid, holder: lockHolder, depth: lockDepth, waiting: new Set(waiting), done: new Set(done) });
+    }
+  });
+
+  let stepIdx = 0;
+  function renderLockStep() {
+    if (stepIdx >= steps.length) {
+      document.getElementById('lockWhy').textContent = 'Simulation complete. All threads acquired the lock, did their work, and released it.';
+      return;
+    }
+    const s = steps[stepIdx];
+    const rowH = 44;
+    const leftW = 100;
+    const lockX = 250;
+    const barX = 380;
+    const barW = 300;
+
+    let html = `<svg width="100%" viewBox="0 0 740 ${n * rowH + 30}" style="font-family:var(--font-sans);">`;
+    html += `<rect x="${lockX - 30}" y="5" width="60" height="${n * rowH + 10}" rx="8" fill="${s.holder >= 0 ? colors[s.holder] : '#e2e6ef'}" opacity="0.18"/>`;
+    html += `<text x="${lockX}" y="${n * rowH + 25}" text-anchor="middle" font-size="10" fill="var(--text-muted)" font-weight="600">${lockType.toUpperCase()}</text>`;
+
+    for (let t = 0; t < n; t++) {
+      const y = t * rowH + 25;
+      const isHolder = s.holder === t;
+      const isRequesting = s.type === 'request' && s.tid === t;
+      const isDone = s.done && s.done.has(t);
+      const isWaiting = s.waiting && s.waiting.has(t);
+
+      html += `<circle cx="${leftW - 20}" cy="${y}" r="14" fill="${colors[t]}" opacity="${isDone ? 0.3 : 1}"/>`;
+      html += `<text x="${leftW - 20}" y="${y + 4}" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">T${t+1}</text>`;
+
+      if (isHolder) {
+        html += `<line x1="${leftW}" y1="${y}" x2="${lockX - 30}" y2="${y}" stroke="${colors[t]}" stroke-width="2"/>`;
+        html += `<line x1="${lockX + 30}" y1="${y}" x2="${barX}" y2="${y}" stroke="${colors[t]}" stroke-width="2"/>`;
+        html += `<rect x="${barX}" y="${y - 10}" width="${barW * 0.7}" height="20" rx="4" fill="${colors[t]}" opacity="0.8"/>`;
+        html += `<text x="${barX + barW * 0.35}" y="${y + 4}" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">Working (lock held)</text>`;
+      } else if (isWaiting || isRequesting) {
+        html += `<line x1="${leftW}" y1="${y}" x2="${lockX - 35}" y2="${y}" stroke="#d97706" stroke-width="1.2" stroke-dasharray="4,3"/>`;
+        html += `<text x="${barX}" y="${y + 4}" font-size="9" fill="#d97706" font-weight="600">Waiting...</text>`;
+      } else if (isDone) {
+        html += `<text x="${barX}" y="${y + 4}" font-size="9" fill="var(--green)" font-weight="600">&#10003; Done</text>`;
+      }
+    }
+    html += '</svg>';
+    canvas.innerHTML = html;
+
+    const descs = {
+      request: `Thread ${s.tid + 1} is requesting the lock.`,
+      acquire: `Thread ${s.tid + 1} acquired the lock!${lockType === 'rlock' ? ` (depth: ${s.depth})` : ''}`,
+      work: `Thread ${s.tid + 1} is doing work inside the critical section.`,
+      reacquire: `Thread ${s.tid + 1} re-acquires the RLock (depth: ${s.depth}) — reentrant acquisition succeeds!`,
+      'release-inner': `Thread ${s.tid + 1} releases one level of RLock (depth: ${s.depth}).`,
+      release: `Thread ${s.tid + 1} released the lock. ${s.waiting && s.waiting.size > 0 ? 'Next waiting thread can acquire.' : 'No threads waiting.'}`,
+    };
+    document.getElementById('lockWhy').textContent = descs[s.type] || '';
+
+    stepIdx++;
+    setTimeout(renderLockStep, 700);
+  }
+
+  stepIdx = 0;
+  renderLockStep();
+});
+
+document.getElementById('lockReset').addEventListener('click', () => {
+  document.getElementById('lockCanvas').innerHTML = '';
+  document.getElementById('lockWhy').textContent = 'Configure the number of threads and lock type, then press Simulate to watch threads compete for the lock.';
+});
+
+// ===================== PLAYGROUND: DEADLOCK DETECTOR =====================
+document.getElementById('deadlockRun').addEventListener('click', () => {
+  const scenario = document.getElementById('deadlockScenario').value;
+  const canvas = document.getElementById('deadlockCanvas');
+  const why = document.getElementById('deadlockWhy');
+
+  const scenarios = {
+    classic: {
+      steps: [
+        { state: 'a-hold-x', desc: 'Thread A acquires Lock X.' },
+        { state: 'b-hold-y', desc: 'Thread B acquires Lock Y.' },
+        { state: 'a-want-y', desc: 'Thread A tries to acquire Lock Y — blocked! Thread B holds it.' },
+        { state: 'b-want-x', desc: 'Thread B tries to acquire Lock X — blocked! Thread A holds it.' },
+        { state: 'deadlock', desc: 'DEADLOCK! Both threads are stuck forever in a circular wait.' },
+      ]
+    },
+    ordered: {
+      steps: [
+        { state: 'a-hold-x', desc: 'Thread A acquires Lock X (always X first).' },
+        { state: 'a-hold-xy', desc: 'Thread A acquires Lock Y (X, then Y — consistent order).' },
+        { state: 'a-done', desc: 'Thread A releases both locks and finishes.' },
+        { state: 'b-hold-x', desc: 'Thread B acquires Lock X (same order: X first).' },
+        { state: 'b-hold-xy', desc: 'Thread B acquires Lock Y. No deadlock — consistent ordering works!' },
+        { state: 'b-done', desc: 'Thread B releases both locks. Both threads completed successfully.' },
+      ]
+    },
+    timeout: {
+      steps: [
+        { state: 'a-hold-x', desc: 'Thread A acquires Lock X.' },
+        { state: 'b-hold-y', desc: 'Thread B acquires Lock Y.' },
+        { state: 'a-want-y-timeout', desc: 'Thread A tries Lock Y with timeout=2s...' },
+        { state: 'a-timeout-fail', desc: 'Timeout expired! Thread A releases Lock X and retries later.' },
+        { state: 'b-gets-x', desc: 'Thread B acquires Lock X (now free) — no deadlock!' },
+        { state: 'b-done', desc: 'Thread B finishes. Thread A retries and succeeds. Timeout prevented deadlock.' },
+      ]
+    }
+  };
+
+  const sc = scenarios[scenario];
+  let idx = 0;
+
+  function renderDeadlock() {
+    if (idx >= sc.steps.length) return;
+    const s = sc.steps[idx];
+
+    let html = `<svg width="100%" viewBox="0 0 500 240" style="font-family:var(--font-sans);">`;
+    const aCol = '#4f46e5', bCol = '#0891b2', xCol = '#d97706', yCol = '#dc2626';
+    const deadlocked = s.state === 'deadlock';
+
+    html += `<circle cx="80" cy="80" r="30" fill="${deadlocked ? '#fee2e2' : '#eef2ff'}" stroke="${aCol}" stroke-width="2"/>`;
+    html += `<text x="80" y="85" text-anchor="middle" font-size="12" font-weight="700" fill="${aCol}">Thread A</text>`;
+
+    html += `<circle cx="420" cy="80" r="30" fill="${deadlocked ? '#fee2e2' : '#e0f2fe'}" stroke="${bCol}" stroke-width="2"/>`;
+    html += `<text x="420" y="85" text-anchor="middle" font-size="12" font-weight="700" fill="${bCol}">Thread B</text>`;
+
+    html += `<rect x="195" y="40" width="50" height="30" rx="6" fill="#fef3c7" stroke="${xCol}" stroke-width="1.5"/>`;
+    html += `<text x="220" y="60" text-anchor="middle" font-size="11" font-weight="700" fill="${xCol}">X</text>`;
+
+    html += `<rect x="255" y="40" width="50" height="30" rx="6" fill="#fee2e2" stroke="${yCol}" stroke-width="1.5"/>`;
+    html += `<text x="280" y="60" text-anchor="middle" font-size="11" font-weight="700" fill="${yCol}">Y</text>`;
+
+    const holds = {
+      'a-hold-x': [['A','X']], 'b-hold-y': [['B','Y']],
+      'a-hold-xy': [['A','X'],['A','Y']], 'b-hold-xy': [['B','X'],['B','Y']],
+      'a-want-y': [['A','X']], 'b-want-x': [['A','X'],['B','Y']],
+      'deadlock': [['A','X'],['B','Y']],
+      'a-done': [], 'b-done': [],
+      'b-hold-x': [['B','X']], 'a-want-y-timeout': [['A','X'],['B','Y']],
+      'a-timeout-fail': [['B','Y']], 'b-gets-x': [['B','X'],['B','Y']],
+    };
+
+    (holds[s.state] || []).forEach(([t, l]) => {
+      const tx = t === 'A' ? 110 : 390;
+      const lx = l === 'X' ? 195 : 305;
+      html += `<line x1="${tx}" y1="80" x2="${lx}" y2="55" stroke="${t === 'A' ? aCol : bCol}" stroke-width="2" opacity="0.6"/>`;
+    });
+
+    if (deadlocked) {
+      html += `<text x="250" y="130" text-anchor="middle" font-size="16" font-weight="800" fill="${yCol}">DEADLOCK</text>`;
+      html += `<text x="250" y="150" text-anchor="middle" font-size="10" fill="${yCol}">Circular wait detected</text>`;
+      html += `<path d="M130,90 Q250,150 370,90" fill="none" stroke="${yCol}" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+      html += `<path d="M370,70 Q250,10 130,70" fill="none" stroke="${yCol}" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+    }
+
+    if (s.state === 'a-timeout-fail') {
+      html += `<text x="80" y="140" text-anchor="middle" font-size="9" fill="${xCol}" font-weight="600">Timeout! Backing off...</text>`;
+    }
+
+    if (s.state.includes('done')) {
+      html += `<text x="250" y="130" text-anchor="middle" font-size="14" font-weight="700" fill="var(--green)">&#10003; No Deadlock</text>`;
+    }
+
+    html += `</svg>`;
+    canvas.innerHTML = html;
+    why.textContent = `Step ${idx + 1}: ${s.desc}`;
+    idx++;
+
+    if (idx < sc.steps.length) {
+      setTimeout(renderDeadlock, 1200);
+    }
+  }
+
+  idx = 0;
+  renderDeadlock();
+});
+
+document.getElementById('deadlockReset').addEventListener('click', () => {
+  document.getElementById('deadlockCanvas').innerHTML = '';
+  document.getElementById('deadlockWhy').textContent = 'Select a deadlock scenario to visualize how threads can get stuck — and how to prevent it.';
+});
+
+// ===================== PLAYGROUND: SEMAPHORE POOL =====================
+const semPoolSlider = document.getElementById('semPoolSize');
+const semThreadsSlider = document.getElementById('semThreads');
+semPoolSlider.addEventListener('input', () => document.getElementById('semPoolVal').textContent = semPoolSlider.value);
+semThreadsSlider.addEventListener('input', () => document.getElementById('semThreadVal').textContent = semThreadsSlider.value);
+
+document.getElementById('semRun').addEventListener('click', () => {
+  const poolSize = parseInt(semPoolSlider.value);
+  const nThreads = parseInt(semThreadsSlider.value);
+  const canvas = document.getElementById('semCanvas');
+  const colors = Array.from({length: nThreads}, (_, i) => `hsl(${(i * 360 / nThreads) + 180}, 60%, 50%)`);
+
+  const threadState = Array.from({length: nThreads}, (_, i) => ({
+    id: i, status: 'waiting', workLeft: 2 + Math.floor(Math.random() * 3), startTime: 0
+  }));
+
+  let active = 0, completed = 0, tick = 0;
+
+  function renderSem() {
+    const activeThreads = threadState.filter(t => t.status === 'active');
+    const waitingThreads = threadState.filter(t => t.status === 'waiting');
+    const doneThreads = threadState.filter(t => t.status === 'done');
+
+    while (active < poolSize && waitingThreads.length > 0) {
+      const t = waitingThreads.shift();
+      t.status = 'active';
+      t.startTime = tick;
+      active++;
+    }
+
+    activeThreads.forEach(t => {
+      if (t.status === 'active') {
+        t.workLeft--;
+        if (t.workLeft <= 0) {
+          t.status = 'done';
+          active--;
+          completed++;
+        }
+      }
+    });
+
+    const slotW = Math.min(80, Math.floor((canvas.clientWidth - 60) / poolSize) - 8);
+    const slotH = 50;
+    let html = '<div style="padding:1rem;">';
+
+    html += '<div style="font-size:0.78rem;font-weight:600;color:var(--text-muted);margin-bottom:6px;">Resource Pool (Semaphore slots)</div>';
+    html += '<div style="display:flex;gap:6px;margin-bottom:1rem;">';
+    for (let s = 0; s < poolSize; s++) {
+      const occupant = threadState.find(t => t.status === 'active' && threadState.filter(tt => tt.status === 'active').indexOf(t) === s);
+      if (occupant) {
+        html += `<div style="width:${slotW}px;height:${slotH}px;background:${colors[occupant.id]};border-radius:8px;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+          <span style="font-size:0.8rem;font-weight:700;color:#fff;">T${occupant.id+1}</span>
+          <span style="font-size:0.65rem;color:rgba(255,255,255,0.8);">${occupant.workLeft} ticks</span>
+        </div>`;
+      } else {
+        html += `<div style="width:${slotW}px;height:${slotH}px;background:var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:0.7rem;color:var(--text-muted);">Empty</span>
+        </div>`;
+      }
+    }
+    html += '</div>';
+
+    const currentWaiting = threadState.filter(t => t.status === 'waiting');
+    if (currentWaiting.length > 0) {
+      html += '<div style="font-size:0.78rem;font-weight:600;color:var(--amber);margin-bottom:6px;">Waiting Queue</div>';
+      html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem;">';
+      currentWaiting.forEach(t => {
+        html += `<div style="width:36px;height:36px;background:${colors[t.id]};border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0.6;">
+          <span style="font-size:0.7rem;font-weight:700;color:#fff;">T${t.id+1}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    const currentDone = threadState.filter(t => t.status === 'done');
+    if (currentDone.length > 0) {
+      html += '<div style="font-size:0.78rem;font-weight:600;color:var(--green);margin-bottom:6px;">Completed</div>';
+      html += '<div style="display:flex;gap:4px;flex-wrap:wrap;">';
+      currentDone.forEach(t => {
+        html += `<div style="width:36px;height:36px;background:${colors[t.id]};border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0.35;">
+          <span style="font-size:0.7rem;font-weight:700;color:#fff;">T${t.id+1}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    html += '</div>';
+    canvas.innerHTML = html;
+
+    const nowActive = threadState.filter(t => t.status === 'active').length;
+    const nowWaiting = threadState.filter(t => t.status === 'waiting').length;
+    const nowDone = threadState.filter(t => t.status === 'done').length;
+
+    document.getElementById('semActive').textContent = nowActive;
+    document.getElementById('semWaiting').textContent = nowWaiting;
+    document.getElementById('semCompleted').textContent = nowDone;
+
+    document.getElementById('semWhy').textContent = nowDone === nThreads
+      ? `All ${nThreads} threads completed. The Semaphore(${poolSize}) ensured at most ${poolSize} threads accessed the resource pool concurrently.`
+      : `Semaphore(${poolSize}): ${nowActive} active, ${nowWaiting} waiting. Threads enter the pool as slots free up.`;
+
+    tick++;
+    if (nowDone < nThreads) {
+      setTimeout(renderSem, 600);
+    }
+  }
+
+  renderSem();
+});
+
+document.getElementById('semReset').addEventListener('click', () => {
+  document.getElementById('semCanvas').innerHTML = '';
+  ['semActive','semWaiting','semCompleted'].forEach(id => document.getElementById(id).textContent = '0');
+  document.getElementById('semWhy').textContent = 'A Semaphore limits how many threads can access a resource concurrently. Adjust the pool size and thread count to see the effect.';
+});
+</script>
+</body>
+</html>

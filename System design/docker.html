@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker — System Design Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f3f6f9;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --primary: #0db7ed;
+      --primary-dark: #0996c7;
+      --secondary: #384d54;
+      --accent: #2496ed;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --purple: #8b5cf6;
+      --pink: #ec4899;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+      --shadow-lg: 0 4px 16px rgba(0,0,0,0.1), 0 8px 32px rgba(0,0,0,0.06);
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Navigation */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+
+    .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      height: 60px;
+      overflow-x: auto;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--secondary);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .nav-logo svg { width: 28px; height: 28px; }
+
+    .nav-links {
+      display: flex;
+      gap: 0.25rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      padding: 0.5rem 0.85rem;
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      background: var(--surface-alt);
+      color: var(--primary-dark);
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #0db7ed 0%, #384d54 100%);
+      padding: 4rem 2rem;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      position: relative;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      max-width: 600px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Sections */
+    .section {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+
+    .section-header {
+      margin-bottom: 2.5rem;
+    }
+
+    .section-header h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    /* Architecture Diagram */
+    .arch-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+
+    .arch-svg {
+      width: 100%;
+      min-width: 900px;
+      height: 600px;
+    }
+
+    .arch-svg text {
+      font-family: var(--font);
+    }
+
+    .arch-svg .component {
+      cursor: pointer;
+      transition: filter 0.2s;
+    }
+
+    .arch-svg .component:hover {
+      filter: brightness(1.05) drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+    }
+
+    .arch-svg .connection {
+      transition: opacity 0.3s;
+    }
+
+    .tooltip {
+      position: fixed;
+      background: var(--secondary);
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      max-width: 280px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 1000;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .tooltip.visible { opacity: 1; }
+
+    /* Component Cards */
+    .component-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .comp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .comp-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .comp-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .comp-card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .comp-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .comp-card-purpose {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      border-left: 3px solid var(--primary);
+      padding-left: 0.75rem;
+    }
+
+    .comp-card-tech {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+    }
+
+    .tech-badge {
+      padding: 0.25rem 0.6rem;
+      background: var(--surface-alt);
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .comp-card-details {
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+
+    .comp-card-details strong {
+      color: var(--secondary);
+    }
+
+    /* Sequence Diagram */
+    .sequence-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+    }
+
+    .seq-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .seq-btn {
+      padding: 0.5rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .seq-btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .seq-btn-primary:hover { background: var(--primary-dark); }
+
+    .seq-btn-secondary {
+      background: var(--surface-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .seq-btn-secondary:hover { background: var(--border); }
+
+    .seq-btn-secondary.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .seq-speed {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .seq-speed input[type="range"] {
+      width: 80px;
+      accent-color: var(--primary);
+    }
+
+    .seq-narration {
+      background: var(--surface-alt);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      border-left: 4px solid var(--primary);
+    }
+
+    .seq-step-counter {
+      font-weight: 700;
+      color: var(--primary);
+      margin-right: 0.5rem;
+    }
+
+    .seq-diagram {
+      overflow-x: auto;
+    }
+
+    .seq-diagram svg {
+      min-width: 800px;
+    }
+
+    /* Comparison Table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .comparison-table th {
+      background: var(--secondary);
+      color: white;
+      padding: 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: left;
+    }
+
+    .comparison-table td {
+      padding: 1rem;
+      font-size: 0.88rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr:last-child td { border-bottom: none; }
+
+    .comparison-table tr.chosen {
+      background: rgba(13, 183, 237, 0.05);
+    }
+
+    .comparison-table tr.chosen td:first-child {
+      border-left: 3px solid var(--primary);
+    }
+
+    .chosen-badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      background: var(--primary);
+      color: white;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+
+    /* Pitfalls */
+    .pitfall-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--warning);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .pitfall-header {
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .pitfall-header:hover { background: var(--surface-alt); }
+
+    .pitfall-chevron {
+      transition: transform 0.3s;
+      color: var(--text-muted);
+    }
+
+    .pitfall-card.open .pitfall-chevron { transform: rotate(180deg); }
+
+    .pitfall-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+
+    .pitfall-card.open .pitfall-body { max-height: 600px; }
+
+    .pitfall-content {
+      padding: 0 1.5rem 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .pitfall-item {
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .pitfall-item.mistake { background: #fef2f2; }
+    .pitfall-item.why { background: #fefce8; }
+    .pitfall-item.consequence { background: #fff7ed; }
+    .pitfall-item.fix { background: #ecfdf5; }
+
+    .pitfall-item strong {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pitfall-item.mistake strong { color: var(--danger); }
+    .pitfall-item.why strong { color: var(--warning); }
+    .pitfall-item.consequence strong { color: #ea580c; }
+    .pitfall-item.fix strong { color: var(--success); }
+
+    /* Best Practices */
+    .bp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .bp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .bp-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .bp-list {
+      list-style: none;
+    }
+
+    .bp-list li {
+      padding: 0.5rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      font-size: 0.88rem;
+      border-bottom: 1px solid var(--surface-alt);
+    }
+
+    .bp-list li:last-child { border-bottom: none; }
+
+    .bp-list li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--success);
+      font-weight: 700;
+    }
+
+    /* Scaling */
+    .scaling-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .scaling-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .scaling-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--secondary);
+    }
+
+    .scaling-card p, .scaling-card li {
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+
+    .scaling-card ul {
+      padding-left: 1.25rem;
+    }
+
+    .scaling-card li {
+      margin-bottom: 0.4rem;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--surface-alt);
+      font-size: 0.88rem;
+    }
+
+    .metric-row:last-child { border-bottom: none; }
+
+    .metric-label { color: var(--text-muted); }
+    .metric-value { font-weight: 700; color: var(--primary-dark); }
+
+    /* Use cases */
+    .usecase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .usecase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .usecase-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+      color: var(--secondary);
+    }
+
+    .usecase-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .anti-badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      background: #fef2f2;
+      color: var(--danger);
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .primary-badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      background: #ecfdf5;
+      color: var(--success);
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      .section { padding: 2.5rem 1rem; }
+      .component-grid { grid-template-columns: 1fr; }
+      .pitfall-content { grid-template-columns: 1fr; }
+      .bp-grid { grid-template-columns: 1fr; }
+      .scaling-grid { grid-template-columns: 1fr; }
+      .nav-links a { font-size: 0.78rem; padding: 0.4rem 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M13 3h-2v2h2V3zm4 0h-2v2h2V3zm-8 0H7v2h2V3zm-4 4H3v2h2V7zm0-4H3v2h2V3zm16 4h-2v2h2V7zm-4 0h-2v2h2V7zm-4 0h-2v2h2V7zm-4 0H7v2h2V7zm12 4c0 4.97-4.03 9-9 9s-9-4.03-9-9h2c0 3.87 3.13 7 7 7s7-3.13 7-7h2z" fill="#0db7ed"/>
+      </svg>
+      Docker
+    </div>
+    <ul class="nav-links">
+      <li><a href="#architecture" class="active">Architecture</a></li>
+      <li><a href="#components">Components</a></li>
+      <li><a href="#flow">Request Flow</a></li>
+      <li><a href="#comparison">Comparisons</a></li>
+      <li><a href="#usecases">Use Cases</a></li>
+      <li><a href="#pitfalls">Pitfalls</a></li>
+      <li><a href="#bestpractices">Best Practices</a></li>
+      <li><a href="#scaling">Scaling</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <h1>Docker Containerization</h1>
+  <p>OS-level virtualization for packaging, distributing, and running applications in isolated, reproducible environments</p>
+</header>
+
+<!-- Section 1: Architecture -->
+<section id="architecture" class="section">
+  <div class="section-header">
+    <h2>Architecture Diagram</h2>
+    <p>Docker uses a client-server architecture with a daemon managing container lifecycle, images, and networks</p>
+  </div>
+  <div class="arch-container">
+    <svg class="arch-svg" viewBox="0 0 1100 580" id="archSvg">
+      <!-- Background groups -->
+      <rect x="20" y="20" width="320" height="200" rx="12" fill="#f0f9ff" stroke="#bae6fd" stroke-dasharray="5,5"/>
+      <text x="35" y="45" font-size="12" font-weight="700" fill="#0284c7">CLIENT LAYER</text>
+
+      <rect x="390" y="20" width="380" height="540" rx="12" fill="#f0fdf4" stroke="#bbf7d0" stroke-dasharray="5,5"/>
+      <text x="405" y="45" font-size="12" font-weight="700" fill="#16a34a">DOCKER HOST</text>
+
+      <rect x="820" y="20" width="260" height="200" rx="12" fill="#faf5ff" stroke="#e9d5ff" stroke-dasharray="5,5"/>
+      <text x="835" y="45" font-size="12" font-weight="700" fill="#7c3aed">REGISTRY</text>
+
+      <!-- Docker CLI -->
+      <g class="component" data-id="cli" data-tooltip="Docker CLI: Command-line interface that sends API calls to the Docker daemon. Supports build, run, push, pull, and management commands.">
+        <rect x="50" y="70" width="180" height="60" rx="10" fill="#0db7ed" stroke="#0996c7" stroke-width="2"/>
+        <text x="140" y="97" text-anchor="middle" fill="white" font-size="13" font-weight="700">Docker CLI</text>
+        <text x="140" y="117" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="10">docker build/run/push</text>
+      </g>
+
+      <!-- Docker Compose -->
+      <g class="component" data-id="compose" data-tooltip="Docker Compose: Tool for defining and running multi-container applications using YAML configuration files.">
+        <rect x="50" y="150" width="180" height="60" rx="10" fill="#384d54" stroke="#2d3e44" stroke-width="2"/>
+        <text x="140" y="177" text-anchor="middle" fill="white" font-size="13" font-weight="700">Docker Compose</text>
+        <text x="140" y="197" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="10">docker-compose.yml</text>
+      </g>
+
+      <!-- Docker Daemon -->
+      <g class="component" data-id="daemon" data-tooltip="Docker Daemon (dockerd): Long-running process that manages Docker objects — images, containers, networks, volumes. Listens for API requests.">
+        <rect x="430" y="70" width="200" height="70" rx="10" fill="#0db7ed" stroke="#0996c7" stroke-width="2"/>
+        <text x="530" y="100" text-anchor="middle" fill="white" font-size="14" font-weight="700">Docker Daemon</text>
+        <text x="530" y="120" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="10">dockerd (REST API)</text>
+      </g>
+
+      <!-- containerd -->
+      <g class="component" data-id="containerd" data-tooltip="containerd: Industry-standard container runtime that manages the complete container lifecycle — image transfer, storage, execution, supervision.">
+        <rect x="430" y="170" width="200" height="60" rx="10" fill="#575757" stroke="#444" stroke-width="2"/>
+        <text x="530" y="197" text-anchor="middle" fill="white" font-size="13" font-weight="700">containerd</text>
+        <text x="530" y="215" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="10">container runtime</text>
+      </g>
+
+      <!-- runc -->
+      <g class="component" data-id="runc" data-tooltip="runc: Low-level OCI runtime that spawns and runs containers according to OCI specification. Handles namespaces, cgroups, and seccomp.">
+        <rect x="430" y="260" width="200" height="55" rx="10" fill="#2d3e44" stroke="#1a2a30" stroke-width="2"/>
+        <text x="530" y="285" text-anchor="middle" fill="white" font-size="13" font-weight="700">runc</text>
+        <text x="530" y="303" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="10">OCI runtime</text>
+      </g>
+
+      <!-- Containers -->
+      <g class="component" data-id="containers" data-tooltip="Containers: Isolated process groups running from images. Each container has its own filesystem, network, and process namespace.">
+        <rect x="420" y="345" width="85" height="80" rx="8" fill="#10b981" stroke="#059669" stroke-width="2"/>
+        <text x="462" y="380" text-anchor="middle" fill="white" font-size="10" font-weight="700">Container</text>
+        <text x="462" y="400" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="9">App A</text>
+
+        <rect x="520" y="345" width="85" height="80" rx="8" fill="#10b981" stroke="#059669" stroke-width="2"/>
+        <text x="562" y="380" text-anchor="middle" fill="white" font-size="10" font-weight="700">Container</text>
+        <text x="562" y="400" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="9">App B</text>
+
+        <rect x="620" y="345" width="85" height="80" rx="8" fill="#10b981" stroke="#059669" stroke-width="2"/>
+        <text x="662" y="380" text-anchor="middle" fill="white" font-size="10" font-weight="700">Container</text>
+        <text x="662" y="400" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="9">App C</text>
+      </g>
+
+      <!-- Images -->
+      <g class="component" data-id="images" data-tooltip="Docker Images: Read-only templates with layered filesystems. Built from Dockerfiles with instruction layers stacked via Union FS.">
+        <rect x="420" y="450" width="140" height="60" rx="8" fill="#8b5cf6" stroke="#7c3aed" stroke-width="2"/>
+        <text x="490" y="477" text-anchor="middle" fill="white" font-size="12" font-weight="700">Images</text>
+        <text x="490" y="495" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="10">Layered FS</text>
+      </g>
+
+      <!-- Volumes -->
+      <g class="component" data-id="volumes" data-tooltip="Docker Volumes: Persistent data storage that outlives containers. Managed by Docker daemon, supports multiple drivers (local, NFS, cloud).">
+        <rect x="580" y="450" width="140" height="60" rx="8" fill="#f59e0b" stroke="#d97706" stroke-width="2"/>
+        <text x="650" y="477" text-anchor="middle" fill="white" font-size="12" font-weight="700">Volumes</text>
+        <text x="650" y="495" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="10">Persistent Data</text>
+      </g>
+
+      <!-- Networks -->
+      <g class="component" data-id="networks" data-tooltip="Docker Networks: Virtual network infrastructure supporting bridge, host, overlay, and macvlan drivers for container communication.">
+        <rect x="420" y="525" width="300" height="25" rx="6" fill="#ec4899" stroke="#db2777" stroke-width="1.5"/>
+        <text x="570" y="542" text-anchor="middle" fill="white" font-size="11" font-weight="600">Docker Networks (bridge / overlay / host)</text>
+      </g>
+
+      <!-- Registry -->
+      <g class="component" data-id="registry" data-tooltip="Container Registry: Stores and distributes Docker images. Docker Hub is the default public registry; can self-host with Docker Registry or use cloud registries (ECR, GCR, ACR).">
+        <rect x="850" y="70" width="200" height="70" rx="10" fill="#7c3aed" stroke="#6d28d9" stroke-width="2"/>
+        <text x="950" y="100" text-anchor="middle" fill="white" font-size="13" font-weight="700">Container Registry</text>
+        <text x="950" y="118" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="10">Docker Hub / ECR / GCR</text>
+      </g>
+
+      <!-- Registry Images -->
+      <g class="component" data-id="reg-images" data-tooltip="Registry stores tagged image manifests, layer blobs, and metadata. Images are addressed by digest (SHA256) for content-addressable storage.">
+        <rect x="860" y="155" width="80" height="50" rx="6" fill="#a78bfa" stroke="#8b5cf6" stroke-width="1.5"/>
+        <text x="900" y="183" text-anchor="middle" fill="white" font-size="9" font-weight="600">nginx</text>
+
+        <rect x="950" y="155" width="80" height="50" rx="6" fill="#a78bfa" stroke="#8b5cf6" stroke-width="1.5"/>
+        <text x="990" y="183" text-anchor="middle" fill="white" font-size="9" font-weight="600">postgres</text>
+      </g>
+
+      <!-- Connections -->
+      <g class="connection">
+        <!-- CLI to Daemon -->
+        <line x1="230" y1="100" x2="430" y2="100" stroke="#0db7ed" stroke-width="2" marker-end="url(#arrowBlue)"/>
+        <text x="330" y="92" text-anchor="middle" font-size="9" fill="#0284c7">REST API / Unix Socket</text>
+
+        <!-- Compose to Daemon -->
+        <line x1="230" y1="180" x2="430" y2="115" stroke="#384d54" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowGray)"/>
+
+        <!-- Daemon to containerd -->
+        <line x1="530" y1="140" x2="530" y2="170" stroke="#444" stroke-width="2" marker-end="url(#arrowGray)"/>
+        <text x="555" y="160" font-size="9" fill="#64748b">gRPC</text>
+
+        <!-- containerd to runc -->
+        <line x1="530" y1="230" x2="530" y2="260" stroke="#444" stroke-width="2" marker-end="url(#arrowGray)"/>
+
+        <!-- runc to containers -->
+        <line x1="530" y1="315" x2="530" y2="345" stroke="#059669" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+
+        <!-- Daemon to Registry -->
+        <line x1="630" y1="95" x2="850" y2="95" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrowPurple)"/>
+        <text x="740" y="87" text-anchor="middle" font-size="9" fill="#7c3aed">push / pull (HTTPS)</text>
+
+        <!-- Images to Containers -->
+        <line x1="490" y1="450" x2="490" y2="425" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrowPurple)"/>
+      </g>
+
+      <!-- Arrow markers -->
+      <defs>
+        <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#0db7ed"/>
+        </marker>
+        <marker id="arrowGray" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#444"/>
+        </marker>
+        <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#059669"/>
+        </marker>
+        <marker id="arrowPurple" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#7c3aed"/>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+</section>
+
+<!-- Section 2: Component Breakdown -->
+<section id="components" class="section">
+  <div class="section-header">
+    <h2>Component Breakdown</h2>
+    <p>Deep dive into each component's responsibility, technology, and scaling characteristics</p>
+  </div>
+  <div class="component-grid">
+    <div class="comp-card">
+      <div class="comp-card-header">
+        <div class="comp-card-icon" style="background:#e0f7ff;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#0db7ed"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10z"/></svg>
+        </div>
+        <h3>Docker CLI</h3>
+      </div>
+      <p class="comp-card-purpose">User-facing command-line tool that translates commands into Docker Engine API calls</p>
+      <div class="comp-card-tech">
+        <span class="tech-badge">Go</span>
+        <span class="tech-badge">REST API Client</span>
+        <span class="tech-badge">Unix Socket / TCP</span>
+      </div>
+      <div class="comp-card-details">
+        <p><strong>Key decisions:</strong> Communicates via /var/run/docker.sock (local) or TCP with TLS (remote). Supports context switching for multi-host management.</p>
+        <p style="margin-top:0.5rem"><strong>Scaling:</strong> Stateless — multiple CLI instances can connect to the same daemon concurrently.</p>
+      </div>
+    </div>
+
+    <div class="comp-card">
+      <div class="comp-card-header">
+        <div class="comp-card-icon" style="background:#e0f7ff;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#0db7ed"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        </div>
+        <h3>Docker Daemon (dockerd)</h3>
+      </div>
+      <p class="comp-card-purpose">Central management process that orchestrates all Docker objects and exposes the API</p>
+      <div class="comp-card-tech">
+        <span class="tech-badge">Go</span>
+        <span class="tech-badge">REST API Server</span>
+        <span class="tech-badge">Plugin Architecture</span>
+      </div>
+      <div class="comp-card-details">
+        <p><strong>Key decisions:</strong> Manages image layers, container lifecycle, network creation, and volume mounts. Delegates actual container execution to containerd.</p>
+        <p style="margin-top:0.5rem"><strong>Scaling:</strong> Single daemon per host. Horizontal scaling via Docker Swarm or Kubernetes orchestration across multiple hosts.</p>
+      </div>
+    </div>
+
+    <div class="comp-card">
+      <div class="comp-card-header">
+        <div class="comp-card-icon" style="background:#f3f4f6;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#575757"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+        </div>
+        <h3>containerd</h3>
+      </div>
+      <p class="comp-card-purpose">High-level container runtime managing full container lifecycle independently from Docker</p>
+      <div class="comp-card-tech">
+        <span class="tech-badge">Go</span>
+        <span class="tech-badge">gRPC API</span>
+        <span class="tech-badge">CNCF Graduated</span>
+      </div>
+      <div class="comp-card-details">
+        <p><strong>Key decisions:</strong> Handles image pull/push, container execution, snapshot management, and task supervision. Used directly by Kubernetes (CRI) without Docker.</p>
+        <p style="margin-top:0.5rem"><strong>Scaling:</strong> One per host. Designed for high-density workloads (thousands of containers per host).</p>
+      </div>
+    </div>
+
+    <div class="comp-card">
+      <div class="comp-card-header">
+        <div class="comp-card-icon" style="background:#f0fdf4;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#2d3e44"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM5 15h14v2H5z"/></svg>
+        </div>
+        <h3>runc</h3>
+      </div>
+      <p class="comp-card-purpose">Low-level OCI-compliant runtime that spawns container processes using Linux kernel primitives</p>
+      <div class="comp-card-tech">
+        <span class="tech-badge">Go</span>
+        <span class="tech-badge">OCI Runtime Spec</span>
+        <span class="tech-badge">namespaces + cgroups</span>
+      </div>
+      <div class="comp-card-details">
+        <p><strong>Key decisions:</strong> Creates Linux namespaces (PID, NET, MNT, UTS, IPC, USER), configures cgroups for resource limits, applies seccomp profiles and AppArmor/SELinux policies.</p>
+        <p style="margin-top:0.5rem"><strong>Scaling:</strong> Ephemeral process — spawns to create containers, then exits. Minimal overhead per container creation.</p>
+      </div>
+    </div>
+
+    <div class="comp-card">
+      <div class="comp-card-header">
+        <div class="comp-card-icon" style="background:#faf5ff;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#7c3aed"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        </div>
+        <h3>Container Registry</h3>
+      </div>
+      <p class="comp-card-purpose">Remote storage and distribution service for container images using content-addressable storage</p>
+      <div class="comp-card-tech">
+        <span class="tech-badge">OCI Distribution Spec</span>
+        <span class="tech-badge">HTTPS + Token Auth</span>
+        <span class="tech-badge">Content-Addressable</span>
+      </div>
+      <div class="comp-card-details">
+        <p><strong>Key decisions:</strong> Images stored as manifests + layer blobs (SHA256 addressed). Supports multi-arch manifests, signing (Notary/cosign), and vulnerability scanning.</p>
+        <p style="margin-top:0.5rem"><strong>Scaling:</strong> CDN-backed blob storage. Layer deduplication across images reduces storage. Geo-replicated registries for global distribution.</p>
+      </div>
+    </div>
+
+    <div class="comp-card">
+      <div class="comp-card-header">
+        <div class="comp-card-icon" style="background:#fef3c7;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#f59e0b"><path d="M2 20h20v-4H2v4zm2-3h2v2H4v-2zM2 4v4h20V4H2zm4 3H4V5h2v2zm-4 7h20v-4H2v4zm2-3h2v2H4v-2z"/></svg>
+        </div>
+        <h3>Union Filesystem (Images)</h3>
+      </div>
+      <p class="comp-card-purpose">Layered, copy-on-write filesystem enabling efficient image storage and container creation</p>
+      <div class="comp-card-tech">
+        <span class="tech-badge">OverlayFS</span>
+        <span class="tech-badge">Copy-on-Write</span>
+        <span class="tech-badge">Layer Caching</span>
+      </div>
+      <div class="comp-card-details">
+        <p><strong>Key decisions:</strong> Each Dockerfile instruction creates a read-only layer. Containers add a thin writable layer on top. Shared base layers mean 100 containers from the same image use ~same disk as 1.</p>
+        <p style="margin-top:0.5rem"><strong>Scaling:</strong> Layer deduplication saves storage. Build cache speeds rebuilds. Multi-stage builds reduce final image size.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 3: Request Flow -->
+<section id="flow" class="section">
+  <div class="section-header">
+    <h2>Request Flow</h2>
+    <p>Animated sequence diagrams showing how Docker commands flow through the architecture</p>
+  </div>
+  <div class="sequence-container">
+    <div class="seq-controls">
+      <button class="seq-btn seq-btn-primary" id="seqPlay">&#9654; Play</button>
+      <button class="seq-btn seq-btn-secondary" id="seqStep">Step</button>
+      <button class="seq-btn seq-btn-secondary" id="seqReset">Reset</button>
+      <div class="seq-speed">
+        <span>Speed:</span>
+        <input type="range" min="1" max="5" value="3" id="seqSpeed">
+      </div>
+      <div style="flex:1"></div>
+      <button class="seq-btn seq-btn-secondary flow-select active" data-flow="run">docker run</button>
+      <button class="seq-btn seq-btn-secondary flow-select" data-flow="build">docker build</button>
+      <button class="seq-btn seq-btn-secondary flow-select" data-flow="push">docker push</button>
+    </div>
+    <div class="seq-narration" id="seqNarration">
+      <span class="seq-step-counter" id="seqCounter"></span>
+      <span id="seqText">Click Play to see how <code>docker run nginx</code> flows through the system</span>
+    </div>
+    <div class="seq-diagram">
+      <svg id="seqSvg" width="100%" height="400" viewBox="0 0 900 400"></svg>
+    </div>
+  </div>
+</section>
+
+<!-- Section 4: Comparison -->
+<section id="comparison" class="section">
+  <div class="section-header">
+    <h2>Comparisons with Alternatives</h2>
+    <p>How Docker compares to other containerization and virtualization approaches</p>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Approach</th>
+          <th>Key Idea</th>
+          <th>Pros</th>
+          <th>Cons</th>
+          <th>Best For</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="chosen">
+          <td><strong>Docker</strong><span class="chosen-badge">POPULAR</span></td>
+          <td>OS-level containers via Linux namespaces + cgroups with layered images</td>
+          <td>Fast startup (~ms), efficient resource use, huge ecosystem, Dockerfile reproducibility</td>
+          <td>Shared kernel (less isolation), Linux-centric, daemon dependency</td>
+          <td>Microservices, CI/CD, dev environments, cloud-native apps</td>
+        </tr>
+        <tr>
+          <td><strong>Podman</strong></td>
+          <td>Daemonless, rootless container engine with Docker-compatible CLI</td>
+          <td>No root daemon, systemd integration, pod-native, Docker CLI compatible</td>
+          <td>Smaller ecosystem, less tooling, networking complexity in rootless mode</td>
+          <td>Security-sensitive envs, RHEL/Fedora shops, rootless requirements</td>
+        </tr>
+        <tr>
+          <td><strong>Virtual Machines</strong></td>
+          <td>Hardware-level virtualization with full OS per instance (KVM, VMware, Hyper-V)</td>
+          <td>Strong isolation, different OS kernels, mature security model</td>
+          <td>Heavy resource overhead, slow boot (minutes), large disk footprint</td>
+          <td>Multi-tenant isolation, legacy apps, different kernel requirements</td>
+        </tr>
+        <tr>
+          <td><strong>LXC/LXD</strong></td>
+          <td>System containers — full Linux OS in a container (like a lightweight VM)</td>
+          <td>Persistent system containers, closer to VM experience, low overhead</td>
+          <td>Less portable, no layered images, smaller community</td>
+          <td>Long-lived workloads that need full OS, lightweight VM replacement</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:2rem;">
+    <h3 style="font-size:1.1rem; margin-bottom:1rem;">When to pick each</h3>
+    <div class="usecase-grid">
+      <div class="usecase-card">
+        <h4>Choose Docker when...</h4>
+        <p>You need fast, reproducible application packaging with a massive ecosystem. Best for microservices, CI/CD pipelines, and cloud deployments where developer experience matters.</p>
+      </div>
+      <div class="usecase-card">
+        <h4>Choose Podman when...</h4>
+        <p>Security policy mandates no root daemons, or you're in a Red Hat environment. Drop-in Docker replacement with better security posture for production.</p>
+      </div>
+      <div class="usecase-card">
+        <h4>Choose VMs when...</h4>
+        <p>You need kernel-level isolation between tenants, run Windows/Linux side-by-side, or compliance requires hardware-level separation.</p>
+      </div>
+      <div class="usecase-card">
+        <h4>Choose LXC/LXD when...</h4>
+        <p>You want a lightweight VM replacement for long-running system workloads that need init systems, persistent state, and full OS tooling.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 5: Use Cases & Pitfalls -->
+<section id="usecases" class="section">
+  <div class="section-header">
+    <h2>Use Cases & Common Pitfalls</h2>
+    <p>Where Docker excels, where it doesn't, and mistakes to avoid</p>
+  </div>
+
+  <h3 style="margin-bottom:1rem; font-size:1.1rem;">Primary Use Cases</h3>
+  <div class="usecase-grid">
+    <div class="usecase-card">
+      <span class="primary-badge">PRIMARY</span>
+      <h4>Microservices Deployment</h4>
+      <p>Each service in its own container with defined interfaces. Enables independent deployment, scaling, and technology choices per service. Scale: 10s to 1000s of services.</p>
+    </div>
+    <div class="usecase-card">
+      <span class="primary-badge">PRIMARY</span>
+      <h4>CI/CD Pipelines</h4>
+      <p>Reproducible build environments, test isolation, and artifact packaging. Every build runs in a fresh container — no "works on my machine" drift. GitHub Actions, GitLab CI, Jenkins all Docker-native.</p>
+    </div>
+    <div class="usecase-card">
+      <span class="primary-badge">PRIMARY</span>
+      <h4>Local Development</h4>
+      <p>docker-compose.yml defines entire stacks (DB + cache + app + queue). New developer onboarding: clone + docker compose up. Matches production topology locally.</p>
+    </div>
+    <div class="usecase-card">
+      <span class="primary-badge">PRIMARY</span>
+      <h4>Cloud-Native Applications</h4>
+      <p>Kubernetes, ECS, Cloud Run, App Runner — all container-first. Docker images are the universal deployment artifact for modern cloud platforms.</p>
+    </div>
+  </div>
+
+  <h3 style="margin: 2rem 0 1rem; font-size:1.1rem;">Anti-Use Cases</h3>
+  <div class="usecase-grid">
+    <div class="usecase-card">
+      <span class="anti-badge">AVOID</span>
+      <h4>Stateful Databases in Production</h4>
+      <p>Running primary databases in containers adds complexity (volume management, backup, failover) without clear benefit. Use managed services (RDS, Cloud SQL) instead.</p>
+    </div>
+    <div class="usecase-card">
+      <span class="anti-badge">AVOID</span>
+      <h4>GUI Desktop Applications</h4>
+      <p>Docker containers lack display servers. While X11 forwarding works, it's fragile and slow. Use native packaging (Snap, Flatpak) or VMs for desktop apps.</p>
+    </div>
+    <div class="usecase-card">
+      <span class="anti-badge">AVOID</span>
+      <h4>High-Performance Computing (HPC)</h4>
+      <p>Network namespace overhead and storage layer indirection hurt latency-sensitive workloads. HPC prefers bare-metal or Singularity containers designed for the space.</p>
+    </div>
+  </div>
+</section>
+
+<section id="pitfalls" class="section" style="padding-top:0;">
+  <h3 style="margin-bottom:1.5rem; font-size:1.1rem;">Common Pitfalls</h3>
+  <div id="pitfallsContainer"></div>
+</section>
+
+<!-- Section 6: Best Practices -->
+<section id="bestpractices" class="section">
+  <div class="section-header">
+    <h2>Best Practices</h2>
+    <p>Proven patterns for building, running, and operating Docker containers in production</p>
+  </div>
+  <div class="bp-grid">
+    <div class="bp-card">
+      <h3><span style="color:var(--primary)">&#9679;</span> Image Building</h3>
+      <ul class="bp-list">
+        <li>Use multi-stage builds to separate build deps from runtime</li>
+        <li>Pin base image versions with SHA digests, not just tags</li>
+        <li>Order Dockerfile layers from least to most frequently changing</li>
+        <li>Use .dockerignore to exclude build context bloat</li>
+        <li>Run as non-root user (USER directive)</li>
+        <li>Use distroless or Alpine for minimal attack surface</li>
+        <li>Scan images with Trivy/Snyk before pushing to registry</li>
+      </ul>
+    </div>
+    <div class="bp-card">
+      <h3><span style="color:var(--success)">&#9679;</span> Runtime & Security</h3>
+      <ul class="bp-list">
+        <li>Never run containers as root in production</li>
+        <li>Set memory and CPU limits (--memory, --cpus)</li>
+        <li>Use read-only root filesystem (--read-only) where possible</li>
+        <li>Drop all capabilities, add back only what's needed</li>
+        <li>Use secrets management (Docker secrets, Vault) not env vars for sensitive data</li>
+        <li>Enable Docker Content Trust for image signing</li>
+        <li>Apply seccomp profiles and AppArmor/SELinux policies</li>
+      </ul>
+    </div>
+    <div class="bp-card">
+      <h3><span style="color:var(--warning)">&#9679;</span> Networking</h3>
+      <ul class="bp-list">
+        <li>Use user-defined bridge networks (not default bridge)</li>
+        <li>DNS-based service discovery between containers</li>
+        <li>Don't expose ports unless required (use internal networks)</li>
+        <li>Use overlay networks for multi-host communication</li>
+        <li>Implement health checks for load balancer integration</li>
+        <li>Consider service mesh (Istio, Linkerd) for complex topologies</li>
+      </ul>
+    </div>
+    <div class="bp-card">
+      <h3><span style="color:var(--purple)">&#9679;</span> Operations & Monitoring</h3>
+      <ul class="bp-list">
+        <li>Log to stdout/stderr — let the platform handle collection</li>
+        <li>Implement graceful shutdown (trap SIGTERM)</li>
+        <li>Use health checks (HEALTHCHECK instruction or orchestrator probes)</li>
+        <li>Monitor: container CPU/mem, restart count, image age</li>
+        <li>Tag images with git SHA + semver for traceability</li>
+        <li>Automate image garbage collection on hosts and registries</li>
+        <li>Use docker system prune in CI to prevent disk exhaustion</li>
+      </ul>
+    </div>
+    <div class="bp-card">
+      <h3><span style="color:var(--pink)">&#9679;</span> Docker Compose</h3>
+      <ul class="bp-list">
+        <li>Use profiles to separate dev/test/prod service sets</li>
+        <li>Declare depends_on with health check conditions</li>
+        <li>Use named volumes for data persistence</li>
+        <li>Pin compose file version to docker compose v2 spec</li>
+        <li>Use .env file for environment-specific configuration</li>
+        <li>Separate override files (docker-compose.override.yml) for local dev</li>
+      </ul>
+    </div>
+    <div class="bp-card">
+      <h3><span style="color:var(--secondary)">&#9679;</span> CI/CD Integration</h3>
+      <ul class="bp-list">
+        <li>Use BuildKit for parallel multi-stage builds</li>
+        <li>Cache layers in registry (--cache-from / --cache-to)</li>
+        <li>Build once, promote the same image through environments</li>
+        <li>Never use :latest in production — always pin versions</li>
+        <li>Scan images in pipeline before allowing deployment</li>
+        <li>Use multi-platform builds (docker buildx) for ARM + x86</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Section 7: Scaling & Trade-offs -->
+<section id="scaling" class="section">
+  <div class="section-header">
+    <h2>Scaling & Trade-offs</h2>
+    <p>How Docker handles growth and the fundamental trade-offs in containerization</p>
+  </div>
+  <div class="scaling-grid">
+    <div class="scaling-card">
+      <h3>Container Density</h3>
+      <div class="metric-row"><span class="metric-label">Containers per host</span><span class="metric-value">100–1000+</span></div>
+      <div class="metric-row"><span class="metric-label">Startup time</span><span class="metric-value">~100ms</span></div>
+      <div class="metric-row"><span class="metric-label">Memory overhead per container</span><span class="metric-value">~10–50 MB</span></div>
+      <div class="metric-row"><span class="metric-label">Image pull (cached layers)</span><span class="metric-value">seconds</span></div>
+      <div class="metric-row"><span class="metric-label">Image pull (cold, 500MB)</span><span class="metric-value">30–120s</span></div>
+    </div>
+
+    <div class="scaling-card">
+      <h3>Scaling Strategies</h3>
+      <ul>
+        <li><strong>Single host:</strong> Docker Compose with resource limits. Good for small apps, dev environments</li>
+        <li><strong>10x (multi-host):</strong> Docker Swarm or Kubernetes. Service discovery, load balancing, rolling deploys</li>
+        <li><strong>100x (cluster):</strong> Kubernetes with node auto-scaling. Pod HPA, cluster autoscaler, resource quotas</li>
+        <li><strong>1000x (global):</strong> Multi-cluster federation, geo-distributed registries, edge deployment with K3s</li>
+      </ul>
+    </div>
+
+    <div class="scaling-card">
+      <h3>Trade-off: Isolation vs. Efficiency</h3>
+      <p style="margin-bottom:0.5rem"><strong>Containers:</strong> Shared kernel, fast, efficient — but a kernel exploit escapes to host</p>
+      <p style="margin-bottom:0.5rem"><strong>VMs:</strong> Separate kernel, strong isolation — but 10x memory overhead and slow boot</p>
+      <p><strong>Hybrid:</strong> Kata Containers / Firecracker — VM-level isolation with near-container speed. Used by AWS Lambda, Fargate.</p>
+    </div>
+
+    <div class="scaling-card">
+      <h3>Trade-off: Image Size vs. Debuggability</h3>
+      <p style="margin-bottom:0.5rem"><strong>Minimal (distroless/scratch):</strong> 5–20 MB, tiny attack surface — but no shell, no debugging tools</p>
+      <p style="margin-bottom:0.5rem"><strong>Alpine:</strong> 5 MB base, musl libc — but subtle glibc incompatibilities</p>
+      <p><strong>Debian/Ubuntu:</strong> 80–120 MB base, full tooling — but larger attack surface, slower pulls</p>
+    </div>
+
+    <div class="scaling-card">
+      <h3>Trade-off: Stateless vs. Stateful</h3>
+      <p style="margin-bottom:0.5rem"><strong>Stateless containers:</strong> Trivial to scale, replace, and update. Ideal for application tiers.</p>
+      <p style="margin-bottom:0.5rem"><strong>Stateful containers:</strong> Require volumes, careful scheduling, backup strategies. Complexity ≈ managing a DB.</p>
+      <p><strong>Recommendation:</strong> Keep containers stateless. Push state to managed services (RDS, ElastiCache, S3).</p>
+    </div>
+
+    <div class="scaling-card">
+      <h3>Failure Scenarios</h3>
+      <ul>
+        <li><strong>Daemon crash:</strong> All containers on host stop. Orchestrators reschedule. Use --live-restore to survive daemon restarts.</li>
+        <li><strong>OOM kill:</strong> Kernel kills container process. Set proper memory limits + monitor. Restart policy handles recovery.</li>
+        <li><strong>Registry down:</strong> Can't pull new images. Mitigate with local caches, pre-pulled images, or mirrored registries.</li>
+        <li><strong>Disk full:</strong> Builds fail, containers can't write. Automate pruning, set storage driver limits, monitor disk usage.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Tooltip element -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// Navigation active state
+const navLinks = document.querySelectorAll('.nav-links a');
+const sections = document.querySelectorAll('.section');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const id = entry.target.id;
+      const link = document.querySelector(`.nav-links a[href="#${id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { threshold: 0.3 });
+
+sections.forEach(s => { if (s.id) observer.observe(s); });
+
+// Smooth scroll
+navLinks.forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+// Architecture tooltip
+const tooltip = document.getElementById('tooltip');
+const components = document.querySelectorAll('.arch-svg .component');
+
+components.forEach(comp => {
+  comp.addEventListener('mouseenter', e => {
+    const text = comp.getAttribute('data-tooltip');
+    if (text) {
+      tooltip.textContent = text;
+      tooltip.classList.add('visible');
+    }
+  });
+  comp.addEventListener('mousemove', e => {
+    tooltip.style.left = (e.clientX + 12) + 'px';
+    tooltip.style.top = (e.clientY + 12) + 'px';
+  });
+  comp.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('visible');
+  });
+});
+
+// Sequence Diagram
+const flows = {
+  run: {
+    actors: ['CLI', 'Daemon', 'containerd', 'runc', 'Registry', 'Container'],
+    steps: [
+      { from: 0, to: 1, label: 'docker run nginx', desc: 'CLI sends "create container" request to Docker daemon via REST API on Unix socket' },
+      { from: 1, to: 4, label: 'pull nginx:latest', desc: 'Daemon checks local image cache — image not found, initiates pull from registry' },
+      { from: 4, to: 1, label: 'manifest + layers', desc: 'Registry returns image manifest and layer blobs. Layers are downloaded in parallel and verified by SHA256 digest' },
+      { from: 1, to: 2, label: 'create container', desc: 'Daemon instructs containerd to create a new container task with the pulled image and specified config (ports, volumes, env)' },
+      { from: 2, to: 3, label: 'spawn process', desc: 'containerd calls runc to create Linux namespaces (PID, NET, MNT, UTS, IPC), set up cgroups limits, and pivot_root into the image filesystem' },
+      { from: 3, to: 5, label: 'exec entrypoint', desc: 'runc executes the container entrypoint (nginx -g "daemon off;"). Process is now isolated with its own PID 1' },
+      { from: 5, to: 1, label: 'running ✓', desc: 'Container reports healthy. Daemon tracks state, applies restart policy, and makes the container accessible on mapped ports' },
+    ]
+  },
+  build: {
+    actors: ['CLI', 'Daemon', 'BuildKit', 'Registry', 'Image Store'],
+    steps: [
+      { from: 0, to: 1, label: 'docker build .', desc: 'CLI sends build context (files matching .dockerignore rules) as a tar stream to the daemon' },
+      { from: 1, to: 2, label: 'parse Dockerfile', desc: 'BuildKit parses Dockerfile into a DAG of build stages. Determines parallelizable steps.' },
+      { from: 2, to: 3, label: 'pull base image', desc: 'BuildKit pulls the FROM image from registry if not cached locally. Verifies digest.' },
+      { from: 2, to: 2, label: 'execute RUN steps', desc: 'Each RUN instruction executes in a temporary container. Output filesystem is captured as a new layer. Cache checks happen per-instruction.' },
+      { from: 2, to: 4, label: 'commit layers', desc: 'Completed layers are committed to local image store. Each layer is content-addressed (SHA256).' },
+      { from: 4, to: 1, label: 'image ID', desc: 'Final image manifest is created referencing all layers. Image ID (digest) returned to daemon.' },
+      { from: 1, to: 0, label: 'built: sha256:abc...', desc: 'Build complete. Image available locally for docker run or docker push. Build cache preserved for future builds.' },
+    ]
+  },
+  push: {
+    actors: ['CLI', 'Daemon', 'Registry', 'Blob Store'],
+    steps: [
+      { from: 0, to: 1, label: 'docker push myapp:v1', desc: 'CLI instructs daemon to push the tagged image to the configured registry' },
+      { from: 1, to: 2, label: 'auth + check layers', desc: 'Daemon authenticates with registry (token-based). Sends manifest to check which layers already exist (deduplication).' },
+      { from: 2, to: 1, label: 'need layers 3,5', desc: 'Registry responds with list of layers it does NOT have — only these need uploading (saves bandwidth).' },
+      { from: 1, to: 3, label: 'upload layer blobs', desc: 'Daemon uploads missing layer blobs in parallel via chunked transfer. Each blob is verified by digest on receipt.' },
+      { from: 3, to: 2, label: 'blobs stored ✓', desc: 'Blob store confirms storage. Layers are now available for pull by any authorized client.' },
+      { from: 1, to: 2, label: 'PUT manifest', desc: 'Daemon uploads the image manifest (referencing all layer digests) and tags it. This atomic operation makes the image pullable.' },
+      { from: 2, to: 0, label: 'pushed ✓', desc: 'Image is now available at registry. Tag points to manifest digest. Other users/CI can now pull this exact image.' },
+    ]
+  }
+};
+
+let currentFlow = 'run';
+let currentStep = -1;
+let playing = false;
+let playInterval = null;
+
+function getSpeedMs() {
+  const val = document.getElementById('seqSpeed').value;
+  return [3000, 2200, 1500, 1000, 600][val - 1];
+}
+
+function drawSequenceDiagram() {
+  const svg = document.getElementById('seqSvg');
+  const flow = flows[currentFlow];
+  const actors = flow.actors;
+  const numActors = actors.length;
+  const width = 900;
+  const height = 400;
+  const margin = 60;
+  const spacing = (width - margin * 2) / (numActors - 1);
+
+  let html = '';
+
+  // Actor lifelines
+  actors.forEach((actor, i) => {
+    const x = margin + i * spacing;
+    html += `<line x1="${x}" y1="60" x2="${x}" y2="${height - 20}" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="4,4"/>`;
+    html += `<rect x="${x - 45}" y="20" width="90" height="35" rx="6" fill="${i === actors.length - 1 ? '#10b981' : '#384d54'}" stroke="none"/>`;
+    html += `<text x="${x}" y="42" text-anchor="middle" fill="white" font-size="11" font-weight="600">${actor}</text>`;
+  });
+
+  // Steps
+  const stepHeight = (height - 100) / flow.steps.length;
+  flow.steps.forEach((step, i) => {
+    const y = 80 + i * stepHeight;
+    const fromX = margin + step.from * spacing;
+    const toX = margin + step.to * spacing;
+    const isActive = i <= currentStep;
+    const isCurrent = i === currentStep;
+
+    const color = isActive ? (isCurrent ? '#0db7ed' : '#94a3b8') : '#e2e8f0';
+    const textColor = isActive ? (isCurrent ? '#0db7ed' : '#64748b') : '#cbd5e1';
+    const strokeWidth = isCurrent ? 2.5 : 1.5;
+
+    const dir = toX > fromX ? 1 : -1;
+    const arrowX = toX - dir * 8;
+
+    html += `<line x1="${fromX}" y1="${y}" x2="${arrowX}" y2="${y}" stroke="${color}" stroke-width="${strokeWidth}" marker-end="url(#seqArrow${isActive ? 'Active' : ''})"/>`;
+
+    if (isCurrent) {
+      html += `<circle cx="${fromX}" cy="${y}" r="4" fill="#0db7ed"/>`;
+    }
+
+    const labelX = (fromX + toX) / 2;
+    html += `<text x="${labelX}" y="${y - 8}" text-anchor="middle" font-size="10" fill="${textColor}" font-weight="${isCurrent ? '700' : '400'}">${step.label}</text>`;
+  });
+
+  html += `
+    <defs>
+      <marker id="seqArrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#e2e8f0"/>
+      </marker>
+      <marker id="seqArrowActive" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#0db7ed"/>
+      </marker>
+    </defs>
+  `;
+
+  svg.innerHTML = html;
+
+  // Update narration
+  const narration = document.getElementById('seqNarration');
+  const counter = document.getElementById('seqCounter');
+  const text = document.getElementById('seqText');
+
+  if (currentStep >= 0 && currentStep < flow.steps.length) {
+    counter.textContent = `Step ${currentStep + 1}/${flow.steps.length}:`;
+    text.textContent = flow.steps[currentStep].desc;
+  } else if (currentStep >= flow.steps.length) {
+    counter.textContent = 'Done!';
+    text.textContent = 'Flow complete. Click Reset to start over or select a different flow.';
+    stopPlaying();
+  } else {
+    counter.textContent = '';
+    const flowNames = { run: 'docker run nginx', build: 'docker build .', push: 'docker push myapp:v1' };
+    text.textContent = `Click Play to see how ${flowNames[currentFlow]} flows through the system`;
+  }
+}
+
+function stopPlaying() {
+  playing = false;
+  if (playInterval) { clearInterval(playInterval); playInterval = null; }
+  document.getElementById('seqPlay').innerHTML = '&#9654; Play';
+}
+
+function startPlaying() {
+  playing = true;
+  document.getElementById('seqPlay').innerHTML = '&#9646;&#9646; Pause';
+  playInterval = setInterval(() => {
+    currentStep++;
+    if (currentStep >= flows[currentFlow].steps.length) {
+      stopPlaying();
+    }
+    drawSequenceDiagram();
+  }, getSpeedMs());
+}
+
+document.getElementById('seqPlay').addEventListener('click', () => {
+  if (playing) { stopPlaying(); }
+  else {
+    if (currentStep >= flows[currentFlow].steps.length) currentStep = -1;
+    startPlaying();
+  }
+});
+
+document.getElementById('seqStep').addEventListener('click', () => {
+  stopPlaying();
+  if (currentStep < flows[currentFlow].steps.length) {
+    currentStep++;
+    drawSequenceDiagram();
+  }
+});
+
+document.getElementById('seqReset').addEventListener('click', () => {
+  stopPlaying();
+  currentStep = -1;
+  drawSequenceDiagram();
+});
+
+document.getElementById('seqSpeed').addEventListener('input', () => {
+  if (playing) { stopPlaying(); startPlaying(); }
+});
+
+document.querySelectorAll('.flow-select').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.flow-select').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFlow = btn.dataset.flow;
+    currentStep = -1;
+    stopPlaying();
+    drawSequenceDiagram();
+  });
+});
+
+drawSequenceDiagram();
+
+// Pitfalls
+const pitfalls = [
+  {
+    title: 'Running containers as root',
+    mistake: 'Using the default root user inside containers. If a container is compromised, attacker has root on the host kernel.',
+    why: 'Docker defaults to root for compatibility. Most tutorials skip USER directives for simplicity.',
+    consequence: 'Container escape vulnerabilities (e.g., CVE-2019-5736 runc) grant host root access. Compliance violations in regulated environments.',
+    fix: 'Always add USER directive in Dockerfile. Use --user flag at runtime. Enable user namespace remapping in daemon config.'
+  },
+  {
+    title: 'Using :latest tag in production',
+    mistake: 'Deploying with image:latest — the tag is mutable and can point to different content at any time.',
+    why: 'It\'s the default tag when none is specified. Developers use it in development and carry the habit to production.',
+    consequence: 'Non-reproducible deployments. Rollbacks impossible — you can\'t "roll back to latest". Different nodes may pull different versions.',
+    fix: 'Tag with git SHA or semver. Pin to digest (image@sha256:abc...) for absolute immutability. Automate tagging in CI.'
+  },
+  {
+    title: 'Fat images with build tools included',
+    mistake: 'Shipping compilers, package managers, and source code in production images (single-stage builds).',
+    why: 'Single-stage Dockerfiles are simpler to write. Multi-stage requires understanding the build/runtime separation.',
+    consequence: 'Images 1–2 GB instead of 50–200 MB. Larger attack surface. Slower pulls and deploys. Wasted registry storage.',
+    fix: 'Use multi-stage builds: compile in a builder stage, copy only artifacts to a minimal runtime stage (distroless, Alpine, or scratch).'
+  },
+  {
+    title: 'Storing secrets in images or environment variables',
+    mistake: 'Baking API keys into Dockerfile (ENV, COPY .env) or passing secrets via docker run -e.',
+    why: 'It\'s the quickest path to a working container. Secret management systems add complexity.',
+    consequence: 'Secrets visible in image layers (docker history), process listings, inspect output. If image leaks, all secrets are exposed.',
+    fix: 'Use Docker secrets (Swarm), Kubernetes secrets, or Vault. Mount secrets as files at runtime. Use BuildKit --mount=type=secret for build-time secrets.'
+  },
+  {
+    title: 'Not setting resource limits',
+    mistake: 'Running containers without --memory or --cpus constraints.',
+    why: 'Development doesn\'t stress resources. Limits add another thing to tune and maintain.',
+    consequence: 'One misbehaving container can OOM-kill others or starve CPU. Noisy neighbor problem on shared hosts. Kubernetes evictions.',
+    fix: 'Always set memory and CPU limits. Use --memory-reservation for soft limits. Monitor actual usage and right-size over time.'
+  },
+  {
+    title: 'Ignoring layer cache ordering in Dockerfiles',
+    mistake: 'Placing frequently-changing instructions (COPY . .) before stable ones (RUN apt-get install).',
+    why: 'Natural instinct is to write instructions in logical order. Cache implications aren\'t obvious to newcomers.',
+    consequence: 'Every code change invalidates all subsequent layers. Builds take 5–10 minutes instead of seconds. CI costs multiply.',
+    fix: 'Order: system deps → app deps (package.json/requirements.txt) → source code. Copy dependency manifests first, install, then copy source.'
+  },
+];
+
+const pitfallsContainer = document.getElementById('pitfallsContainer');
+pitfalls.forEach((p, i) => {
+  const card = document.createElement('div');
+  card.className = 'pitfall-card';
+  card.innerHTML = `
+    <div class="pitfall-header" onclick="this.parentElement.classList.toggle('open')">
+      <span>&#9888;&#65039; ${p.title}</span>
+      <span class="pitfall-chevron">&#9660;</span>
+    </div>
+    <div class="pitfall-body">
+      <div class="pitfall-content">
+        <div class="pitfall-item mistake"><strong>The Mistake</strong>${p.mistake}</div>
+        <div class="pitfall-item why"><strong>Why It Happens</strong>${p.why}</div>
+        <div class="pitfall-item consequence"><strong>Consequence</strong>${p.consequence}</div>
+        <div class="pitfall-item fix"><strong>The Fix</strong>${p.fix}</div>
+      </div>
+    </div>
+  `;
+  pitfallsContainer.appendChild(card);
+});
+
+// Open first pitfall by default
+if (pitfallsContainer.firstChild) pitfallsContainer.firstChild.classList.add('open');
+</script>
+</body>
+</html>

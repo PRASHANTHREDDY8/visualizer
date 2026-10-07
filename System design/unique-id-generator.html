@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unique ID Generator — System Design Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f4f6f9;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --accent: #4f46e5;
+      --accent-light: #eef2ff;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #3b82f6;
+      --purple: #8b5cf6;
+      --teal: #14b8a6;
+      --orange: #f97316;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+      padding: 60px 40px;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .hero h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+      position: relative;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      opacity: 0.9;
+      max-width: 700px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .requirements-bar {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 28px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    .req-pill {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.25);
+      padding: 8px 18px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    section {
+      padding: 60px 0;
+    }
+
+    .section-header {
+      margin-bottom: 40px;
+    }
+
+    .section-header h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    /* Architecture Diagram */
+    .arch-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      background: var(--surface-alt);
+      padding: 6px;
+      border-radius: var(--radius);
+      width: fit-content;
+    }
+
+    .arch-tab {
+      padding: 10px 24px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: transparent;
+      font-family: var(--font);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .arch-tab.active {
+      background: var(--surface);
+      color: var(--accent);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .arch-tab:hover:not(.active) {
+      color: var(--text);
+    }
+
+    .diagram-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px;
+      box-shadow: var(--shadow-sm);
+      min-height: 420px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .diagram-panel {
+      display: none;
+      width: 100%;
+      height: 400px;
+    }
+
+    .diagram-panel.active {
+      display: block;
+    }
+
+    .diagram-panel svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* SVG styles */
+    .node-service {
+      fill: var(--accent-light);
+      stroke: var(--accent);
+      stroke-width: 2;
+      rx: 10;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .node-service:hover {
+      filter: drop-shadow(0 4px 12px rgba(79, 70, 229, 0.3));
+    }
+
+    .node-db {
+      fill: #fef3c7;
+      stroke: #f59e0b;
+      stroke-width: 2;
+      cursor: pointer;
+    }
+
+    .node-lb {
+      fill: #dcfce7;
+      stroke: #10b981;
+      stroke-width: 2;
+      cursor: pointer;
+    }
+
+    .node-client {
+      fill: #f1f5f9;
+      stroke: #64748b;
+      stroke-width: 2;
+      cursor: pointer;
+    }
+
+    .node-label {
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 600;
+      fill: var(--text);
+      text-anchor: middle;
+      pointer-events: none;
+    }
+
+    .node-sublabel {
+      font-family: var(--font);
+      font-size: 10px;
+      fill: var(--text-muted);
+      text-anchor: middle;
+      pointer-events: none;
+    }
+
+    .edge-line {
+      stroke: #94a3b8;
+      stroke-width: 2;
+      fill: none;
+      marker-end: url(#arrowhead);
+    }
+
+    .edge-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      fill: var(--text-muted);
+    }
+
+    /* Comparison Table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 14px 20px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+
+    .comparison-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .comparison-table tr.highlight {
+      background: rgba(79, 70, 229, 0.04);
+    }
+
+    .check { color: var(--success); font-weight: bold; font-size: 1.1rem; }
+    .cross { color: var(--danger); font-weight: bold; font-size: 1.1rem; }
+
+    /* Component Cards */
+    .components-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .component-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s;
+    }
+
+    .component-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .component-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .component-card .icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .component-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+
+    .tech-badge {
+      display: inline-block;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+
+    /* Sequence Diagram */
+    .sequence-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .sequence-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .seq-btn {
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-family: var(--font);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text);
+    }
+
+    .seq-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .seq-btn.primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .seq-btn.primary:hover {
+      background: #4338ca;
+    }
+
+    .flow-select {
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-family: var(--font);
+      font-size: 0.85rem;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .speed-control input[type="range"] {
+      width: 80px;
+      accent-color: var(--accent);
+    }
+
+    .sequence-svg {
+      width: 100%;
+      min-height: 380px;
+    }
+
+    .lifeline {
+      stroke: var(--border);
+      stroke-width: 2;
+      stroke-dasharray: 6, 4;
+    }
+
+    .lifeline-header {
+      fill: var(--surface-alt);
+      stroke: var(--border);
+      stroke-width: 1.5;
+      rx: 8;
+    }
+
+    .seq-arrow {
+      stroke: var(--accent);
+      stroke-width: 2;
+      fill: none;
+      marker-end: url(#seq-arrowhead);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+
+    .seq-arrow.visible {
+      opacity: 1;
+    }
+
+    .seq-message {
+      font-family: var(--mono);
+      font-size: 10px;
+      fill: var(--text);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+
+    .seq-message.visible {
+      opacity: 1;
+    }
+
+    .step-narration {
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      padding: 14px 20px;
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: var(--text);
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-left: 4px solid var(--accent);
+    }
+
+    .step-narration .step-num {
+      background: var(--accent);
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* Scaling Section */
+    .scaling-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .scaling-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .scaling-card h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .scaling-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .scaling-card li {
+      padding: 6px 0;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .scaling-card li::before {
+      content: '→';
+      color: var(--accent);
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .capacity-calc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 24px;
+    }
+
+    .capacity-calc h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .calc-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+
+    .calc-row:last-child {
+      border-bottom: none;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .calc-row .label {
+      color: var(--text-muted);
+    }
+
+    .calc-row .value {
+      font-family: var(--mono);
+      font-weight: 600;
+    }
+
+    /* Failure Scenarios */
+    .failure-card {
+      background: #fff5f5;
+      border: 1px solid #fecaca;
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 12px;
+    }
+
+    .failure-card h5 {
+      color: var(--danger);
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+
+    .failure-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .mitigation {
+      background: #f0fdf4;
+      border-left: 3px solid var(--success);
+      padding: 8px 14px;
+      margin-top: 8px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-size: 0.82rem;
+      color: #166534;
+    }
+
+    /* Interactive Demo */
+    .demo-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .demo-config {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .config-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .config-group input, .config-group select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: var(--font);
+      font-size: 0.9rem;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .config-group input:focus, .config-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .demo-output {
+      background: #1e1e2e;
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      min-height: 200px;
+      overflow-x: auto;
+    }
+
+    .demo-output .server-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+    }
+
+    .server-name {
+      color: #a5b4fc;
+      min-width: 80px;
+      font-weight: 600;
+    }
+
+    .range-bar {
+      height: 28px;
+      background: rgba(79, 70, 229, 0.2);
+      border: 1px solid rgba(79, 70, 229, 0.4);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      color: #e2e8f0;
+      font-size: 0.75rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .range-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      background: rgba(79, 70, 229, 0.4);
+      border-radius: 4px 0 0 4px;
+      transition: width 0.3s;
+    }
+
+    .range-text {
+      position: relative;
+      z-index: 1;
+    }
+
+    .id-stream {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .id-chip {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .demo-stats {
+      display: flex;
+      gap: 20px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .stat {
+      color: #94a3b8;
+      font-size: 0.8rem;
+    }
+
+    .stat .val {
+      color: #f1f5f9;
+      font-weight: 700;
+      font-family: var(--mono);
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      .hero { padding: 40px 20px; }
+      .container { padding: 0 16px; }
+      .diagram-container { padding: 20px; }
+      .arch-tabs { flex-wrap: wrap; }
+      .requirements-bar { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="hero">
+    <h1>Unique ID Generator</h1>
+    <p>Design a high-throughput, 64-bit unique identifier system for distributed architectures — generating 1B+ IDs daily with zero collisions.</p>
+    <div class="requirements-bar">
+      <div class="req-pill">&#x1f512; Uniqueness</div>
+      <div class="req-pill">&#x26a1; Scalability (1B/day)</div>
+      <div class="req-pill">&#x1f7e2; High Availability</div>
+      <div class="req-pill">&#x1f4be; 64-bit Numeric</div>
+    </div>
+  </header>
+
+  <!-- Section 1: Architecture Approaches -->
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <h2>Architecture Approaches</h2>
+        <p>Three progressively better solutions for generating unique IDs at scale</p>
+      </div>
+
+      <div class="arch-tabs">
+        <button class="arch-tab active" data-tab="uuid">UUID</button>
+        <button class="arch-tab" data-tab="database">Database Auto-Increment</button>
+        <button class="arch-tab" data-tab="range">Range Handler</button>
+      </div>
+
+      <div class="diagram-container">
+        <div class="diagram-panel active" id="panel-uuid">
+          <svg viewBox="0 0 900 380">
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+              </marker>
+            </defs>
+            <!-- Clients -->
+            <rect x="60" y="40" width="120" height="50" class="node-client" rx="8"/>
+            <text x="120" y="68" class="node-label">Client A</text>
+            <rect x="60" y="120" width="120" height="50" class="node-client" rx="8"/>
+            <text x="120" y="148" class="node-label">Client B</text>
+            <rect x="60" y="200" width="120" height="50" class="node-client" rx="8"/>
+            <text x="120" y="228" class="node-label">Client C</text>
+
+            <!-- Servers -->
+            <rect x="340" y="30" width="160" height="70" class="node-service" rx="10"/>
+            <text x="420" y="60" class="node-label">Server 1</text>
+            <text x="420" y="78" class="node-sublabel">UUID v4 Generator</text>
+
+            <rect x="340" y="130" width="160" height="70" class="node-service" rx="10"/>
+            <text x="420" y="160" class="node-label">Server 2</text>
+            <text x="420" y="178" class="node-sublabel">UUID v4 Generator</text>
+
+            <rect x="340" y="230" width="160" height="70" class="node-service" rx="10"/>
+            <text x="420" y="260" class="node-label">Server 3</text>
+            <text x="420" y="278" class="node-sublabel">UUID v4 Generator</text>
+
+            <!-- Arrows -->
+            <line x1="180" y1="65" x2="335" y2="65" class="edge-line"/>
+            <line x1="180" y1="145" x2="335" y2="165" class="edge-line"/>
+            <line x1="180" y1="225" x2="335" y2="265" class="edge-line"/>
+
+            <!-- Output IDs -->
+            <rect x="620" y="50" width="240" height="35" fill="#fef3c7" stroke="#f59e0b" stroke-width="1" rx="6"/>
+            <text x="740" y="72" font-family="monospace" font-size="11" fill="#92400e" text-anchor="middle">a3f1e7b2-9c4d-4e5f...</text>
+
+            <rect x="620" y="150" width="240" height="35" fill="#fef3c7" stroke="#f59e0b" stroke-width="1" rx="6"/>
+            <text x="740" y="172" font-family="monospace" font-size="11" fill="#92400e" text-anchor="middle">7b2c9d4e-1a5f-4b3c...</text>
+
+            <rect x="620" y="250" width="240" height="35" fill="#fef3c7" stroke="#f59e0b" stroke-width="1" rx="6"/>
+            <text x="740" y="272" font-family="monospace" font-size="11" fill="#92400e" text-anchor="middle">e8f2a1b4-6c3d-4e7a...</text>
+
+            <line x1="500" y1="65" x2="615" y2="67" class="edge-line"/>
+            <line x1="500" y1="165" x2="615" y2="167" class="edge-line"/>
+            <line x1="500" y1="265" x2="615" y2="267" class="edge-line"/>
+
+            <!-- Info box -->
+            <rect x="580" y="310" width="300" height="55" fill="#fef2f2" stroke="#fca5a5" stroke-width="1" rx="8"/>
+            <text x="730" y="332" font-family="var(--font)" font-size="11" fill="#dc2626" text-anchor="middle" font-weight="600">Drawbacks</text>
+            <text x="730" y="350" font-family="var(--font)" font-size="10" fill="#991b1b" text-anchor="middle">128-bit (exceeds 64-bit req) | Non-numeric | Not ordered</text>
+
+            <!-- No coordination marker -->
+            <text x="420" y="330" font-family="var(--font)" font-size="11" fill="#059669" text-anchor="middle" font-weight="600">No coordination needed between servers</text>
+            <rect x="320" y="316" width="200" height="22" fill="none" stroke="#10b981" stroke-width="1" stroke-dasharray="4,3" rx="4"/>
+          </svg>
+        </div>
+
+        <div class="diagram-panel" id="panel-database">
+          <svg viewBox="0 0 900 380">
+            <defs>
+              <marker id="arrowhead2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+              </marker>
+            </defs>
+            <!-- Clients -->
+            <rect x="40" y="150" width="100" height="50" class="node-client" rx="8"/>
+            <text x="90" y="178" class="node-label">Clients</text>
+
+            <!-- Load Balancer -->
+            <polygon points="250,145 290,170 250,195 210,170" class="node-lb"/>
+            <text x="250" y="174" class="node-label" font-size="10">LB</text>
+
+            <line x1="140" y1="175" x2="205" y2="170" class="edge-line"/>
+
+            <!-- DB Servers -->
+            <rect x="380" y="40" width="160" height="65" class="node-db" rx="10"/>
+            <text x="460" y="65" class="node-label">DB Server A</text>
+            <text x="460" y="82" class="node-sublabel">IDs: 1, 4, 7, 10...</text>
+
+            <rect x="380" y="140" width="160" height="65" class="node-db" rx="10"/>
+            <text x="460" y="165" class="node-label">DB Server B</text>
+            <text x="460" y="182" class="node-sublabel">IDs: 2, 5, 8, 11...</text>
+
+            <rect x="380" y="240" width="160" height="65" class="node-db" rx="10"/>
+            <text x="460" y="265" class="node-label">DB Server C</text>
+            <text x="460" y="282" class="node-sublabel">IDs: 3, 6, 9, 12...</text>
+
+            <!-- Arrows from LB to DBs -->
+            <line x1="290" y1="160" x2="375" y2="72" class="edge-line"/>
+            <line x1="290" y1="170" x2="375" y2="172" class="edge-line"/>
+            <line x1="290" y1="180" x2="375" y2="272" class="edge-line"/>
+
+            <!-- Formula -->
+            <rect x="620" y="60" width="240" height="80" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" rx="8"/>
+            <text x="740" y="85" font-family="var(--font)" font-size="12" fill="#4f46e5" text-anchor="middle" font-weight="700">Increment Formula</text>
+            <text x="740" y="107" font-family="monospace" font-size="11" fill="#1e293b" text-anchor="middle">next_id = current + m</text>
+            <text x="740" y="127" font-family="var(--font)" font-size="10" fill="#64748b" text-anchor="middle">where m = number of servers (3)</text>
+
+            <!-- Problem box -->
+            <rect x="600" y="200" width="280" height="120" fill="#fef2f2" stroke="#fca5a5" stroke-width="1" rx="8"/>
+            <text x="740" y="225" font-family="var(--font)" font-size="11" fill="#dc2626" text-anchor="middle" font-weight="600">Failure Scenario</text>
+            <text x="740" y="248" font-family="var(--font)" font-size="10" fill="#991b1b" text-anchor="middle">If Server B fails, m changes to 2:</text>
+            <text x="740" y="268" font-family="monospace" font-size="10" fill="#991b1b" text-anchor="middle">Server A: next = 7 + 2 = 9</text>
+            <text x="740" y="288" font-family="monospace" font-size="10" fill="#991b1b" text-anchor="middle">Server C: already generated 9!</text>
+            <text x="740" y="308" font-family="var(--font)" font-size="11" fill="#dc2626" text-anchor="middle" font-weight="700">Uniqueness LOST</text>
+          </svg>
+        </div>
+
+        <div class="diagram-panel" id="panel-range">
+          <svg viewBox="0 0 900 380">
+            <defs>
+              <marker id="arrowhead3" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+              </marker>
+              <marker id="arrowgreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+              </marker>
+            </defs>
+
+            <!-- Clients -->
+            <rect x="20" y="130" width="90" height="90" class="node-client" rx="8"/>
+            <text x="65" y="170" class="node-label">Clients</text>
+            <text x="65" y="188" class="node-sublabel">(1B+ /day)</text>
+
+            <!-- Load Balancer -->
+            <polygon points="180,155 220,175 180,195 140,175" class="node-lb"/>
+            <text x="180" y="179" class="node-label" font-size="9">LB</text>
+
+            <line x1="110" y1="175" x2="137" y2="175" class="edge-line"/>
+
+            <!-- App Servers -->
+            <rect x="270" y="30" width="150" height="60" class="node-service" rx="10"/>
+            <text x="345" y="53" class="node-label">App Server 1</text>
+            <text x="345" y="70" class="node-sublabel">Range: 1 - 1,000,000</text>
+
+            <rect x="270" y="120" width="150" height="60" class="node-service" rx="10"/>
+            <text x="345" y="143" class="node-label">App Server 2</text>
+            <text x="345" y="160" class="node-sublabel">Range: 1M - 2M</text>
+
+            <rect x="270" y="210" width="150" height="60" class="node-service" rx="10"/>
+            <text x="345" y="233" class="node-label">App Server 3</text>
+            <text x="345" y="250" class="node-sublabel">Range: 2M - 3M</text>
+
+            <rect x="270" y="300" width="150" height="60" class="node-service" rx="10"/>
+            <text x="345" y="323" class="node-label">App Server N</text>
+            <text x="345" y="340" class="node-sublabel">Range: NM - (N+1)M</text>
+
+            <!-- LB to servers -->
+            <line x1="220" y1="165" x2="265" y2="60" class="edge-line"/>
+            <line x1="220" y1="175" x2="265" y2="150" class="edge-line"/>
+            <line x1="220" y1="180" x2="265" y2="240" class="edge-line"/>
+            <line x1="220" y1="185" x2="265" y2="330" class="edge-line"/>
+
+            <!-- Range Handler -->
+            <rect x="560" y="110" width="170" height="75" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2.5" rx="12"/>
+            <text x="645" y="138" class="node-label" fill="#5b21b6">Range Handler</text>
+            <text x="645" y="155" class="node-sublabel">(Central Microservice)</text>
+            <text x="645" y="172" class="node-sublabel">Allocates ID ranges</text>
+
+            <!-- Failover -->
+            <rect x="580" y="220" width="130" height="50" fill="#f5f3ff" stroke="#a78bfa" stroke-width="1.5" rx="8" stroke-dasharray="4,3"/>
+            <text x="645" y="245" class="node-label" font-size="10" fill="#7c3aed">Failover Server</text>
+            <text x="645" y="260" class="node-sublabel">Hot standby</text>
+
+            <!-- Storage -->
+            <rect x="790" y="120" width="90" height="60" class="node-db" rx="8"/>
+            <text x="835" y="148" class="node-label" font-size="10">Replicated</text>
+            <text x="835" y="163" class="node-sublabel">Storage</text>
+
+            <!-- Server to Range Handler arrows -->
+            <line x1="420" y1="55" x2="555" y2="130" stroke="#10b981" stroke-width="1.5" fill="none" marker-end="url(#arrowgreen)"/>
+            <line x1="420" y1="150" x2="555" y2="147" stroke="#10b981" stroke-width="1.5" fill="none" marker-end="url(#arrowgreen)"/>
+            <line x1="420" y1="240" x2="555" y2="165" stroke="#10b981" stroke-width="1.5" fill="none" marker-end="url(#arrowgreen)"/>
+
+            <!-- Range Handler to Storage -->
+            <line x1="730" y1="147" x2="785" y2="147" class="edge-line"/>
+
+            <!-- Range Handler to Failover -->
+            <line x1="645" y1="185" x2="645" y2="215" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+
+            <!-- Legend -->
+            <text x="460" y="100" font-family="var(--mono)" font-size="9" fill="#10b981">Request new range</text>
+            <rect x="470" y="318" width="200" height="40" fill="#f0fdf4" stroke="#86efac" stroke-width="1" rx="6"/>
+            <text x="570" y="342" font-family="var(--font)" font-size="10" fill="#166534" text-anchor="middle" font-weight="600">IDs assigned locally — no network call!</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison Table -->
+  <section style="padding-top: 0;">
+    <div class="container">
+      <div class="section-header">
+        <h2>Requirements Matrix</h2>
+        <p>How each approach satisfies the system requirements</p>
+      </div>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Approach</th>
+            <th>Unique</th>
+            <th>Scalable</th>
+            <th>Available</th>
+            <th>64-bit Numeric</th>
+            <th>Verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>UUID v4</strong></td>
+            <td><span class="cross">&#x2716;</span></td>
+            <td><span class="check">&#x2714;</span></td>
+            <td><span class="check">&#x2714;</span></td>
+            <td><span class="cross">&#x2716;</span></td>
+            <td><span class="tech-badge" style="background:#fef2f2;color:#dc2626;border-color:#fca5a5;">Insufficient</span></td>
+          </tr>
+          <tr>
+            <td><strong>Database Auto-Increment</strong></td>
+            <td><span class="cross">&#x2716;</span></td>
+            <td><span class="check">&#x2714;</span></td>
+            <td><span class="check">&#x2714;</span></td>
+            <td><span class="check">&#x2714;</span></td>
+            <td><span class="tech-badge" style="background:#fefce8;color:#a16207;border-color:#fde68a;">Risky</span></td>
+          </tr>
+          <tr class="highlight">
+            <td><strong>Range Handler</strong></td>
+            <td><span class="check">&#x2714;</span></td>
+            <td><span class="check">&#x2714;</span></td>
+            <td><span class="check">&#x2714;</span></td>
+            <td><span class="check">&#x2714;</span></td>
+            <td><span class="tech-badge" style="background:#f0fdf4;color:#166534;border-color:#86efac;">Recommended</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Component Breakdown -->
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <h2>Component Breakdown</h2>
+        <p>Key components of the Range Handler architecture</p>
+      </div>
+      <div class="components-grid">
+        <div class="component-card">
+          <h3><span class="icon" style="background:#ede9fe;">&#x1f3af;</span> Range Handler</h3>
+          <p>Central microservice that exclusively manages range allocation. Maintains a global counter and hands out non-overlapping ranges to application servers on demand.</p>
+          <span class="tech-badge">Go / Rust</span>
+          <span class="tech-badge">gRPC</span>
+          <span class="tech-badge">Leader election</span>
+          <div style="margin-top:12px;font-size:0.82rem;color:var(--text-muted);">
+            <strong>Scaling:</strong> Active-passive with automatic failover. Low request rate (only called when ranges exhaust).
+          </div>
+        </div>
+        <div class="component-card">
+          <h3><span class="icon" style="background:#dcfce7;">&#x1f5a5;</span> Application Servers</h3>
+          <p>Stateless services that hold a local range. Assign IDs by incrementing a local counter — zero network overhead per ID generation.</p>
+          <span class="tech-badge">Horizontal scale</span>
+          <span class="tech-badge">Stateless</span>
+          <span class="tech-badge">In-memory counter</span>
+          <div style="margin-top:12px;font-size:0.82rem;color:var(--text-muted);">
+            <strong>Scaling:</strong> Add more instances freely. Each gets its own range with no coordination.
+          </div>
+        </div>
+        <div class="component-card">
+          <h3><span class="icon" style="background:#fef3c7;">&#x1f4be;</span> Replicated Storage</h3>
+          <p>Persists range allocation state (which ranges are taken, current high-water mark). Enables recovery after Range Handler failure.</p>
+          <span class="tech-badge">etcd / ZooKeeper</span>
+          <span class="tech-badge">Strong consistency</span>
+          <span class="tech-badge">WAL</span>
+          <div style="margin-top:12px;font-size:0.82rem;color:var(--text-muted);">
+            <strong>Scaling:</strong> Raft/Paxos consensus. 3-5 node cluster handles the low write volume easily.
+          </div>
+        </div>
+        <div class="component-card">
+          <h3><span class="icon" style="background:#e0f2fe;">&#x2696;</span> Load Balancer</h3>
+          <p>Distributes incoming ID requests across application servers. Ensures even utilization and handles server health checks.</p>
+          <span class="tech-badge">Round-robin</span>
+          <span class="tech-badge">Health checks</span>
+          <span class="tech-badge">L4/L7</span>
+          <div style="margin-top:12px;font-size:0.82rem;color:var(--text-muted);">
+            <strong>Scaling:</strong> DNS-based or hardware LB. Standard horizontal scaling patterns apply.
+          </div>
+        </div>
+        <div class="component-card">
+          <h3><span class="icon" style="background:#fce7f3;">&#x1f6e1;</span> Failover Server</h3>
+          <p>Hot standby for the Range Handler. Monitors primary health and takes over range allocation if the primary fails, reading last state from storage.</p>
+          <span class="tech-badge">Hot standby</span>
+          <span class="tech-badge">Heartbeat</span>
+          <span class="tech-badge">Auto-promote</span>
+          <div style="margin-top:12px;font-size:0.82rem;color:var(--text-muted);">
+            <strong>Scaling:</strong> Single standby sufficient due to low primary load. Sub-second failover target.
+          </div>
+        </div>
+        <div class="component-card">
+          <h3><span class="icon" style="background:#f1f5f9;">&#x1f4ca;</span> Monitoring</h3>
+          <p>Tracks range consumption rate, server health, allocation latency, and remaining ID capacity to predict exhaustion and trigger alerts.</p>
+          <span class="tech-badge">Prometheus</span>
+          <span class="tech-badge">Grafana</span>
+          <span class="tech-badge">PagerDuty</span>
+          <div style="margin-top:12px;font-size:0.82rem;color:var(--text-muted);">
+            <strong>Alert on:</strong> Range exhaustion rate, failover events, storage replication lag.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sequence Diagram -->
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <h2>Request Flow</h2>
+        <p>Animated sequence of how IDs are generated and ranges are allocated</p>
+      </div>
+      <div class="sequence-container">
+        <div class="sequence-controls">
+          <button class="seq-btn primary" id="seq-play">&#x25B6; Play</button>
+          <button class="seq-btn" id="seq-step">Step &rarr;</button>
+          <button class="seq-btn" id="seq-reset">Reset</button>
+          <select class="flow-select" id="flow-select">
+            <option value="normal">Normal ID Generation</option>
+            <option value="range-exhaust">Range Exhaustion</option>
+            <option value="failover">Handler Failover</option>
+          </select>
+          <div class="speed-control">
+            <span>Speed:</span>
+            <input type="range" min="1" max="5" value="3" id="seq-speed">
+          </div>
+        </div>
+
+        <svg class="sequence-svg" id="sequence-svg" viewBox="0 0 850 340">
+          <defs>
+            <marker id="seq-arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#4f46e5"/>
+            </marker>
+            <marker id="seq-arrowback" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto">
+              <polygon points="8 0, 0 3, 8 6" fill="#10b981"/>
+            </marker>
+          </defs>
+
+          <!-- Lifeline headers -->
+          <rect x="50" y="10" width="100" height="36" class="lifeline-header"/>
+          <text x="100" y="33" class="node-label" font-size="11">Client</text>
+
+          <rect x="230" y="10" width="100" height="36" class="lifeline-header"/>
+          <text x="280" y="33" class="node-label" font-size="11">Load Balancer</text>
+
+          <rect x="420" y="10" width="100" height="36" class="lifeline-header"/>
+          <text x="470" y="33" class="node-label" font-size="11">App Server</text>
+
+          <rect x="610" y="10" width="110" height="36" class="lifeline-header"/>
+          <text x="665" y="33" class="node-label" font-size="11">Range Handler</text>
+
+          <rect x="780" y="10" width="60" height="36" class="lifeline-header"/>
+          <text x="810" y="33" class="node-label" font-size="11">Storage</text>
+
+          <!-- Lifelines -->
+          <line x1="100" y1="46" x2="100" y2="330" class="lifeline"/>
+          <line x1="280" y1="46" x2="280" y2="330" class="lifeline"/>
+          <line x1="470" y1="46" x2="470" y2="330" class="lifeline"/>
+          <line x1="665" y1="46" x2="665" y2="330" class="lifeline"/>
+          <line x1="810" y1="46" x2="810" y2="330" class="lifeline"/>
+
+          <!-- Sequence arrows (initially hidden) -->
+          <g id="seq-arrows"></g>
+        </svg>
+
+        <div class="step-narration" id="step-narration">
+          <span class="step-num">-</span>
+          <span>Press Play or Step to begin the sequence</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Demo -->
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <h2>Interactive Simulation</h2>
+        <p>Configure the range handler and watch IDs being generated in real-time</p>
+      </div>
+      <div class="demo-container">
+        <div class="demo-config">
+          <div class="config-group">
+            <label>Number of Servers</label>
+            <input type="number" id="cfg-servers" value="4" min="1" max="10">
+          </div>
+          <div class="config-group">
+            <label>Range Size</label>
+            <select id="cfg-range">
+              <option value="10">10 (demo)</option>
+              <option value="1000">1,000</option>
+              <option value="100000" selected>100,000</option>
+              <option value="1000000">1,000,000</option>
+            </select>
+          </div>
+          <div class="config-group">
+            <label>Generation Speed</label>
+            <select id="cfg-speed">
+              <option value="500">Slow</option>
+              <option value="200" selected>Medium</option>
+              <option value="50">Fast</option>
+            </select>
+          </div>
+          <div class="config-group" style="display:flex;align-items:flex-end;">
+            <button class="seq-btn primary" id="demo-start" style="width:100%;">Start Simulation</button>
+          </div>
+        </div>
+        <div class="demo-output" id="demo-output">
+          <div style="color:#64748b;font-family:var(--mono);font-size:0.85rem;">Configure and press Start to begin...</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Scaling & Trade-offs -->
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <h2>Scaling & Trade-offs</h2>
+        <p>Capacity planning, growth strategies, and failure analysis</p>
+      </div>
+
+      <div class="capacity-calc">
+        <h4>Back-of-Envelope Capacity Estimation</h4>
+        <div class="calc-row">
+          <span class="label">Total 64-bit ID space</span>
+          <span class="value">2^64 = 1.84 x 10^19</span>
+        </div>
+        <div class="calc-row">
+          <span class="label">Target throughput</span>
+          <span class="value">1,000,000,000 IDs/day</span>
+        </div>
+        <div class="calc-row">
+          <span class="label">Per-second rate</span>
+          <span class="value">~11,574 IDs/sec</span>
+        </div>
+        <div class="calc-row">
+          <span class="label">With 10 servers (range=1M)</span>
+          <span class="value">~1 range request / 86 sec / server</span>
+        </div>
+        <div class="calc-row">
+          <span class="label">Range Handler load</span>
+          <span class="value">~10 req/86s = 0.12 QPS</span>
+        </div>
+        <div class="calc-row">
+          <span class="label">Years until ID exhaustion</span>
+          <span class="value">~50.5 million years</span>
+        </div>
+      </div>
+
+      <div class="scaling-grid">
+        <div class="scaling-card">
+          <h4>&#x1f4c8; Growth Strategies</h4>
+          <ul>
+            <li>10x load: Add more app servers, each gets independent ranges</li>
+            <li>100x load: Shard range handler by region/data center</li>
+            <li>New data center: Allocate dedicated range partitions per DC</li>
+            <li>Burst handling: Pre-fetch next range before current exhausts</li>
+          </ul>
+        </div>
+        <div class="scaling-card">
+          <h4>&#x2696; Key Trade-offs</h4>
+          <ul>
+            <li><strong>Range size:</strong> Large = fewer handler calls, but more waste on failure</li>
+            <li><strong>Consistency:</strong> Strong consistency at handler, eventual at app layer</li>
+            <li><strong>Ordering:</strong> IDs are unique but NOT globally ordered by time</li>
+            <li><strong>Gaps:</strong> Acceptable — not sequential, just unique</li>
+          </ul>
+        </div>
+        <div class="scaling-card">
+          <h4>&#x1f310; Multi-Region Strategy</h4>
+          <ul>
+            <li>Partition the 64-bit space by region prefix bits</li>
+            <li>Each region's range handler owns a non-overlapping slice</li>
+            <li>No cross-region coordination needed for ID generation</li>
+            <li>Example: 4-bit prefix = 16 regions, each with 2^60 IDs</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="margin-top:24px;">
+        <h3 style="font-size:1.1rem;margin-bottom:16px;">Failure Scenarios & Mitigations</h3>
+        <div class="failure-card">
+          <h5>App Server Crash</h5>
+          <p>Unassigned IDs in the server's current range are permanently lost (gaps in sequence).</p>
+          <div class="mitigation"><strong>Mitigation:</strong> Use smaller ranges (e.g., 10K–100K) to minimize waste. Gaps are acceptable — they don't violate uniqueness.</div>
+        </div>
+        <div class="failure-card">
+          <h5>Range Handler Down</h5>
+          <p>App servers cannot get new ranges. Existing servers continue until their current range exhausts.</p>
+          <div class="mitigation"><strong>Mitigation:</strong> Hot standby with sub-second failover. Pre-fetch next range while current is 80% consumed.</div>
+        </div>
+        <div class="failure-card">
+          <h5>Storage Corruption</h5>
+          <p>Range allocation state lost — risk of duplicate range assignments.</p>
+          <div class="mitigation"><strong>Mitigation:</strong> Replicated storage (etcd/ZooKeeper) with WAL. On recovery, skip ahead by a safety margin to avoid overlaps.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer style="text-align:center;padding:40px;color:var(--text-muted);font-size:0.85rem;border-top:1px solid var(--border);">
+    Unique ID Generator — System Design Visualizer
+  </footer>
+
+  <script>
+    // Tab switching
+    const tabs = document.querySelectorAll('.arch-tab');
+    const panels = document.querySelectorAll('.diagram-panel');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        panels.forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Sequence Diagram Logic
+    const flows = {
+      normal: [
+        { from: 0, to: 1, y: 80, label: 'GET /id', desc: 'Client requests a new unique ID from the system' },
+        { from: 1, to: 2, y: 110, label: 'Route request', desc: 'Load balancer routes to an available app server' },
+        { from: 2, to: 2, y: 140, label: 'counter++ (local)', desc: 'App server increments local counter and assigns next ID from its range', self: true },
+        { from: 2, to: 1, y: 175, label: 'ID: 300042', desc: 'App server returns the generated ID', back: true },
+        { from: 1, to: 0, y: 205, label: 'Response: 300042', desc: 'Load balancer forwards the unique ID back to the client', back: true },
+      ],
+      'range-exhaust': [
+        { from: 2, to: 2, y: 80, label: 'counter = range_end', desc: 'App server has used all IDs in its current range (e.g., reached 400,000)', self: true },
+        { from: 2, to: 3, y: 115, label: 'RequestRange()', desc: 'App server calls Range Handler to get a new range allocation' },
+        { from: 3, to: 4, y: 150, label: 'Write checkpoint', desc: 'Range Handler persists the new allocation to replicated storage' },
+        { from: 4, to: 3, y: 185, label: 'ACK', desc: 'Storage confirms the write — range is now exclusively reserved', back: true },
+        { from: 3, to: 2, y: 220, label: 'Range: 400001-500000', desc: 'Range Handler returns the new range to the app server', back: true },
+        { from: 2, to: 2, y: 255, label: 'counter = 400001', desc: 'App server resets local counter to the start of the new range', self: true },
+      ],
+      failover: [
+        { from: 3, to: 3, y: 80, label: 'CRASH', desc: 'Primary Range Handler experiences a failure (process crash, network partition)', self: true, color: '#ef4444' },
+        { from: 2, to: 3, y: 115, label: 'RequestRange() TIMEOUT', desc: 'App server\'s range request times out — primary is unresponsive', color: '#ef4444' },
+        { from: 3, to: 3, y: 150, label: 'Failover detects', desc: 'Failover server detects missing heartbeat, begins promotion', self: true, color: '#f59e0b' },
+        { from: 3, to: 4, y: 185, label: 'Read last state', desc: 'Failover reads last checkpointed state from replicated storage', color: '#f59e0b' },
+        { from: 4, to: 3, y: 220, label: 'State restored', desc: 'Storage returns all range allocations — failover is now the new primary', back: true, color: '#10b981' },
+        { from: 2, to: 3, y: 260, label: 'Retry RequestRange()', desc: 'App server retries and succeeds against the new primary', color: '#10b981' },
+        { from: 3, to: 2, y: 290, label: 'Range: 500001-600000', desc: 'New primary allocates next safe range (skips crashed server\'s partial range)', back: true, color: '#10b981' },
+      ]
+    };
+
+    const xPositions = [100, 280, 470, 665, 810];
+    let currentFlow = 'normal';
+    let currentStep = -1;
+    let playing = false;
+    let playInterval = null;
+
+    function renderSequenceStep() {
+      const arrowsG = document.getElementById('seq-arrows');
+      arrowsG.innerHTML = '';
+
+      const steps = flows[currentFlow];
+
+      for (let i = 0; i <= currentStep && i < steps.length; i++) {
+        const step = steps[i];
+        const fromX = xPositions[step.from];
+        const toX = xPositions[step.to];
+        const y = step.y;
+        const visible = i <= currentStep;
+        const color = step.color || (step.back ? '#10b981' : '#4f46e5');
+
+        if (step.self) {
+          const arc = `M ${fromX} ${y} C ${fromX + 40} ${y - 15}, ${fromX + 40} ${y + 15}, ${fromX} ${y + 20}`;
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', arc);
+          path.setAttribute('stroke', color);
+          path.setAttribute('stroke-width', '2');
+          path.setAttribute('fill', 'none');
+          path.setAttribute('opacity', visible ? '1' : '0');
+          arrowsG.appendChild(path);
+
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          text.setAttribute('x', fromX + 50);
+          text.setAttribute('y', y + 8);
+          text.setAttribute('font-family', 'monospace');
+          text.setAttribute('font-size', '9');
+          text.setAttribute('fill', color);
+          text.setAttribute('opacity', visible ? '1' : '0');
+          text.textContent = step.label;
+          arrowsG.appendChild(text);
+        } else {
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', fromX);
+          line.setAttribute('y1', y);
+          line.setAttribute('x2', toX);
+          line.setAttribute('y2', y);
+          line.setAttribute('stroke', color);
+          line.setAttribute('stroke-width', '2');
+          line.setAttribute('opacity', visible ? '1' : '0');
+
+          if (step.back) {
+            line.setAttribute('marker-start', 'url(#seq-arrowback)');
+            line.setAttribute('stroke-dasharray', '4,3');
+          } else {
+            line.setAttribute('marker-end', 'url(#seq-arrowhead)');
+          }
+          arrowsG.appendChild(line);
+
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          const midX = (fromX + toX) / 2;
+          text.setAttribute('x', midX);
+          text.setAttribute('y', y - 6);
+          text.setAttribute('font-family', 'monospace');
+          text.setAttribute('font-size', '9');
+          text.setAttribute('fill', color);
+          text.setAttribute('text-anchor', 'middle');
+          text.setAttribute('opacity', visible ? '1' : '0');
+          text.textContent = step.label;
+          arrowsG.appendChild(text);
+        }
+      }
+
+      const narration = document.getElementById('step-narration');
+      if (currentStep >= 0 && currentStep < steps.length) {
+        narration.innerHTML = `<span class="step-num">${currentStep + 1}</span><span>${steps[currentStep].desc}</span>`;
+      } else {
+        narration.innerHTML = `<span class="step-num">-</span><span>Press Play or Step to begin the sequence</span>`;
+      }
+    }
+
+    function nextStep() {
+      const steps = flows[currentFlow];
+      if (currentStep < steps.length - 1) {
+        currentStep++;
+        renderSequenceStep();
+      } else {
+        stopPlaying();
+      }
+    }
+
+    function stopPlaying() {
+      playing = false;
+      if (playInterval) { clearInterval(playInterval); playInterval = null; }
+      document.getElementById('seq-play').innerHTML = '&#x25B6; Play';
+    }
+
+    document.getElementById('seq-play').addEventListener('click', () => {
+      if (playing) {
+        stopPlaying();
+      } else {
+        playing = true;
+        document.getElementById('seq-play').innerHTML = '&#x23F8; Pause';
+        const speed = 6 - document.getElementById('seq-speed').value;
+        playInterval = setInterval(() => {
+          const steps = flows[currentFlow];
+          if (currentStep >= steps.length - 1) { stopPlaying(); return; }
+          nextStep();
+        }, speed * 400);
+      }
+    });
+
+    document.getElementById('seq-step').addEventListener('click', () => {
+      stopPlaying();
+      nextStep();
+    });
+
+    document.getElementById('seq-reset').addEventListener('click', () => {
+      stopPlaying();
+      currentStep = -1;
+      renderSequenceStep();
+    });
+
+    document.getElementById('flow-select').addEventListener('change', (e) => {
+      stopPlaying();
+      currentFlow = e.target.value;
+      currentStep = -1;
+      renderSequenceStep();
+    });
+
+    renderSequenceStep();
+
+    // Interactive Demo
+    let demoInterval = null;
+    let demoRunning = false;
+
+    document.getElementById('demo-start').addEventListener('click', () => {
+      if (demoRunning) {
+        clearInterval(demoInterval);
+        demoRunning = false;
+        document.getElementById('demo-start').textContent = 'Start Simulation';
+        return;
+      }
+
+      demoRunning = true;
+      document.getElementById('demo-start').textContent = 'Stop';
+
+      const numServers = parseInt(document.getElementById('cfg-servers').value) || 4;
+      const rangeSize = parseInt(document.getElementById('cfg-range').value) || 100000;
+      const speed = parseInt(document.getElementById('cfg-speed').value) || 200;
+
+      const servers = [];
+      for (let i = 0; i < numServers; i++) {
+        servers.push({
+          name: `Server ${i + 1}`,
+          rangeStart: i * rangeSize + 1,
+          rangeEnd: (i + 1) * rangeSize,
+          current: i * rangeSize + 1,
+          generated: 0
+        });
+      }
+
+      let totalGenerated = 0;
+      const generatedIds = [];
+
+      function render() {
+        const output = document.getElementById('demo-output');
+        let html = '';
+
+        servers.forEach(s => {
+          const progress = ((s.current - s.rangeStart) / (s.rangeEnd - s.rangeStart)) * 100;
+          const width = Math.max(150, 300 * (rangeSize <= 1000 ? 1 : 0.6));
+          html += `<div class="server-row">
+            <span class="server-name">${s.name}</span>
+            <div class="range-bar" style="width:${width}px;">
+              <div class="range-fill" style="width:${progress}%"></div>
+              <span class="range-text">${s.rangeStart.toLocaleString()} — ${s.rangeEnd.toLocaleString()} (${progress.toFixed(1)}%)</span>
+            </div>
+          </div>`;
+        });
+
+        html += `<div class="id-stream">`;
+        const recentIds = generatedIds.slice(-20);
+        recentIds.forEach(id => {
+          html += `<span class="id-chip">${id.toLocaleString()}</span>`;
+        });
+        html += `</div>`;
+
+        html += `<div class="demo-stats">
+          <span class="stat">Total: <span class="val">${totalGenerated.toLocaleString()}</span></span>
+          <span class="stat">Rate: <span class="val">${Math.round(1000 / speed)}/sec</span></span>
+          <span class="stat">Servers: <span class="val">${numServers}</span></span>
+        </div>`;
+
+        output.innerHTML = html;
+      }
+
+      render();
+
+      demoInterval = setInterval(() => {
+        const serverIdx = Math.floor(Math.random() * numServers);
+        const server = servers[serverIdx];
+
+        if (server.current > server.rangeEnd) {
+          const maxEnd = Math.max(...servers.map(s => s.rangeEnd));
+          server.rangeStart = maxEnd + 1;
+          server.rangeEnd = maxEnd + rangeSize;
+          server.current = server.rangeStart;
+        }
+
+        generatedIds.push(server.current);
+        server.current++;
+        server.generated++;
+        totalGenerated++;
+
+        if (generatedIds.length > 50) generatedIds.shift();
+
+        render();
+      }, speed);
+    });
+  </script>
+</body>
+</html>

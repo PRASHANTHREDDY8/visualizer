@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swiggy System Design — Visualizer</title>
+<style>
+:root {
+  --bg: #fafbfc;
+  --surface: #ffffff;
+  --surface-alt: #f3f4f6;
+  --border: #e5e7eb;
+  --border-active: #f97316;
+  --text: #1f2937;
+  --text-muted: #6b7280;
+  --text-light: #9ca3af;
+  --primary: #f97316;
+  --primary-light: #fed7aa;
+  --primary-dark: #c2410c;
+  --secondary: #6366f1;
+  --secondary-light: #c7d2fe;
+  --accent-green: #10b981;
+  --accent-green-light: #d1fae5;
+  --accent-red: #ef4444;
+  --accent-red-light: #fee2e2;
+  --accent-blue: #3b82f6;
+  --accent-blue-light: #dbeafe;
+  --accent-purple: #8b5cf6;
+  --accent-purple-light: #ede9fe;
+  --accent-amber: #f59e0b;
+  --accent-amber-light: #fef3c7;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Navigation */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  overflow-x: auto;
+}
+
+.nav-brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--primary);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-brand svg { width: 24px; height: 24px; }
+
+.nav-links {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: nowrap;
+}
+
+.nav-link {
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.nav-link:hover, .nav-link.active {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+/* Hero */
+.hero {
+  padding: 3rem 2rem 2rem;
+  text-align: center;
+  background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 50%, #ecfdf5 100%);
+  border-bottom: 1px solid var(--border);
+}
+
+.hero h1 {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.hero h1 span { color: var(--primary); }
+
+.hero p {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.hero-stat {
+  text-align: center;
+}
+
+.hero-stat .value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+.hero-stat .label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Sections */
+.section {
+  padding: 3rem 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.section-header {
+  margin-bottom: 2rem;
+}
+
+.section-header h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-header h2 .num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  font-size: 0.85rem;
+}
+
+.section-header p {
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+}
+
+/* Architecture Diagram */
+.arch-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  overflow-x: auto;
+  box-shadow: var(--shadow-md);
+}
+
+.arch-svg {
+  width: 100%;
+  min-width: 1100px;
+  height: 700px;
+}
+
+.arch-svg text {
+  font-family: var(--font);
+}
+
+.arch-node {
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.arch-node:hover {
+  filter: brightness(0.95);
+}
+
+.arch-tooltip {
+  position: absolute;
+  background: var(--text);
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 50;
+  max-width: 250px;
+}
+
+/* Component Cards */
+.components-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.component-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+
+.component-card:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-md);
+}
+
+.component-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.component-card h3 .icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+}
+
+.component-card .purpose {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.component-card .tech-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  margin: 0.1rem;
+  color: var(--text-muted);
+}
+
+.component-card .scaling {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--accent-green);
+  font-weight: 500;
+}
+
+/* Sequence Diagram */
+.sequence-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.sequence-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.seq-btn {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text);
+}
+
+.seq-btn:hover { background: var(--surface-alt); }
+.seq-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+.seq-flow-select {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.sequence-svg {
+  width: 100%;
+  min-width: 900px;
+  overflow-x: auto;
+}
+
+.seq-step-info {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  min-height: 40px;
+}
+
+/* Comparison Table */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.comparison-table th {
+  background: var(--surface-alt);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+}
+
+.comparison-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.comparison-table tr.chosen {
+  background: #fff7ed;
+}
+
+.comparison-table tr.chosen td:first-child {
+  border-left: 3px solid var(--primary);
+}
+
+.badge-chosen {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  background: var(--primary);
+  color: white;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  margin-left: 0.25rem;
+  vertical-align: middle;
+}
+
+/* Pitfalls */
+.pitfall-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent-amber);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+
+.pitfall-header {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.15s;
+}
+
+.pitfall-header:hover { background: var(--surface-alt); }
+
+.pitfall-body {
+  display: none;
+  padding: 0 1rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.pitfall-body.open { display: block; }
+
+.pitfall-body strong { color: var(--text); }
+
+/* Best Practices */
+.practice-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent-green);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.practice-card h4 {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: var(--accent-green);
+}
+
+.practice-card ul {
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.practice-card ul li {
+  padding: 0.25rem 0;
+  padding-left: 1.25rem;
+  position: relative;
+}
+
+.practice-card ul li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--accent-green);
+  font-weight: 700;
+}
+
+/* Scaling Section */
+.capacity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.capacity-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  text-align: center;
+}
+
+.capacity-card .value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+.capacity-card .label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.capacity-card .detail {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 0.25rem;
+}
+
+/* Playground */
+.playground-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.playground-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.pg-tab {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+
+.pg-tab:hover { background: var(--surface-alt); }
+.pg-tab.active { background: var(--primary); color: white; }
+
+.pg-panel { display: none; }
+.pg-panel.active { display: block; }
+
+.pg-controls {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.pg-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pg-control label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.pg-control input[type="range"] {
+  width: 150px;
+  accent-color: var(--primary);
+}
+
+.pg-control input[type="number"],
+.pg-control select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  width: 120px;
+}
+
+.pg-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pg-metric {
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.pg-metric .val {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.pg-metric .lbl {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.pg-viz {
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  min-height: 200px;
+  position: relative;
+  overflow: hidden;
+}
+
+.pg-presets {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.pg-preset {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  background: var(--surface);
+  transition: all 0.15s;
+}
+
+.pg-preset:hover { border-color: var(--primary); color: var(--primary); }
+
+.pg-narration {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  color: #92400e;
+}
+
+/* Use Cases */
+.usecase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.usecase-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem;
+}
+
+.usecase-card h4 {
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+.usecase-card p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.usecase-card .scale-badge {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  background: var(--accent-blue-light);
+  color: var(--accent-blue);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero h1 { font-size: 1.75rem; }
+  .section { padding: 2rem 1rem; }
+  .nav { padding: 0.5rem 1rem; }
+  .components-grid { grid-template-columns: 1fr; }
+  .capacity-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Chevron icon */
+.chevron {
+  transition: transform 0.2s;
+  font-size: 0.8rem;
+}
+
+.chevron.open { transform: rotate(90deg); }
+
+/* Tabs for sections */
+.sub-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.sub-tab {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+
+.sub-tab:hover { border-color: var(--primary); }
+.sub-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>
+    </svg>
+    Swiggy
+  </div>
+  <div class="nav-links">
+    <a class="nav-link active" onclick="scrollToSection('architecture')">Architecture</a>
+    <a class="nav-link" onclick="scrollToSection('components')">Components</a>
+    <a class="nav-link" onclick="scrollToSection('sequence')">Request Flow</a>
+    <a class="nav-link" onclick="scrollToSection('comparisons')">Comparisons</a>
+    <a class="nav-link" onclick="scrollToSection('usecases')">Use Cases</a>
+    <a class="nav-link" onclick="scrollToSection('pitfalls')">Pitfalls</a>
+    <a class="nav-link" onclick="scrollToSection('practices')">Best Practices</a>
+    <a class="nav-link" onclick="scrollToSection('scaling')">Scaling</a>
+    <a class="nav-link" onclick="scrollToSection('playground')">Playground</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>Designing <span>Swiggy</span></h1>
+  <p>A hyperlocal food delivery platform handling millions of orders per day — real-time tracking, dynamic delivery assignment, restaurant discovery, and demand-based pricing at scale.</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="value">2M+</div><div class="label">Daily Orders</div></div>
+    <div class="hero-stat"><div class="value">200K+</div><div class="label">Restaurant Partners</div></div>
+    <div class="hero-stat"><div class="value">300K+</div><div class="label">Delivery Partners</div></div>
+    <div class="hero-stat"><div class="value">&lt;35 min</div><div class="label">Avg Delivery</div></div>
+  </div>
+</div>
+
+<!-- Section 1: Architecture -->
+<div class="section" id="architecture">
+  <div class="section-header">
+    <h2><span class="num">1</span> Architecture Diagram</h2>
+    <p>Interactive overview of Swiggy's microservices architecture — hover for details, click to navigate</p>
+  </div>
+  <div class="arch-container">
+    <svg class="arch-svg" id="archSvg" viewBox="0 0 1100 700"></svg>
+  </div>
+  <div class="arch-tooltip" id="archTooltip"></div>
+</div>
+
+<!-- Section 2: Components -->
+<div class="section" id="components">
+  <div class="section-header">
+    <h2><span class="num">2</span> Component Breakdown</h2>
+    <p>Detailed view of each major service with technology choices and scaling strategy</p>
+  </div>
+  <div class="components-grid" id="componentsGrid"></div>
+</div>
+
+<!-- Section 3: Request Flow -->
+<div class="section" id="sequence">
+  <div class="section-header">
+    <h2><span class="num">3</span> Request Flow</h2>
+    <p>Animated sequence diagrams showing how requests traverse the system</p>
+  </div>
+  <div class="sequence-container">
+    <div class="sequence-controls">
+      <select class="seq-flow-select" id="flowSelect">
+        <option value="order">Order Placement Flow</option>
+        <option value="delivery">Delivery Assignment Flow</option>
+        <option value="tracking">Real-time Tracking Flow</option>
+        <option value="search">Restaurant Search Flow</option>
+      </select>
+      <button class="seq-btn" id="seqPlayBtn" onclick="seqPlay()">▶ Play</button>
+      <button class="seq-btn" onclick="seqStep()">⏭ Step</button>
+      <button class="seq-btn" onclick="seqReset()">↺ Reset</button>
+      <label style="font-size:0.8rem;color:var(--text-muted);display:flex;align-items:center;gap:0.4rem;">
+        Speed <input type="range" min="1" max="5" value="3" id="seqSpeed" style="width:80px;accent-color:var(--primary);">
+      </label>
+    </div>
+    <div style="overflow-x:auto;">
+      <svg class="sequence-svg" id="seqSvg" viewBox="0 0 1000 500"></svg>
+    </div>
+    <div class="seq-step-info" id="seqStepInfo">Select a flow and press Play to animate the request sequence.</div>
+  </div>
+</div>
+
+<!-- Section 4: Comparisons -->
+<div class="section" id="comparisons">
+  <div class="section-header">
+    <h2><span class="num">4</span> Comparisons with Alternatives</h2>
+    <p>How Swiggy's architecture compares to alternative approaches</p>
+  </div>
+
+  <h3 style="font-size:1rem;margin-bottom:1rem;color:var(--text);">Delivery Assignment Strategy</h3>
+  <div style="overflow-x:auto;margin-bottom:2rem;">
+    <table class="comparison-table">
+      <thead>
+        <tr><th>Approach</th><th>Key Idea</th><th>Pros</th><th>Cons</th><th>Used By</th></tr>
+      </thead>
+      <tbody>
+        <tr class="chosen">
+          <td><strong>Dynamic Batching + ML</strong> <span class="badge-chosen">CHOSEN</span></td>
+          <td>ML model scores rider-order affinity, batches nearby orders, reassigns dynamically</td>
+          <td>Optimal utilization, handles demand spikes, multi-order deliveries</td>
+          <td>High engineering complexity, model drift risk</td>
+          <td>Swiggy, DoorDash</td>
+        </tr>
+        <tr>
+          <td><strong>Nearest Rider</strong></td>
+          <td>Assign order to closest available rider via geospatial query</td>
+          <td>Simple, fast assignment, easy to implement</td>
+          <td>Ignores traffic, rider capacity, restaurant prep time</td>
+          <td>Early-stage startups</td>
+        </tr>
+        <tr>
+          <td><strong>Zone-Based Dispatch</strong></td>
+          <td>City divided into zones; riders assigned within zone only</td>
+          <td>Predictable, easy ops, no cross-zone deadheading</td>
+          <td>Suboptimal at zone boundaries, rigid supply allocation</td>
+          <td>Uber Eats (early)</td>
+        </tr>
+        <tr>
+          <td><strong>Auction Model</strong></td>
+          <td>Broadcast order to nearby riders; first accept wins</td>
+          <td>Self-optimizing, riders choose profitable orders</td>
+          <td>Cherry-picking, longer wait for unpopular orders</td>
+          <td>Grab, Gojek</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="font-size:1rem;margin-bottom:1rem;color:var(--text);">Real-Time Tracking Architecture</h3>
+  <div style="overflow-x:auto;">
+    <table class="comparison-table">
+      <thead>
+        <tr><th>Approach</th><th>Key Idea</th><th>Pros</th><th>Cons</th><th>Used By</th></tr>
+      </thead>
+      <tbody>
+        <tr class="chosen">
+          <td><strong>WebSocket + Server Push</strong> <span class="badge-chosen">CHOSEN</span></td>
+          <td>Persistent WebSocket connection; server pushes location updates every 4s</td>
+          <td>Low latency, efficient for frequent updates, bidirectional</td>
+          <td>Connection management at scale, reconnection handling</td>
+          <td>Swiggy, Uber</td>
+        </tr>
+        <tr>
+          <td><strong>Long Polling</strong></td>
+          <td>Client polls server every N seconds for new location</td>
+          <td>Simple, works everywhere, stateless server</td>
+          <td>Higher latency, more bandwidth, many idle connections</td>
+          <td>Older food apps</td>
+        </tr>
+        <tr>
+          <td><strong>Server-Sent Events (SSE)</strong></td>
+          <td>One-way server-to-client stream over HTTP</td>
+          <td>Simpler than WebSocket, auto-reconnect, HTTP compatible</td>
+          <td>Unidirectional only, limited browser connections per domain</td>
+          <td>Some logistics platforms</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Section 5: Use Cases & Pitfalls -->
+<div class="section" id="usecases">
+  <div class="section-header">
+    <h2><span class="num">5</span> Use Cases & Common Pitfalls</h2>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin-bottom:1rem;">Primary Use Cases</h3>
+  <div class="usecase-grid" style="margin-bottom:2rem;">
+    <div class="usecase-card">
+      <h4>On-Demand Food Delivery</h4>
+      <p>Customer orders from nearby restaurants with 25-40 min delivery. Requires real-time tracking, dynamic ETA, surge pricing.</p>
+      <span class="scale-badge">2M+ orders/day</span>
+    </div>
+    <div class="usecase-card">
+      <h4>Grocery & Essentials (Instamart)</h4>
+      <p>15-30 min delivery from dark stores. Higher item count per order, inventory management, smaller delivery radius.</p>
+      <span class="scale-badge">500K+ orders/day</span>
+    </div>
+    <div class="usecase-card">
+      <h4>Scheduled / Pre-orders</h4>
+      <p>Orders placed for future time slots. Batching optimization, predictable demand, capacity planning.</p>
+      <span class="scale-badge">200K+ orders/day</span>
+    </div>
+    <div class="usecase-card">
+      <h4>Dine-In & Takeaway</h4>
+      <p>Table reservations, in-restaurant ordering, and pickup. No delivery logistics, focus on discovery and payment.</p>
+      <span class="scale-badge">100K+ daily sessions</span>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin-bottom:1rem;">Anti-Use-Cases</h3>
+  <div class="usecase-grid" style="margin-bottom:2rem;">
+    <div class="usecase-card" style="border-left:3px solid var(--accent-red);">
+      <h4>Long-Distance Logistics</h4>
+      <p>This architecture isn't suited for inter-city freight or package delivery (&gt;50km). Use a hub-and-spoke model with route optimization instead.</p>
+    </div>
+    <div class="usecase-card" style="border-left:3px solid var(--accent-red);">
+      <h4>B2B Bulk Ordering</h4>
+      <p>Enterprise catering with 500+ meals needs different fulfillment: advance planning, bulk prep coordination, not real-time dispatch.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--accent-amber);">Common Pitfalls</h3>
+  <div id="pitfallsList"></div>
+</div>
+
+<!-- Section 6: Best Practices -->
+<div class="section" id="practices">
+  <div class="section-header">
+    <h2><span class="num">6</span> Best Practices</h2>
+    <p>Proven patterns for building reliable food delivery systems</p>
+  </div>
+  <div id="practicesList"></div>
+</div>
+
+<!-- Section 7: Scaling -->
+<div class="section" id="scaling">
+  <div class="section-header">
+    <h2><span class="num">7</span> Scaling & Trade-offs</h2>
+    <p>Capacity estimates and strategies for handling 10x growth</p>
+  </div>
+
+  <h3 style="font-size:1rem;margin-bottom:1rem;">Capacity Estimation (Peak Hour)</h3>
+  <div class="capacity-grid">
+    <div class="capacity-card">
+      <div class="value">~25K</div>
+      <div class="label">Orders/min (Peak)</div>
+      <div class="detail">1.5M orders in 1hr dinner rush</div>
+    </div>
+    <div class="capacity-card">
+      <div class="value">~500K</div>
+      <div class="label">Concurrent WebSockets</div>
+      <div class="detail">Active tracking sessions</div>
+    </div>
+    <div class="capacity-card">
+      <div class="value">~100K QPS</div>
+      <div class="label">API Gateway</div>
+      <div class="detail">Search, menu, tracking combined</div>
+    </div>
+    <div class="capacity-card">
+      <div class="value">~5 TB/day</div>
+      <div class="label">Location Data</div>
+      <div class="detail">300K riders × 1 ping/4s × 24h</div>
+    </div>
+    <div class="capacity-card">
+      <div class="value">&lt;200ms p99</div>
+      <div class="label">Search Latency</div>
+      <div class="detail">Restaurant discovery SLA</div>
+    </div>
+    <div class="capacity-card">
+      <div class="value">99.95%</div>
+      <div class="label">Order Service SLA</div>
+      <div class="detail">Cannot lose placed orders</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1rem;margin:1.5rem 0 1rem;">Scaling Strategies by Component</h3>
+  <div class="components-grid">
+    <div class="component-card">
+      <h3>Order Service → 10x</h3>
+      <div class="purpose">Shard by city_id + date. Each city is independent for order state. Use Kafka for async downstream (payment, assignment, notifications).</div>
+      <div class="scaling">Strategy: Horizontal sharding by geography</div>
+    </div>
+    <div class="component-card">
+      <h3>Location Service → 10x</h3>
+      <div class="purpose">In-memory geospatial index (Redis with geohash). Partition by city. Writes go to time-series DB (InfluxDB/TimescaleDB) asynchronously.</div>
+      <div class="scaling">Strategy: Partition by geohash prefix</div>
+    </div>
+    <div class="component-card">
+      <h3>Search/Discovery → 10x</h3>
+      <div class="purpose">Elasticsearch cluster per region. Cache popular queries (top restaurants near area) in Redis with 5-min TTL. Pre-compute rankings hourly.</div>
+      <div class="scaling">Strategy: Read replicas + aggressive caching</div>
+    </div>
+    <div class="component-card">
+      <h3>WebSocket Gateway → 10x</h3>
+      <div class="purpose">Sticky sessions via consistent hashing on user_id. Horizontally scale WS servers. Use pub/sub (Redis) to fan out location updates to correct server.</div>
+      <div class="scaling">Strategy: Horizontal + pub/sub fan-out</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1rem;margin:2rem 0 1rem;">Key Trade-offs</h3>
+  <div style="overflow-x:auto;">
+    <table class="comparison-table">
+      <thead><tr><th>Trade-off</th><th>Choice</th><th>Rationale</th></tr></thead>
+      <tbody>
+        <tr><td>Consistency vs. Availability (Order)</td><td>Strong consistency</td><td>Cannot lose or duplicate orders — use synchronous writes with WAL</td></tr>
+        <tr><td>Consistency vs. Availability (Tracking)</td><td>Eventual consistency</td><td>Location data can be slightly stale (4s); prioritize availability and low latency</td></tr>
+        <tr><td>Latency vs. Optimality (Assignment)</td><td>Time-bounded optimization</td><td>Wait 30-60s to batch nearby orders, then run assignment — trades latency for better routing</td></tr>
+        <tr><td>Cost vs. Freshness (Search)</td><td>5-min cache TTL</td><td>Restaurant availability changes infrequently; caching reduces ES load 80%</td></tr>
+        <tr><td>Push vs. Pull (Notifications)</td><td>Push-first, pull fallback</td><td>Push via FCM/APNS for real-time; pull for order history and status page loads</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Section 8: Playground -->
+<div class="section" id="playground">
+  <div class="section-header">
+    <h2><span class="num">8</span> Interactive Playground</h2>
+    <p>Experiment with delivery assignment, capacity estimation, and surge pricing</p>
+  </div>
+  <div class="playground-container">
+    <div class="playground-tabs">
+      <button class="pg-tab active" onclick="switchPlayground('assignment')">Delivery Assignment</button>
+      <button class="pg-tab" onclick="switchPlayground('capacity')">Capacity Calculator</button>
+      <button class="pg-tab" onclick="switchPlayground('surge')">Surge Pricing</button>
+    </div>
+
+    <!-- Assignment Playground -->
+    <div class="pg-panel active" id="pg-assignment">
+      <div class="pg-presets">
+        <button class="pg-preset" onclick="loadAssignmentPreset('normal')">Normal Load</button>
+        <button class="pg-preset" onclick="loadAssignmentPreset('peak')">Peak Hour</button>
+        <button class="pg-preset" onclick="loadAssignmentPreset('rain')">Rainy Day</button>
+        <button class="pg-preset" onclick="loadAssignmentPreset('shortage')">Rider Shortage</button>
+      </div>
+      <div class="pg-controls">
+        <div class="pg-control">
+          <label>Orders / min</label>
+          <input type="range" min="10" max="500" value="100" id="asgOrderRate" oninput="updateAssignment()">
+          <span style="font-size:0.8rem;color:var(--text-muted);" id="asgOrderRateVal">100</span>
+        </div>
+        <div class="pg-control">
+          <label>Available Riders</label>
+          <input type="range" min="10" max="1000" value="200" id="asgRiders" oninput="updateAssignment()">
+          <span style="font-size:0.8rem;color:var(--text-muted);" id="asgRidersVal">200</span>
+        </div>
+        <div class="pg-control">
+          <label>Avg Delivery Time (min)</label>
+          <input type="range" min="15" max="60" value="30" id="asgDeliveryTime" oninput="updateAssignment()">
+          <span style="font-size:0.8rem;color:var(--text-muted);" id="asgDeliveryTimeVal">30</span>
+        </div>
+        <div class="pg-control">
+          <label>Algorithm</label>
+          <select id="asgAlgo" onchange="updateAssignment()">
+            <option value="ml">ML Batching</option>
+            <option value="nearest">Nearest Rider</option>
+            <option value="zone">Zone-Based</option>
+          </select>
+        </div>
+      </div>
+      <div class="pg-metrics" id="asgMetrics"></div>
+      <div class="pg-viz" id="asgViz"></div>
+      <div class="pg-narration" id="asgNarration">Adjust parameters to see how different algorithms handle delivery assignment under various load conditions.</div>
+    </div>
+
+    <!-- Capacity Calculator -->
+    <div class="pg-panel" id="pg-capacity">
+      <div class="pg-presets">
+        <button class="pg-preset" onclick="loadCapacityPreset('startup')">Small City</button>
+        <button class="pg-preset" onclick="loadCapacityPreset('mid')">Metro City</button>
+        <button class="pg-preset" onclick="loadCapacityPreset('scale')">Full Scale</button>
+      </div>
+      <div class="pg-controls">
+        <div class="pg-control">
+          <label>Daily Orders</label>
+          <input type="number" min="1000" max="10000000" value="500000" id="capOrders" oninput="updateCapacity()">
+        </div>
+        <div class="pg-control">
+          <label>Peak Multiplier</label>
+          <input type="range" min="2" max="10" value="5" id="capPeak" oninput="updateCapacity()">
+          <span style="font-size:0.8rem;color:var(--text-muted);" id="capPeakVal">5x</span>
+        </div>
+        <div class="pg-control">
+          <label>Active Restaurants</label>
+          <input type="number" min="100" max="500000" value="50000" id="capRestaurants" oninput="updateCapacity()">
+        </div>
+        <div class="pg-control">
+          <label>Tracking Update Freq (sec)</label>
+          <input type="range" min="2" max="15" value="4" id="capTrackFreq" oninput="updateCapacity()">
+          <span style="font-size:0.8rem;color:var(--text-muted);" id="capTrackFreqVal">4s</span>
+        </div>
+      </div>
+      <div class="pg-metrics" id="capMetrics"></div>
+      <div class="pg-narration" id="capNarration">Enter your scale parameters to calculate infrastructure requirements.</div>
+    </div>
+
+    <!-- Surge Pricing -->
+    <div class="pg-panel" id="pg-surge">
+      <div class="pg-presets">
+        <button class="pg-preset" onclick="loadSurgePreset('normal')">Normal</button>
+        <button class="pg-preset" onclick="loadSurgePreset('lunch')">Lunch Rush</button>
+        <button class="pg-preset" onclick="loadSurgePreset('rain')">Heavy Rain</button>
+        <button class="pg-preset" onclick="loadSurgePreset('cricket')">Cricket Match</button>
+      </div>
+      <div class="pg-controls">
+        <div class="pg-control">
+          <label>Demand (orders/min)</label>
+          <input type="range" min="10" max="1000" value="150" id="surgeDemand" oninput="updateSurge()">
+          <span style="font-size:0.8rem;color:var(--text-muted);" id="surgeDemandVal">150</span>
+        </div>
+        <div class="pg-control">
+          <label>Supply (riders available)</label>
+          <input type="range" min="10" max="500" value="200" id="surgeSupply" oninput="updateSurge()">
+          <span style="font-size:0.8rem;color:var(--text-muted);" id="surgeSupplyVal">200</span>
+        </div>
+        <div class="pg-control">
+          <label>Base Delivery Fee (₹)</label>
+          <input type="number" min="10" max="100" value="30" id="surgeBase" oninput="updateSurge()">
+        </div>
+        <div class="pg-control">
+          <label>Max Surge Cap</label>
+          <select id="surgeCap" onchange="updateSurge()">
+            <option value="2">2x</option>
+            <option value="2.5" selected>2.5x</option>
+            <option value="3">3x</option>
+            <option value="5">5x (no cap)</option>
+          </select>
+        </div>
+      </div>
+      <div class="pg-metrics" id="surgeMetrics"></div>
+      <div class="pg-viz" id="surgeViz"></div>
+      <div class="pg-narration" id="surgeNarration">See how supply-demand imbalance triggers surge pricing and its effect on order volume and rider earnings.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================
+// Architecture Diagram
+// ============================
+const archComponents = [
+  { id: 'client', label: 'Customer App', x: 80, y: 50, w: 120, h: 50, type: 'client', color: '#dbeafe', stroke: '#3b82f6', desc: 'iOS/Android/Web app for browsing, ordering, tracking' },
+  { id: 'restaurant', label: 'Restaurant App', x: 250, y: 50, w: 120, h: 50, type: 'client', color: '#dcfce7', stroke: '#10b981', desc: 'Order management, menu updates, prep time reporting' },
+  { id: 'rider', label: 'Rider App', x: 420, y: 50, w: 120, h: 50, type: 'client', color: '#fef3c7', stroke: '#f59e0b', desc: 'Navigation, order acceptance, location broadcasting' },
+  { id: 'cdn', label: 'CDN', x: 620, y: 50, w: 90, h: 50, type: 'cloud', color: '#f3e8ff', stroke: '#8b5cf6', desc: 'Static assets, menu images, app bundles (CloudFront)' },
+
+  { id: 'gateway', label: 'API Gateway', x: 220, y: 160, w: 160, h: 50, type: 'service', color: '#fff7ed', stroke: '#f97316', desc: 'Auth, rate limiting, routing, request validation (Kong/Envoy)' },
+  { id: 'ws', label: 'WebSocket Gateway', x: 450, y: 160, w: 160, h: 50, type: 'service', color: '#fff7ed', stroke: '#f97316', desc: 'Persistent connections for real-time tracking updates' },
+
+  { id: 'search', label: 'Search & Discovery', x: 30, y: 290, w: 140, h: 50, type: 'service', color: '#eff6ff', stroke: '#3b82f6', desc: 'Restaurant search, ranking, personalization (Elasticsearch)' },
+  { id: 'order', label: 'Order Service', x: 200, y: 290, w: 130, h: 50, type: 'service', color: '#eff6ff', stroke: '#3b82f6', desc: 'Order lifecycle management, state machine, idempotent placement' },
+  { id: 'menu', label: 'Menu & Catalog', x: 360, y: 290, w: 130, h: 50, type: 'service', color: '#eff6ff', stroke: '#3b82f6', desc: 'Restaurant menus, item availability, pricing' },
+  { id: 'payment', label: 'Payment Service', x: 520, y: 290, w: 130, h: 50, type: 'service', color: '#eff6ff', stroke: '#3b82f6', desc: 'Payment processing, wallets, refunds (Razorpay/Juspay)' },
+  { id: 'assignment', label: 'Delivery Assignment', x: 680, y: 290, w: 150, h: 50, type: 'service', color: '#eff6ff', stroke: '#3b82f6', desc: 'ML-based rider-order matching, batch optimization' },
+  { id: 'tracking', label: 'Location & Tracking', x: 860, y: 290, w: 150, h: 50, type: 'service', color: '#eff6ff', stroke: '#3b82f6', desc: 'Real-time rider location, ETA calculation, geofencing' },
+
+  { id: 'pricing', label: 'Dynamic Pricing', x: 30, y: 400, w: 130, h: 50, type: 'service', color: '#fdf4ff', stroke: '#a855f7', desc: 'Surge pricing, demand forecasting, delivery fee calculation' },
+  { id: 'notify', label: 'Notification Service', x: 190, y: 400, w: 140, h: 50, type: 'service', color: '#fdf4ff', stroke: '#a855f7', desc: 'Push notifications, SMS, email via FCM/APNS/Twilio' },
+  { id: 'rating', label: 'Ratings & Reviews', x: 360, y: 400, w: 130, h: 50, type: 'service', color: '#fdf4ff', stroke: '#a855f7', desc: 'User feedback, restaurant ratings, delivery partner scores' },
+  { id: 'recommend', label: 'Recommendation', x: 520, y: 400, w: 130, h: 50, type: 'service', color: '#fdf4ff', stroke: '#a855f7', desc: 'Personalized restaurant/dish suggestions using collaborative filtering' },
+  { id: 'eta', label: 'ETA Engine', x: 680, y: 400, w: 120, h: 50, type: 'service', color: '#fdf4ff', stroke: '#a855f7', desc: 'ML-based delivery time prediction considering traffic, prep time, distance' },
+  { id: 'fraud', label: 'Fraud Detection', x: 830, y: 400, w: 130, h: 50, type: 'service', color: '#fdf4ff', stroke: '#a855f7', desc: 'Real-time fraud scoring on orders, payments, promotions' },
+
+  { id: 'kafka', label: 'Kafka', x: 100, y: 530, w: 110, h: 45, type: 'queue', color: '#ecfdf5', stroke: '#10b981', desc: 'Event streaming: order events, location updates, notifications' },
+  { id: 'redis', label: 'Redis Cluster', x: 250, y: 530, w: 120, h: 45, type: 'db', color: '#fef2f2', stroke: '#ef4444', desc: 'Session cache, geospatial index, rate limiting, rider availability' },
+  { id: 'postgres', label: 'PostgreSQL', x: 410, y: 530, w: 120, h: 45, type: 'db', color: '#fef2f2', stroke: '#ef4444', desc: 'Orders, users, restaurants — sharded by city_id' },
+  { id: 'es', label: 'Elasticsearch', x: 570, y: 530, w: 120, h: 45, type: 'db', color: '#fef2f2', stroke: '#ef4444', desc: 'Restaurant search index, menu full-text search' },
+  { id: 'cassandra', label: 'Cassandra', x: 730, y: 530, w: 120, h: 45, type: 'db', color: '#fef2f2', stroke: '#ef4444', desc: 'Location history, event logs — high write throughput' },
+  { id: 's3', label: 'Object Store (S3)', x: 890, y: 530, w: 130, h: 45, type: 'cloud', color: '#f3e8ff', stroke: '#8b5cf6', desc: 'Menu images, invoices, analytics data lake' },
+
+  { id: 'ml', label: 'ML Platform', x: 400, y: 630, w: 140, h: 45, type: 'service', color: '#fef9c3', stroke: '#ca8a04', desc: 'Model training & serving: ETA, demand forecast, assignment scoring' },
+  { id: 'analytics', label: 'Analytics (Spark)', x: 580, y: 630, w: 140, h: 45, type: 'service', color: '#fef9c3', stroke: '#ca8a04', desc: 'Batch analytics, business metrics, A/B test analysis' },
+];
+
+const archConnections = [
+  { from: 'client', to: 'gateway', label: 'HTTPS' },
+  { from: 'client', to: 'ws', label: 'WSS' },
+  { from: 'restaurant', to: 'gateway', label: 'HTTPS' },
+  { from: 'rider', to: 'gateway', label: 'HTTPS' },
+  { from: 'rider', to: 'ws', label: 'WSS' },
+  { from: 'client', to: 'cdn', label: '' },
+  { from: 'gateway', to: 'search', label: '' },
+  { from: 'gateway', to: 'order', label: '' },
+  { from: 'gateway', to: 'menu', label: '' },
+  { from: 'gateway', to: 'payment', label: '' },
+  { from: 'ws', to: 'tracking', label: '' },
+  { from: 'order', to: 'assignment', label: 'gRPC' },
+  { from: 'assignment', to: 'tracking', label: 'gRPC' },
+  { from: 'order', to: 'kafka', label: 'events' },
+  { from: 'tracking', to: 'kafka', label: 'events' },
+  { from: 'kafka', to: 'notify', label: '' },
+  { from: 'kafka', to: 'analytics', label: '' },
+  { from: 'search', to: 'es', label: '' },
+  { from: 'order', to: 'postgres', label: '' },
+  { from: 'tracking', to: 'redis', label: '' },
+  { from: 'tracking', to: 'cassandra', label: '' },
+  { from: 'assignment', to: 'redis', label: '' },
+  { from: 'assignment', to: 'ml', label: 'scoring' },
+  { from: 'eta', to: 'ml', label: '' },
+  { from: 'pricing', to: 'ml', label: '' },
+  { from: 'recommend', to: 'ml', label: '' },
+  { from: 'menu', to: 's3', label: 'images' },
+];
+
+function drawArchitecture() {
+  const svg = document.getElementById('archSvg');
+  let html = '';
+
+  // Draw connections
+  archConnections.forEach(conn => {
+    const from = archComponents.find(c => c.id === conn.from);
+    const to = archComponents.find(c => c.id === conn.to);
+    if (!from || !to) return;
+    const x1 = from.x + from.w/2, y1 = from.y + from.h/2;
+    const x2 = to.x + to.w/2, y2 = to.y + to.h/2;
+    html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#d1d5db" stroke-width="1.5" stroke-dasharray="${conn.label ? '' : '4,3'}"/>`;
+    if (conn.label) {
+      const mx = (x1+x2)/2, my = (y1+y2)/2;
+      html += `<text x="${mx}" y="${my-5}" text-anchor="middle" font-size="9" fill="#9ca3af">${conn.label}</text>`;
+    }
+  });
+
+  // Draw components
+  archComponents.forEach(comp => {
+    const rx = comp.type === 'db' ? 20 : comp.type === 'queue' ? 4 : 8;
+    html += `<g class="arch-node" data-id="${comp.id}" onmouseenter="showArchTooltip(event,'${comp.id}')" onmouseleave="hideArchTooltip()">`;
+    html += `<rect x="${comp.x}" y="${comp.y}" width="${comp.w}" height="${comp.h}" rx="${rx}" fill="${comp.color}" stroke="${comp.stroke}" stroke-width="2"/>`;
+    html += `<text x="${comp.x + comp.w/2}" y="${comp.y + comp.h/2 + 4}" text-anchor="middle" font-size="11" font-weight="600" fill="#374151">${comp.label}</text>`;
+    html += `</g>`;
+  });
+
+  // Layer labels
+  html += `<text x="1050" y="75" text-anchor="end" font-size="10" fill="#9ca3af" font-weight="600">CLIENTS</text>`;
+  html += `<text x="1050" y="185" text-anchor="end" font-size="10" fill="#9ca3af" font-weight="600">GATEWAY</text>`;
+  html += `<text x="1050" y="315" text-anchor="end" font-size="10" fill="#9ca3af" font-weight="600">CORE SERVICES</text>`;
+  html += `<text x="1050" y="425" text-anchor="end" font-size="10" fill="#9ca3af" font-weight="600">SUPPORT SERVICES</text>`;
+  html += `<text x="1050" y="555" text-anchor="end" font-size="10" fill="#9ca3af" font-weight="600">DATA LAYER</text>`;
+  html += `<text x="1050" y="655" text-anchor="end" font-size="10" fill="#9ca3af" font-weight="600">PLATFORM</text>`;
+
+  svg.innerHTML = html;
+}
+
+function showArchTooltip(e, id) {
+  const comp = archComponents.find(c => c.id === id);
+  const tip = document.getElementById('archTooltip');
+  tip.textContent = comp.desc;
+  tip.style.opacity = '1';
+  tip.style.left = e.pageX + 10 + 'px';
+  tip.style.top = e.pageY - 30 + 'px';
+}
+
+function hideArchTooltip() {
+  document.getElementById('archTooltip').style.opacity = '0';
+}
+
+// ============================
+// Component Breakdown
+// ============================
+const componentDetails = [
+  { name: 'API Gateway', icon: '🚪', iconBg: '#fff7ed', purpose: 'Single entry point for all client requests. Handles authentication, rate limiting, request routing, and protocol translation.', tech: ['Kong/Envoy', 'JWT Auth', 'Rate Limiter', 'Circuit Breaker'], scaling: 'Horizontal auto-scaling based on QPS; stateless design' },
+  { name: 'Order Service', icon: '📋', iconBg: '#eff6ff', purpose: 'Manages the complete order lifecycle via a state machine (placed → confirmed → preparing → picked_up → delivered). Guarantees exactly-once order placement via idempotency keys.', tech: ['Go/Java', 'PostgreSQL', 'Kafka', 'State Machine'], scaling: 'Sharded by city_id; strong consistency within shard' },
+  { name: 'Delivery Assignment', icon: '🎯', iconBg: '#ecfdf5', purpose: 'ML-powered rider-order matching. Considers rider location, restaurant prep time, traffic conditions, batch opportunities, and rider capacity. Re-optimizes every 30s.', tech: ['Python ML', 'Redis Geo', 'gRPC', 'Feature Store'], scaling: 'Partitioned by city; independent assignment per zone' },
+  { name: 'Location & Tracking', icon: '📍', iconBg: '#fef3c7', purpose: 'Ingests rider GPS pings every 4 seconds. Maintains real-time geospatial index for nearby rider lookups. Pushes updates to customers via WebSocket.', tech: ['Redis GeoHash', 'Cassandra', 'WebSocket', 'H3 Index'], scaling: 'Write-heavy: Cassandra for history, Redis for hot state' },
+  { name: 'Search & Discovery', icon: '🔍', iconBg: '#f3e8ff', purpose: 'Restaurant search with personalized ranking. Factors: distance, ratings, delivery time, user preferences, cuisine match, promotions.', tech: ['Elasticsearch', 'Redis Cache', 'ML Ranker', 'Geo Filters'], scaling: 'ES cluster per region; 5-min cache on popular queries' },
+  { name: 'Payment Service', icon: '💳', iconBg: '#fdf4ff', purpose: 'Handles payment capture, wallet operations, refunds, and split settlements to restaurants. Integrates with multiple payment gateways for redundancy.', tech: ['Razorpay', 'Juspay', 'Wallet', 'Ledger DB'], scaling: 'Strong consistency; double-entry ledger pattern' },
+  { name: 'ETA Engine', icon: '⏱️', iconBg: '#ecfdf5', purpose: 'Predicts delivery time using ML model trained on: historical delivery times, current traffic, restaurant prep patterns, distance, and time of day.', tech: ['XGBoost', 'TensorFlow', 'Real-time Features', 'A/B Testing'], scaling: 'Model serving via TF Serving; feature store in Redis' },
+  { name: 'Dynamic Pricing', icon: '📈', iconBg: '#fff7ed', purpose: 'Calculates delivery fees and surge multipliers based on real-time supply-demand ratio, weather, events, and time of day. Capped at max surge to protect customers.', tech: ['Python', 'Redis', 'ML Demand Forecast', 'Rule Engine'], scaling: 'Computed per zone every 60s; cached for use in order flow' },
+  { name: 'Notification Service', icon: '🔔', iconBg: '#fef2f2', purpose: 'Multi-channel notifications: push (FCM/APNS), SMS, email, in-app. Event-driven via Kafka consumers. Handles delivery receipts and retries.', tech: ['Kafka Consumer', 'FCM', 'APNS', 'Twilio', 'SES'], scaling: 'Horizontally scaled consumers; per-channel rate limiting' },
+  { name: 'Recommendation Engine', icon: '✨', iconBg: '#fef9c3', purpose: 'Personalized restaurant and dish suggestions. Uses collaborative filtering, order history, time-of-day patterns, and trending items.', tech: ['Spark ML', 'Redis', 'Feature Store', 'A/B Platform'], scaling: 'Batch recompute hourly; real-time scoring at request time' },
+  { name: 'Fraud Detection', icon: '🛡️', iconBg: '#fef2f2', purpose: 'Real-time scoring on orders and payments. Detects promo abuse, fake accounts, payment fraud, and GPS spoofing by delivery partners.', tech: ['ML Scoring', 'Rules Engine', 'Device Fingerprint', 'Kafka'], scaling: 'Async scoring pipeline; blocks only high-confidence fraud' },
+  { name: 'Menu & Catalog', icon: '📖', iconBg: '#f0fdf4', purpose: 'Restaurant menus with real-time item availability. Handles menu customization (add-ons, variants), pricing tiers, and image CDN management.', tech: ['PostgreSQL', 'Redis Cache', 'S3/CDN', 'Versioning'], scaling: 'Heavy read caching; writes are infrequent per restaurant' },
+];
+
+function renderComponents() {
+  const grid = document.getElementById('componentsGrid');
+  grid.innerHTML = componentDetails.map(c => `
+    <div class="component-card">
+      <h3><span class="icon" style="background:${c.iconBg}">${c.icon}</span>${c.name}</h3>
+      <div class="purpose">${c.purpose}</div>
+      <div>${c.tech.map(t => `<span class="tech-badge">${t}</span>`).join('')}</div>
+      <div class="scaling">↗ ${c.scaling}</div>
+    </div>
+  `).join('');
+}
+
+// ============================
+// Sequence Diagram
+// ============================
+const flows = {
+  order: {
+    actors: ['Customer', 'API GW', 'Order Svc', 'Payment', 'Assignment', 'Rider', 'Restaurant', 'Notify'],
+    steps: [
+      { from: 0, to: 1, label: 'POST /orders', desc: 'Customer places order with cart items, delivery address, and payment method' },
+      { from: 1, to: 2, label: 'Create order', desc: 'API Gateway authenticates and routes to Order Service. Idempotency key prevents duplicates.' },
+      { from: 2, to: 3, label: 'Capture payment', desc: 'Order Service requests payment capture. Holds amount until delivery confirmation.' },
+      { from: 3, to: 2, label: 'Payment OK', desc: 'Payment gateway confirms capture. Order moves to CONFIRMED state.' },
+      { from: 2, to: 6, label: 'New order alert', desc: 'Restaurant receives new order notification with items and estimated pickup time.' },
+      { from: 6, to: 2, label: 'Accept + prep time', desc: 'Restaurant confirms order and provides estimated preparation time (e.g., 15 min).' },
+      { from: 2, to: 4, label: 'Find rider', desc: 'Assignment service triggered with order location, restaurant location, and prep time.' },
+      { from: 4, to: 5, label: 'Assign delivery', desc: 'ML model selects optimal rider. Rider receives assignment with restaurant details and route.' },
+      { from: 5, to: 4, label: 'Accept', desc: 'Rider accepts assignment. Status: RIDER_ASSIGNED. Timer starts for pickup.' },
+      { from: 2, to: 7, label: 'Order confirmed', desc: 'Push notification sent to customer: "Your order is confirmed! Estimated delivery: 32 min"' },
+      { from: 5, to: 2, label: 'Picked up', desc: 'Rider confirms food pickup at restaurant. Status: OUT_FOR_DELIVERY.' },
+      { from: 5, to: 2, label: 'Delivered', desc: 'Rider marks delivery complete. Triggers settlement, rating prompt, and loyalty points.' },
+    ]
+  },
+  delivery: {
+    actors: ['Order Svc', 'Assignment', 'ML Model', 'Redis Geo', 'Rider 1', 'Rider 2', 'Rider 3'],
+    steps: [
+      { from: 0, to: 1, label: 'Assign request', desc: 'New order ready for assignment. Includes restaurant location, customer location, prep time.' },
+      { from: 1, to: 3, label: 'GEORADIUS 3km', desc: 'Query Redis geospatial index for available riders within 3km of restaurant.' },
+      { from: 3, to: 1, label: '12 riders found', desc: 'Returns list of nearby available riders with their current positions and status.' },
+      { from: 1, to: 2, label: 'Score candidates', desc: 'ML model scores each rider: distance, current load, acceptance rate, route efficiency.' },
+      { from: 2, to: 1, label: 'Ranked list', desc: 'Returns scored list. Rider 2 scores highest (close, 0 orders, good acceptance rate).' },
+      { from: 1, to: 5, label: 'Offer order', desc: 'Send assignment offer to top-scored rider with order details, payout, and 30s acceptance window.' },
+      { from: 5, to: 1, label: 'Accept ✓', desc: 'Rider 2 accepts within 10s. Assignment confirmed. Rider status updated to ON_DELIVERY.' },
+      { from: 1, to: 0, label: 'Rider assigned', desc: 'Order Service updated with rider details. Customer notified with rider info and live ETA.' },
+    ]
+  },
+  tracking: {
+    actors: ['Rider App', 'WS Gateway', 'Location Svc', 'Redis', 'ETA Engine', 'Customer App'],
+    steps: [
+      { from: 0, to: 2, label: 'GPS ping (4s)', desc: 'Rider app sends location update every 4 seconds via HTTP. Includes lat, lng, speed, bearing.' },
+      { from: 2, to: 3, label: 'GEOADD rider:123', desc: 'Update rider position in Redis geospatial index. Also updates rider availability status.' },
+      { from: 2, to: 4, label: 'Compute ETA', desc: 'Recalculate ETA based on new position, remaining distance, traffic conditions, and speed.' },
+      { from: 4, to: 2, label: 'ETA: 8 min', desc: 'Updated ETA returned. Detects if rider is on track or delayed.' },
+      { from: 2, to: 1, label: 'Push update', desc: 'Location service publishes update to WebSocket Gateway via Redis pub/sub channel.' },
+      { from: 1, to: 5, label: 'WSS frame', desc: 'WebSocket Gateway pushes to customer app: {lat, lng, eta, status}. Map pin moves smoothly.' },
+    ]
+  },
+  search: {
+    actors: ['Customer', 'API GW', 'Search Svc', 'Redis Cache', 'Elasticsearch', 'ML Ranker'],
+    steps: [
+      { from: 0, to: 1, label: 'GET /restaurants', desc: 'Customer opens app. Request includes: lat/lng, cuisine preference, sort order, filters.' },
+      { from: 1, to: 2, label: 'Route to search', desc: 'API Gateway routes to Search Service with authenticated user context and location.' },
+      { from: 2, to: 3, label: 'Check cache', desc: 'Check Redis for cached results of this geohash + filter combination (5-min TTL).' },
+      { from: 3, to: 2, label: 'Cache MISS', desc: 'No cached result (new area or expired). Proceed to Elasticsearch query.' },
+      { from: 2, to: 4, label: 'Geo + text query', desc: 'Elasticsearch query: geo_distance filter (5km), cuisine match, open_now, min_rating. Returns top 100.' },
+      { from: 4, to: 2, label: '87 restaurants', desc: 'Raw results returned with scores. Need personalized re-ranking for this user.' },
+      { from: 2, to: 5, label: 'Re-rank for user', desc: 'ML ranker applies personalization: order history, time-of-day preferences, dietary tags, promotions.' },
+      { from: 5, to: 2, label: 'Ranked results', desc: 'Personalized ranking returned. User\'s favorite cuisines boosted, promoted restaurants placed.' },
+      { from: 2, to: 3, label: 'Cache SET', desc: 'Cache generic geo results (without personalization) for 5 min to serve other nearby users.' },
+      { from: 2, to: 1, label: '30 restaurants', desc: 'Return paginated response with restaurant cards: name, image, rating, ETA, delivery fee, offers.' },
+    ]
+  }
+};
+
+let seqState = { playing: false, step: -1, timer: null, flow: 'order' };
+
+function drawSequence() {
+  const svg = document.getElementById('seqSvg');
+  const flow = flows[seqState.flow];
+  const actorCount = flow.actors.length;
+  const spacing = 900 / (actorCount + 1);
+  const startY = 60;
+  const stepHeight = 40;
+  const svgHeight = startY + flow.steps.length * stepHeight + 40;
+  svg.setAttribute('viewBox', `0 0 1000 ${svgHeight}`);
+
+  let html = '';
+
+  // Draw actors
+  flow.actors.forEach((actor, i) => {
+    const x = spacing * (i + 1);
+    html += `<rect x="${x-45}" y="10" width="90" height="32" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>`;
+    html += `<text x="${x}" y="30" text-anchor="middle" font-size="10" font-weight="600" fill="#374151">${actor}</text>`;
+    html += `<line x1="${x}" y1="42" x2="${x}" y2="${svgHeight}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,4"/>`;
+  });
+
+  // Draw steps
+  flow.steps.forEach((step, i) => {
+    const y = startY + i * stepHeight;
+    const x1 = spacing * (step.from + 1);
+    const x2 = spacing * (step.to + 1);
+    const dir = x2 > x1 ? 1 : -1;
+    const opacity = seqState.step >= i ? 1 : 0.15;
+    const color = seqState.step === i ? '#f97316' : '#6b7280';
+    const weight = seqState.step === i ? 2.5 : 1.5;
+
+    html += `<g opacity="${opacity}">`;
+    html += `<line x1="${x1}" y1="${y}" x2="${x2 - dir*8}" y2="${y}" stroke="${color}" stroke-width="${weight}" marker-end="url(#arrow${seqState.step === i ? 'Active' : ''})"/>`;
+    html += `<text x="${(x1+x2)/2}" y="${y-6}" text-anchor="middle" font-size="9" fill="${color}" font-weight="${seqState.step === i ? '600' : '400'}">${step.label}</text>`;
+    html += `</g>`;
+  });
+
+  // Arrow markers
+  html += `<defs>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#6b7280"/></marker>
+    <marker id="arrowActive" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#f97316"/></marker>
+  </defs>`;
+
+  svg.innerHTML = html;
+
+  // Update step info
+  const info = document.getElementById('seqStepInfo');
+  if (seqState.step >= 0 && seqState.step < flow.steps.length) {
+    const s = flow.steps[seqState.step];
+    info.innerHTML = `<strong>Step ${seqState.step + 1}/${flow.steps.length}:</strong> ${s.desc}`;
+  } else if (seqState.step >= flow.steps.length) {
+    info.innerHTML = `<strong>✓ Flow complete!</strong> All ${flow.steps.length} steps executed successfully.`;
+  }
+}
+
+function seqPlay() {
+  if (seqState.playing) {
+    clearInterval(seqState.timer);
+    seqState.playing = false;
+    document.getElementById('seqPlayBtn').textContent = '▶ Play';
+    return;
+  }
+  seqState.playing = true;
+  document.getElementById('seqPlayBtn').textContent = '⏸ Pause';
+  const speed = 1500 / parseInt(document.getElementById('seqSpeed').value);
+  seqState.timer = setInterval(() => {
+    const flow = flows[seqState.flow];
+    if (seqState.step >= flow.steps.length - 1) {
+      clearInterval(seqState.timer);
+      seqState.playing = false;
+      document.getElementById('seqPlayBtn').textContent = '▶ Play';
+      return;
+    }
+    seqState.step++;
+    drawSequence();
+  }, speed);
+}
+
+function seqStep() {
+  const flow = flows[seqState.flow];
+  if (seqState.step < flow.steps.length - 1) {
+    seqState.step++;
+    drawSequence();
+  }
+}
+
+function seqReset() {
+  clearInterval(seqState.timer);
+  seqState.playing = false;
+  seqState.step = -1;
+  document.getElementById('seqPlayBtn').textContent = '▶ Play';
+  drawSequence();
+}
+
+document.getElementById('flowSelect').addEventListener('change', (e) => {
+  seqState.flow = e.target.value;
+  seqReset();
+});
+
+// ============================
+// Pitfalls
+// ============================
+const pitfalls = [
+  { title: 'Not handling payment capture timeout', mistake: 'Assuming payment always succeeds or fails fast. In reality, payment gateways can hang for 30-60s.', why: 'Happy path testing never reveals timeout scenarios. Gateway SDKs abstract away the complexity.', consequence: 'Orders stuck in limbo — customer charged but order never confirmed. Or order confirmed but payment never captured (loss).', fix: 'Use a saga pattern: place order → initiate payment → confirm on callback. Implement payment status polling with exponential backoff. Add a reconciliation job that runs every 5 min to detect orphaned payments.' },
+  { title: 'Single point of failure in delivery assignment', mistake: 'Running the assignment algorithm as a single service instance or with in-memory state.', why: 'Assignment logic is complex and stateful (batching window). Easier to build as a single process first.', consequence: 'If assignment service crashes, all new orders queue up with no rider assignment. Delivery times spike across the city.', fix: 'Partition assignment by city/zone. Each partition runs independently. Use Kafka for input (orders) and output (assignments) so state is recoverable. Add a fallback nearest-rider algorithm that activates if ML scoring is unavailable.' },
+  { title: 'GPS drift causing incorrect ETAs', mistake: 'Trusting raw GPS coordinates from rider phones without filtering.', why: 'GPS works fine in testing. Edge cases (tunnels, tall buildings, phone in pocket) are invisible in dev.', consequence: 'Rider appears to jump across streets. ETA oscillates wildly. Geofence triggers incorrectly (false "arrived at restaurant").', fix: 'Apply Kalman filter to smooth GPS trajectory. Use road-snapping (map matching) to constrain positions to valid roads. Reject updates with speed > 120km/h as GPS glitches. Weight speed-based ETA more than distance-based when GPS is noisy.' },
+  { title: 'Cache stampede on restaurant page', mistake: 'Simple cache-aside pattern with fixed TTL. When cache expires, hundreds of concurrent users all hit the database.', why: 'Cache works great under normal load. The stampede only appears at scale during peak hours.', consequence: 'Database CPU spikes to 100%. Cascading failure as connection pool exhausts. Restaurant pages return 503 for 10-30 seconds.', fix: 'Implement stale-while-revalidate: serve stale data while one background request refreshes cache. Add jitter to TTLs (±30s) to prevent synchronized expiry. Use a distributed lock so only one request rebuilds the cache.' },
+  { title: 'Not accounting for restaurant preparation variance', mistake: 'Using a fixed prep time (e.g., 20 min) or simple average for ETA calculation.', why: 'Averages seem reasonable. The variance in prep time across restaurants and order sizes is underestimated.', consequence: 'Riders arrive too early and wait (wasted time). Or riders arrive late and food gets cold. Both destroy the customer experience.', fix: 'ML model predicting prep time per restaurant, factoring: order complexity (num items, custom items), current kitchen load (concurrent orders), time of day, historical performance. Update predictions as restaurant provides real-time status updates.' },
+  { title: 'Notification spam during order lifecycle', mistake: 'Sending a push notification for every state transition (confirmed, preparing, rider assigned, picked up, near you, delivered).', why: 'Each notification seems individually important. Product team wants to keep user informed.', consequence: 'Users mute notifications entirely. Important alerts (delivery arrival) get lost in the noise. App uninstall rate increases.', fix: 'Consolidate to 3-4 key moments: order confirmed, rider on the way, arriving soon. Use in-app tracking for intermediate states. Implement notification preferences. A/B test to find optimal notification cadence.' },
+  { title: 'Not handling order cancellation race conditions', mistake: 'Simple "cancelled" flag without considering concurrent state transitions.', why: 'Cancellation seems straightforward. But an order can be simultaneously: cancelled by user, accepted by restaurant, and assigned to rider.', consequence: 'Ghost orders where rider shows up but order is cancelled. Or cancelled orders still get charged. Restaurant prepares food nobody picks up.', fix: 'Use optimistic locking with version numbers on order state. Cancellation must acquire a distributed lock. Define clear cancellation windows (free cancel before restaurant accepts, charged cancel after). Publish CancellationEvent that all services must handle.' },
+];
+
+function renderPitfalls() {
+  const list = document.getElementById('pitfallsList');
+  list.innerHTML = pitfalls.map((p, i) => `
+    <div class="pitfall-card">
+      <div class="pitfall-header" onclick="togglePitfall(${i})">
+        <span>⚠️ ${p.title}</span>
+        <span class="chevron" id="chev${i}">▶</span>
+      </div>
+      <div class="pitfall-body" id="pitfall${i}">
+        <p><strong>The mistake:</strong> ${p.mistake}</p>
+        <p style="margin-top:0.5rem;"><strong>Why it happens:</strong> ${p.why}</p>
+        <p style="margin-top:0.5rem;"><strong>The consequence:</strong> ${p.consequence}</p>
+        <p style="margin-top:0.5rem;"><strong>The fix:</strong> ${p.fix}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+function togglePitfall(i) {
+  const body = document.getElementById(`pitfall${i}`);
+  const chev = document.getElementById(`chev${i}`);
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+// ============================
+// Best Practices
+// ============================
+const practices = [
+  { title: 'Design Phase', items: ['Define SLAs upfront: order placement <500ms p99, search <200ms p99, tracking update <100ms', 'Start with capacity estimation — orders/sec at peak determines your database and queue sizing', 'Identify the hardest problem first: for Swiggy it\'s real-time assignment at scale under supply constraints', 'Design for the 10x case but implement for the 1x case — avoid premature optimization'] },
+  { title: 'Order Management', items: ['Implement idempotency keys on order placement — mobile networks cause duplicate requests', 'Use a proper state machine with defined transitions — never allow invalid state jumps', 'Separate read and write paths: order writes go to PostgreSQL, order tracking reads from Redis', 'Event-source critical order transitions to Kafka — enables replay, audit, and async processing'] },
+  { title: 'Real-Time Systems', items: ['Use WebSocket for tracking (not polling) — saves 90% bandwidth at scale', 'Implement graceful degradation: if tracking fails, show last-known position + estimated ETA', 'Batch location updates before writing to persistent storage — write every 4s to Redis, batch to Cassandra every 30s', 'Add client-side interpolation for smooth map animation between 4s server updates'] },
+  { title: 'Delivery Optimization', items: ['Implement a batching window (30-60s) before assignment — allows grouping nearby orders for same rider', 'Always have a fallback assignment algorithm (nearest rider) if ML scoring is unavailable', 'Monitor rider utilization rate — target 70-80%. Below 60% means oversupply; above 85% means delays', 'Build in reassignment: if rider hasn\'t moved toward restaurant in 5 min, auto-reassign'] },
+  { title: 'Operational Excellence', items: ['Alert on business metrics, not just infra: orders/min dropping, average delivery time increasing, assignment failure rate', 'Implement circuit breakers between all service calls — prevent cascade failures during peak', 'Use blue-green deploys for order service; canary for search (can tolerate brief degradation)', 'Run chaos engineering: kill assignment service monthly to verify fallback works'] },
+  { title: 'Data & Caching', items: ['Cache restaurant menus aggressively (change rarely) but never cache order state', 'Use Redis for hot data (rider locations, session, availability) and Cassandra for warm data (location history)', 'Implement write-behind for analytics events — don\'t slow the order path for logging', 'Shard PostgreSQL by city_id — orders in Mumbai never query Delhi data'] },
+];
+
+function renderPractices() {
+  const list = document.getElementById('practicesList');
+  list.innerHTML = practices.map(p => `
+    <div class="practice-card">
+      <h4>${p.title}</h4>
+      <ul>${p.items.map(item => `<li>${item}</li>`).join('')}</ul>
+    </div>
+  `).join('');
+}
+
+// ============================
+// Playground: Delivery Assignment
+// ============================
+function updateAssignment() {
+  const orderRate = parseInt(document.getElementById('asgOrderRate').value);
+  const riders = parseInt(document.getElementById('asgRiders').value);
+  const deliveryTime = parseInt(document.getElementById('asgDeliveryTime').value);
+  const algo = document.getElementById('asgAlgo').value;
+
+  document.getElementById('asgOrderRateVal').textContent = orderRate;
+  document.getElementById('asgRidersVal').textContent = riders;
+  document.getElementById('asgDeliveryTimeVal').textContent = deliveryTime;
+
+  // Calculate metrics
+  const riderCapacity = riders * (60 / deliveryTime); // orders/hour per rider pool
+  const demandPerHour = orderRate * 60;
+  const utilization = Math.min(demandPerHour / riderCapacity, 1);
+
+  // Algorithm-specific adjustments
+  let efficiency = 1, batchRate = 0, avgWaitTime = 0;
+  switch(algo) {
+    case 'ml':
+      efficiency = 1.3; // 30% more efficient due to batching
+      batchRate = Math.min(orderRate / 50, 0.4) * 100; // % of orders batched
+      avgWaitTime = 45; // seconds wait for batching window
+      break;
+    case 'nearest':
+      efficiency = 1.0;
+      batchRate = 0;
+      avgWaitTime = 5;
+      break;
+    case 'zone':
+      efficiency = 0.85; // less efficient at boundaries
+      batchRate = 0;
+      avgWaitTime = 15;
+      break;
+  }
+
+  const effectiveCapacity = riderCapacity * efficiency;
+  const effectiveUtil = Math.min(demandPerHour / effectiveCapacity, 1);
+  const unassignedRate = Math.max(0, (demandPerHour - effectiveCapacity) / demandPerHour * 100);
+  const avgDeliveryWithAlgo = deliveryTime * (1 + (effectiveUtil > 0.8 ? (effectiveUtil - 0.8) * 2 : 0));
+
+  // Render metrics
+  document.getElementById('asgMetrics').innerHTML = `
+    <div class="pg-metric"><div class="val">${(effectiveUtil * 100).toFixed(0)}%</div><div class="lbl">Rider Utilization</div></div>
+    <div class="pg-metric"><div class="val">${avgDeliveryWithAlgo.toFixed(0)} min</div><div class="lbl">Avg Delivery Time</div></div>
+    <div class="pg-metric"><div class="val">${unassignedRate.toFixed(1)}%</div><div class="lbl">Unassigned Orders</div></div>
+    <div class="pg-metric"><div class="val">${batchRate.toFixed(0)}%</div><div class="lbl">Batched Orders</div></div>
+    <div class="pg-metric"><div class="val">${avgWaitTime}s</div><div class="lbl">Assignment Delay</div></div>
+    <div class="pg-metric"><div class="val" style="color:${effectiveUtil > 0.9 ? 'var(--accent-red)' : effectiveUtil > 0.7 ? 'var(--accent-amber)' : 'var(--accent-green)'}">${effectiveUtil > 0.9 ? 'CRITICAL' : effectiveUtil > 0.7 ? 'HIGH' : 'NORMAL'}</div><div class="lbl">Load Status</div></div>
+  `;
+
+  // Render visualization (rider distribution)
+  drawAssignmentViz(riders, orderRate, effectiveUtil, algo);
+
+  // Narration
+  let narration = '';
+  if (effectiveUtil > 0.95) {
+    narration = `⚠️ System overloaded! ${unassignedRate.toFixed(0)}% of orders cannot be assigned. Surge pricing should activate to reduce demand and attract more riders.`;
+  } else if (effectiveUtil > 0.8) {
+    narration = `High utilization (${(effectiveUtil*100).toFixed(0)}%). Delivery times increasing due to fewer available riders. ${algo === 'ml' ? 'ML batching helps by combining ' + batchRate.toFixed(0) + '% of orders.' : 'Consider switching to ML batching for better efficiency.'}`;
+  } else {
+    narration = `Healthy load. ${riders} riders handle ${orderRate} orders/min comfortably with ${algo === 'ml' ? 'ML-optimized' : algo === 'nearest' ? 'nearest-rider' : 'zone-based'} assignment. Average delivery: ${avgDeliveryWithAlgo.toFixed(0)} min.`;
+  }
+  document.getElementById('asgNarration').textContent = narration;
+}
+
+function drawAssignmentViz(riders, orderRate, util, algo) {
+  const viz = document.getElementById('asgViz');
+  const w = viz.clientWidth || 600;
+  const h = 200;
+
+  // Draw a simplified city grid with riders and orders
+  let html = `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}">`;
+
+  // Grid background
+  for (let x = 0; x < w; x += 40) {
+    html += `<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="#e5e7eb" stroke-width="0.5"/>`;
+  }
+  for (let y = 0; y < h; y += 40) {
+    html += `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="#e5e7eb" stroke-width="0.5"/>`;
+  }
+
+  // Draw riders (circles)
+  const riderCount = Math.min(riders / 5, 40);
+  const seed = 42;
+  for (let i = 0; i < riderCount; i++) {
+    const rx = ((i * 137 + seed) % (w - 40)) + 20;
+    const ry = ((i * 73 + seed * 2) % (h - 40)) + 20;
+    const busy = i / riderCount < util;
+    html += `<circle cx="${rx}" cy="${ry}" r="6" fill="${busy ? '#f97316' : '#10b981'}" opacity="0.8"/>`;
+    if (busy) {
+      // Draw line to "order" (nearby restaurant)
+      const ox = rx + (((i * 31) % 60) - 30);
+      const oy = ry + (((i * 47) % 40) - 20);
+      html += `<line x1="${rx}" y1="${ry}" x2="${ox}" y2="${oy}" stroke="#f97316" stroke-width="1" opacity="0.4"/>`;
+      html += `<rect x="${ox-4}" y="${oy-4}" width="8" height="8" fill="#ef4444" opacity="0.6" rx="2"/>`;
+    }
+  }
+
+  // Legend
+  html += `<circle cx="20" cy="${h-15}" r="5" fill="#10b981"/>`;
+  html += `<text x="30" y="${h-11}" font-size="10" fill="#6b7280">Available</text>`;
+  html += `<circle cx="100" cy="${h-15}" r="5" fill="#f97316"/>`;
+  html += `<text x="110" y="${h-11}" font-size="10" fill="#6b7280">On delivery</text>`;
+  html += `<rect x="180" y="${h-19}" width="8" height="8" fill="#ef4444" rx="2"/>`;
+  html += `<text x="192" y="${h-11}" font-size="10" fill="#6b7280">Orders</text>`;
+
+  // Zone boundaries if zone algorithm
+  if (algo === 'zone') {
+    const zoneW = w / 3;
+    html += `<line x1="${zoneW}" y1="0" x2="${zoneW}" y2="${h}" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="6,4"/>`;
+    html += `<line x1="${zoneW*2}" y1="0" x2="${zoneW*2}" y2="${h}" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="6,4"/>`;
+    html += `<text x="${zoneW/2}" y="15" text-anchor="middle" font-size="9" fill="#8b5cf6" font-weight="600">Zone A</text>`;
+    html += `<text x="${zoneW*1.5}" y="15" text-anchor="middle" font-size="9" fill="#8b5cf6" font-weight="600">Zone B</text>`;
+    html += `<text x="${zoneW*2.5}" y="15" text-anchor="middle" font-size="9" fill="#8b5cf6" font-weight="600">Zone C</text>`;
+  }
+
+  html += `</svg>`;
+  viz.innerHTML = html;
+}
+
+function loadAssignmentPreset(preset) {
+  const presets = {
+    normal: { orders: 100, riders: 200, time: 30, algo: 'ml' },
+    peak: { orders: 400, riders: 250, time: 35, algo: 'ml' },
+    rain: { orders: 350, riders: 150, time: 45, algo: 'ml' },
+    shortage: { orders: 200, riders: 60, time: 30, algo: 'nearest' },
+  };
+  const p = presets[preset];
+  document.getElementById('asgOrderRate').value = p.orders;
+  document.getElementById('asgRiders').value = p.riders;
+  document.getElementById('asgDeliveryTime').value = p.time;
+  document.getElementById('asgAlgo').value = p.algo;
+  updateAssignment();
+}
+
+// ============================
+// Playground: Capacity Calculator
+// ============================
+function updateCapacity() {
+  const dailyOrders = parseInt(document.getElementById('capOrders').value);
+  const peakMultiplier = parseInt(document.getElementById('capPeak').value);
+  const restaurants = parseInt(document.getElementById('capRestaurants').value);
+  const trackFreq = parseInt(document.getElementById('capTrackFreq').value);
+
+  document.getElementById('capPeakVal').textContent = peakMultiplier + 'x';
+  document.getElementById('capTrackFreqVal').textContent = trackFreq + 's';
+
+  // Calculations
+  const peakOrdersPerSec = (dailyOrders * peakMultiplier) / (3600 * 3); // peak over 3 hours
+  const ridersNeeded = Math.ceil(dailyOrders / 20); // avg 20 deliveries/rider/day
+  const activeRidersPeak = Math.ceil(ridersNeeded * 0.7); // 70% online at peak
+  const locationWritesPerSec = activeRidersPeak / trackFreq;
+  const wsConnections = Math.ceil(dailyOrders * 0.15); // 15% orders being tracked simultaneously
+  const searchQPS = Math.ceil(dailyOrders * 3 / 86400 * peakMultiplier); // 3 searches per order
+  const storagePerDayGB = (locationWritesPerSec * 86400 * 100) / 1e9; // 100 bytes per location record
+  const orderDBSizeGB = (dailyOrders * 365 * 2000) / 1e9; // 2KB per order, 1 year
+  const kafkaEventsPerSec = peakOrdersPerSec * 8; // ~8 events per order lifecycle
+  const redisMemoryGB = (activeRidersPeak * 200 + restaurants * 500) / 1e9; // geo + cache
+
+  document.getElementById('capMetrics').innerHTML = `
+    <div class="pg-metric"><div class="val">${peakOrdersPerSec.toFixed(0)}</div><div class="lbl">Peak Orders/sec</div></div>
+    <div class="pg-metric"><div class="val">${(locationWritesPerSec/1000).toFixed(1)}K</div><div class="lbl">Location Writes/sec</div></div>
+    <div class="pg-metric"><div class="val">${(wsConnections/1000).toFixed(0)}K</div><div class="lbl">WebSocket Conns</div></div>
+    <div class="pg-metric"><div class="val">${searchQPS.toFixed(0)}</div><div class="lbl">Search QPS</div></div>
+    <div class="pg-metric"><div class="val">${storagePerDayGB.toFixed(1)} GB</div><div class="lbl">Location Data/day</div></div>
+    <div class="pg-metric"><div class="val">${orderDBSizeGB.toFixed(0)} GB</div><div class="lbl">Order DB (1yr)</div></div>
+    <div class="pg-metric"><div class="val">${(kafkaEventsPerSec/1000).toFixed(1)}K</div><div class="lbl">Kafka Events/sec</div></div>
+    <div class="pg-metric"><div class="val">${redisMemoryGB.toFixed(1)} GB</div><div class="lbl">Redis Memory</div></div>
+    <div class="pg-metric"><div class="val">${ridersNeeded.toLocaleString()}</div><div class="lbl">Riders Needed</div></div>
+    <div class="pg-metric"><div class="val">${Math.ceil(wsConnections / 50000)}</div><div class="lbl">WS Servers</div></div>
+    <div class="pg-metric"><div class="val">${Math.ceil(searchQPS / 5000)}</div><div class="lbl">ES Nodes</div></div>
+    <div class="pg-metric"><div class="val">${Math.ceil(locationWritesPerSec / 20000)}</div><div class="lbl">Cassandra Nodes</div></div>
+  `;
+
+  document.getElementById('capNarration').textContent = `At ${dailyOrders.toLocaleString()} daily orders with ${peakMultiplier}x peak multiplier: you need ${ridersNeeded.toLocaleString()} delivery partners, ${Math.ceil(wsConnections/50000)} WebSocket servers (50K conn each), ${Math.ceil(locationWritesPerSec/20000)} Cassandra nodes for location ingestion at ${locationWritesPerSec.toFixed(0)} writes/sec, and ~${storagePerDayGB.toFixed(1)} GB/day of location data (${(storagePerDayGB*365/1000).toFixed(1)} TB/year).`;
+}
+
+function loadCapacityPreset(preset) {
+  const presets = {
+    startup: { orders: 10000, peak: 3, restaurants: 500, freq: 10 },
+    mid: { orders: 500000, peak: 5, restaurants: 50000, freq: 4 },
+    scale: { orders: 3000000, peak: 7, restaurants: 200000, freq: 3 },
+  };
+  const p = presets[preset];
+  document.getElementById('capOrders').value = p.orders;
+  document.getElementById('capPeak').value = p.peak;
+  document.getElementById('capRestaurants').value = p.restaurants;
+  document.getElementById('capTrackFreq').value = p.freq;
+  updateCapacity();
+}
+
+// ============================
+// Playground: Surge Pricing
+// ============================
+function updateSurge() {
+  const demand = parseInt(document.getElementById('surgeDemand').value);
+  const supply = parseInt(document.getElementById('surgeSupply').value);
+  const baseFee = parseInt(document.getElementById('surgeBase').value);
+  const maxCap = parseFloat(document.getElementById('surgeCap').value);
+
+  document.getElementById('surgeDemandVal').textContent = demand;
+  document.getElementById('surgeSupplyVal').textContent = supply;
+
+  // Calculate surge
+  const ratio = demand / supply;
+  const rawSurge = ratio > 1 ? 1 + (ratio - 1) * 0.8 : 1;
+  const surge = Math.min(rawSurge, maxCap);
+  const deliveryFee = Math.round(baseFee * surge);
+
+  // Demand elasticity: higher price reduces demand
+  const priceElasticity = -0.3; // 10% price increase → 3% demand drop
+  const priceIncrease = (surge - 1);
+  const demandReduction = Math.max(0, priceElasticity * priceIncrease);
+  const effectiveDemand = Math.round(demand * (1 + demandReduction));
+
+  // Rider incentive: surge attracts more riders
+  const riderIncentive = surge > 1.5 ? (surge - 1.5) * 0.2 : 0;
+  const attractedRiders = Math.round(supply * (1 + riderIncentive));
+
+  const newRatio = effectiveDemand / attractedRiders;
+  const balanced = newRatio <= 1.1;
+
+  const riderEarningsPerOrder = baseFee * 0.7 * surge; // rider gets 70% of delivery fee
+  const riderEarningsPerHour = riderEarningsPerOrder * (60 / 30); // 2 deliveries/hour
+
+  document.getElementById('surgeMetrics').innerHTML = `
+    <div class="pg-metric"><div class="val">${surge.toFixed(2)}x</div><div class="lbl">Surge Multiplier</div></div>
+    <div class="pg-metric"><div class="val">₹${deliveryFee}</div><div class="lbl">Delivery Fee</div></div>
+    <div class="pg-metric"><div class="val">${ratio.toFixed(2)}</div><div class="lbl">Demand/Supply Ratio</div></div>
+    <div class="pg-metric"><div class="val">${effectiveDemand}</div><div class="lbl">Effective Demand</div></div>
+    <div class="pg-metric"><div class="val">${attractedRiders}</div><div class="lbl">Riders (w/ incentive)</div></div>
+    <div class="pg-metric"><div class="val">₹${riderEarningsPerHour.toFixed(0)}/hr</div><div class="lbl">Rider Earnings</div></div>
+  `;
+
+  // Draw surge visualization
+  drawSurgeViz(demand, supply, effectiveDemand, attractedRiders, surge, maxCap);
+
+  // Narration
+  let narration = '';
+  if (surge >= maxCap) {
+    narration = `🔴 Surge at cap (${maxCap}x)! Delivery fee: ₹${deliveryFee} (base ₹${baseFee}). Demand reduced by ${Math.abs(demandReduction*100).toFixed(0)}% due to higher prices. ${riderIncentive > 0 ? `Higher earnings (₹${riderEarningsPerHour.toFixed(0)}/hr) attracting ${attractedRiders - supply} additional riders.` : ''} ${!balanced ? 'Still not balanced — consider increasing cap or adding supply incentives.' : 'Market approaching balance.'}`;
+  } else if (surge > 1) {
+    narration = `🟡 Mild surge (${surge.toFixed(2)}x). Delivery fee increased to ₹${deliveryFee}. This reduces demand by ${Math.abs(demandReduction*100).toFixed(0)}% while attracting ${attractedRiders - supply} extra riders. ${balanced ? 'Supply-demand now balanced.' : 'Slight imbalance remains.'}`;
+  } else {
+    narration = `🟢 No surge — supply (${supply} riders) comfortably exceeds demand (${demand} orders/min). Standard delivery fee: ₹${baseFee}. Riders earning ₹${riderEarningsPerHour.toFixed(0)}/hr.`;
+  }
+  document.getElementById('surgeNarration').textContent = narration;
+}
+
+function drawSurgeViz(demand, supply, effDemand, effSupply, surge, maxCap) {
+  const viz = document.getElementById('surgeViz');
+  const w = viz.clientWidth || 600;
+  const h = 180;
+
+  const maxVal = Math.max(demand, supply, effDemand, effSupply) * 1.2;
+  const barW = 50;
+  const gap = 30;
+  const startX = w / 2 - (barW * 4 + gap * 3) / 2;
+
+  let html = `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}">`;
+
+  // Bars
+  const bars = [
+    { label: 'Demand', value: demand, color: '#ef4444' },
+    { label: 'Supply', value: supply, color: '#10b981' },
+    { label: 'Eff. Demand', value: effDemand, color: '#f97316' },
+    { label: 'Eff. Supply', value: effSupply, color: '#3b82f6' },
+  ];
+
+  bars.forEach((bar, i) => {
+    const x = startX + i * (barW + gap);
+    const barH = (bar.value / maxVal) * (h - 50);
+    const y = h - 30 - barH;
+    html += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${bar.color}" rx="4" opacity="0.8"/>`;
+    html += `<text x="${x + barW/2}" y="${y - 5}" text-anchor="middle" font-size="11" font-weight="600" fill="${bar.color}">${bar.value}</text>`;
+    html += `<text x="${x + barW/2}" y="${h - 12}" text-anchor="middle" font-size="9" fill="#6b7280">${bar.label}</text>`;
+  });
+
+  // Surge indicator
+  const surgeX = w - 120;
+  const surgeH = (surge / maxCap) * 80;
+  html += `<rect x="${surgeX}" y="${h - 30 - 80}" width="30" height="80" fill="#f3f4f6" rx="4" stroke="#e5e7eb"/>`;
+  html += `<rect x="${surgeX}" y="${h - 30 - surgeH}" width="30" height="${surgeH}" fill="${surge >= maxCap ? '#ef4444' : surge > 1 ? '#f59e0b' : '#10b981'}" rx="4"/>`;
+  html += `<text x="${surgeX + 15}" y="${h - 30 - surgeH - 5}" text-anchor="middle" font-size="11" font-weight="700" fill="#374151">${surge.toFixed(1)}x</text>`;
+  html += `<text x="${surgeX + 15}" y="${h - 12}" text-anchor="middle" font-size="9" fill="#6b7280">Surge</text>`;
+  // Cap line
+  html += `<line x1="${surgeX - 5}" y1="${h - 30 - 80}" x2="${surgeX + 35}" y2="${h - 30 - 80}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3,2"/>`;
+  html += `<text x="${surgeX + 50}" y="${h - 30 - 76}" font-size="8" fill="#ef4444">Cap: ${maxCap}x</text>`;
+
+  html += `</svg>`;
+  viz.innerHTML = html;
+}
+
+function loadSurgePreset(preset) {
+  const presets = {
+    normal: { demand: 100, supply: 200, base: 30, cap: '2.5' },
+    lunch: { demand: 350, supply: 200, base: 30, cap: '2.5' },
+    rain: { demand: 500, supply: 120, base: 35, cap: '3' },
+    cricket: { demand: 800, supply: 150, base: 30, cap: '2.5' },
+  };
+  const p = presets[preset];
+  document.getElementById('surgeDemand').value = p.demand;
+  document.getElementById('surgeSupply').value = p.supply;
+  document.getElementById('surgeBase').value = p.base;
+  document.getElementById('surgeCap').value = p.cap;
+  updateSurge();
+}
+
+// ============================
+// Playground Tab Switching
+// ============================
+function switchPlayground(tab) {
+  document.querySelectorAll('.pg-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.pg-panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(`pg-${tab}`).classList.add('active');
+}
+
+// ============================
+// Navigation
+// ============================
+function scrollToSection(id) {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// Highlight nav on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      const link = document.querySelector(`.nav-link[onclick*="${entry.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { threshold: 0.2 });
+
+document.querySelectorAll('.section').forEach(s => observer.observe(s));
+
+// ============================
+// Initialize
+// ============================
+drawArchitecture();
+renderComponents();
+drawSequence();
+renderPitfalls();
+renderPractices();
+updateAssignment();
+updateCapacity();
+updateSurge();
+</script>
+</body>
+</html>

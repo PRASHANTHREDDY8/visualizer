@@ -1,0 +1,2702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apache Kafka Deep Dive — System Design Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f4f6f9;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --accent: #e85d04;
+      --accent-light: #fff3e6;
+      --kafka-orange: #e85d04;
+      --kafka-dark: #231f20;
+      --producer: #3b82f6;
+      --broker: #e85d04;
+      --consumer: #10b981;
+      --zk: #8b5cf6;
+      --storage: #f59e0b;
+      --danger: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+      --shadow-lg: 0 4px 16px rgba(0,0,0,0.1), 0 8px 32px rgba(0,0,0,0.06);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Header */
+    .hero {
+      background: linear-gradient(135deg, #231f20 0%, #3d2e1f 50%, #5a3a1a 100%);
+      color: white;
+      padding: 60px 40px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e85d04' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      opacity: 0.5;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      position: relative;
+      letter-spacing: -1px;
+    }
+
+    .hero h1 span { color: var(--kafka-orange); }
+
+    .hero p {
+      font-size: 1.15rem;
+      opacity: 0.85;
+      max-width: 700px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .hero-badges {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 24px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    .hero-badge {
+      background: rgba(232, 93, 4, 0.2);
+      border: 1px solid rgba(232, 93, 4, 0.4);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    /* Navigation */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px;
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      box-shadow: var(--shadow);
+    }
+
+    .nav-item {
+      padding: 14px 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .nav-item:hover { color: var(--text); }
+    .nav-item.active {
+      color: var(--kafka-orange);
+      border-bottom-color: var(--kafka-orange);
+    }
+
+    /* Sections */
+    .section {
+      padding: 60px 40px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--text);
+      letter-spacing: -0.5px;
+    }
+
+    .section-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+    }
+
+    /* Architecture Diagram */
+    .arch-container {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 40px;
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+
+    .arch-svg {
+      width: 100%;
+      min-width: 900px;
+      height: 600px;
+    }
+
+    .arch-svg text {
+      font-family: var(--font);
+    }
+
+    .arch-svg .component {
+      cursor: pointer;
+      transition: transform 0.2s, filter 0.2s;
+    }
+
+    .arch-svg .component:hover {
+      filter: brightness(1.05);
+    }
+
+    .arch-svg .connection {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      animation: drawLine 2s forwards;
+    }
+
+    @keyframes drawLine {
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* Component Cards */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 28px;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+
+    .card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .card .tech-tag {
+      display: inline-block;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 6px;
+      margin-top: 10px;
+    }
+
+    /* Sequence Diagram */
+    .sequence-container {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 32px;
+      box-shadow: var(--shadow);
+    }
+
+    .seq-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .seq-btn {
+      padding: 8px 20px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .seq-btn:hover { background: var(--surface-alt); }
+    .seq-btn.active {
+      background: var(--kafka-orange);
+      color: white;
+      border-color: var(--kafka-orange);
+    }
+
+    .seq-btn.play-btn {
+      background: var(--kafka-orange);
+      color: white;
+      border-color: var(--kafka-orange);
+    }
+
+    .seq-btn.play-btn:hover { background: #d04f00; }
+
+    .seq-narration {
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin-top: 20px;
+      font-size: 0.9rem;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      border-left: 4px solid var(--kafka-orange);
+    }
+
+    .seq-step-counter {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Use Cases */
+    .usecase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .usecase-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .usecase-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--kafka-orange);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .usecase-card:hover::before { opacity: 1; }
+    .usecase-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+
+    .usecase-card h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .usecase-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .usecase-card .example {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-family: var(--mono);
+      color: var(--text-muted);
+    }
+
+    /* Tradeoffs */
+    .tradeoff-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .tradeoff-table th {
+      background: var(--surface-alt);
+      padding: 14px 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tradeoff-table td {
+      padding: 16px 20px;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .tradeoff-table tr:last-child td { border-bottom: none; }
+
+    .pro { color: var(--success); font-weight: 600; }
+    .con { color: var(--danger); font-weight: 600; }
+
+    /* Pitfalls */
+    .pitfall-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--danger);
+    }
+
+    .pitfall-card h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pitfall-card .severity {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .severity-high { background: #fef2f2; color: var(--danger); }
+    .severity-medium { background: #fffbeb; color: var(--warning); }
+    .severity-low { background: #f0fdf4; color: var(--success); }
+
+    .pitfall-card p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .pitfall-card .solution {
+      margin-top: 12px;
+      padding: 12px 16px;
+      background: #f0fdf4;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .pitfall-card .solution strong { color: #15803d; }
+
+    /* Capacity Section */
+    .capacity-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .capacity-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 20px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .capacity-card .number {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--kafka-orange);
+    }
+
+    .capacity-card .label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    /* Internals Diagram */
+    .internals-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .internals-grid { grid-template-columns: 1fr; }
+    }
+
+    .internal-box {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .internal-box h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .internal-box ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .internal-box li {
+      padding: 6px 0;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .internal-box li:last-child { border-bottom: none; }
+    .internal-box li::before {
+      content: '→';
+      color: var(--kafka-orange);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* Comparison Table */
+    .comparison-container {
+      overflow-x: auto;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      min-width: 700px;
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 12px 16px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .comparison-table tr:last-child td { border-bottom: none; }
+
+    /* Tooltip */
+    .tooltip {
+      position: fixed;
+      background: var(--kafka-dark);
+      color: white;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      max-width: 250px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 1000;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .tooltip.visible { opacity: 1; }
+
+    /* Tabs */
+    .tab-group {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      background: var(--surface-alt);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      width: fit-content;
+    }
+
+    .tab {
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text-muted);
+    }
+
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Config Visualization */
+    .config-block {
+      background: #1a1a2e;
+      border-radius: var(--radius);
+      padding: 24px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: #e2e8f0;
+      overflow-x: auto;
+      line-height: 1.8;
+    }
+
+    .config-block .key { color: #93c5fd; }
+    .config-block .value { color: #fbbf24; }
+    .config-block .comment { color: #6b7280; font-style: italic; }
+
+    /* Partition Visualizer */
+    .partition-viz {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 32px;
+      box-shadow: var(--shadow);
+    }
+
+    .partition-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 12px;
+    }
+
+    .partition-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      width: 100px;
+      flex-shrink: 0;
+      color: var(--text-muted);
+    }
+
+    .partition-segments {
+      display: flex;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .segment {
+      height: 36px;
+      min-width: 36px;
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border-radius: 4px;
+      color: white;
+      animation: segmentIn 0.3s ease-out backwards;
+    }
+
+    @keyframes segmentIn {
+      from { opacity: 0; transform: scaleX(0); }
+      to { opacity: 1; transform: scaleX(1); }
+    }
+
+    .offset-marker {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-left: auto;
+      font-family: var(--mono);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Playground */
+    .playground-container {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 32px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+
+    .playground-container h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .playground-container .subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .pg-controls {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      margin-bottom: 24px;
+    }
+
+    .pg-control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .pg-control-group label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pg-control-group input[type="range"] {
+      width: 160px;
+      accent-color: var(--kafka-orange);
+    }
+
+    .pg-control-group select,
+    .pg-control-group input[type="number"] {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-family: var(--font);
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .pg-value {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--kafka-orange);
+      font-family: var(--mono);
+    }
+
+    .pg-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .pg-metric {
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .pg-metric .value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: var(--mono);
+    }
+
+    .pg-metric .label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .pg-viz-area {
+      position: relative;
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      padding: 20px;
+      min-height: 200px;
+      overflow: hidden;
+    }
+
+    .pg-partition-lane {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .pg-partition-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      width: 50px;
+      flex-shrink: 0;
+      color: var(--text-muted);
+    }
+
+    .pg-partition-bar {
+      flex: 1;
+      height: 32px;
+      background: var(--surface);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pg-partition-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      border-radius: 5px;
+      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      padding-left: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .pg-partition-consumer {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 3px;
+      background: var(--consumer);
+      transition: left 0.3s ease;
+    }
+
+    .pg-partition-consumer::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: -3px;
+      transform: translateY(-50%);
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--consumer);
+    }
+
+    .pg-lag-indicator {
+      font-size: 0.7rem;
+      font-weight: 700;
+      width: 60px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .pg-btn {
+      padding: 8px 20px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font);
+    }
+
+    .pg-btn-primary {
+      background: var(--kafka-orange);
+      color: white;
+    }
+
+    .pg-btn-primary:hover { background: #d04f00; }
+
+    .pg-btn-secondary {
+      background: var(--surface-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .pg-btn-secondary:hover { background: var(--border); }
+
+    .pg-btn-danger {
+      background: #fef2f2;
+      color: var(--danger);
+      border: 1px solid #fecaca;
+    }
+
+    .pg-btn-danger:hover { background: #fee2e2; }
+
+    .pg-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .pg-narration {
+      background: var(--surface-alt);
+      border-left: 4px solid var(--kafka-orange);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 16px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+
+    .pg-presets {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .pg-preset {
+      padding: 6px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--surface);
+    }
+
+    .pg-preset:hover {
+      border-color: var(--kafka-orange);
+      color: var(--kafka-orange);
+    }
+
+    .pg-preset.active {
+      background: var(--kafka-orange);
+      color: white;
+      border-color: var(--kafka-orange);
+    }
+
+    /* Capacity calculator */
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .calc-inputs, .calc-results {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .calc-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+    }
+
+    .calc-row label {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .calc-row input {
+      width: 100px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: var(--mono);
+      text-align: right;
+    }
+
+    .calc-result-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--accent-light);
+      border-radius: var(--radius-sm);
+      border: 1px solid #fed7aa;
+    }
+
+    .calc-result-item .label {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .calc-result-item .value {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--kafka-orange);
+      font-family: var(--mono);
+    }
+
+    @media (max-width: 900px) {
+      .calc-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .hero { padding: 40px 20px; }
+      .hero h1 { font-size: 2rem; }
+      .section { padding: 40px 20px; }
+      .nav { padding: 0 16px; }
+      .cards-grid { grid-template-columns: 1fr; }
+      .internals-grid { grid-template-columns: 1fr; }
+      .pg-controls { flex-direction: column; align-items: stretch; }
+      .pg-control-group input[type="range"] { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Apache <span>Kafka</span> Deep Dive</h1>
+  <p>A distributed event streaming platform capable of handling trillions of events per day — architecture, internals, use cases, tradeoffs, and production pitfalls</p>
+  <div class="hero-badges">
+    <span class="hero-badge">Distributed Log</span>
+    <span class="hero-badge">Pub/Sub</span>
+    <span class="hero-badge">Stream Processing</span>
+    <span class="hero-badge">Event Sourcing</span>
+    <span class="hero-badge">High Throughput</span>
+  </div>
+</div>
+
+<nav class="nav" id="nav">
+  <div class="nav-item active" data-section="architecture">Architecture</div>
+  <div class="nav-item" data-section="internals">Internals</div>
+  <div class="nav-item" data-section="components">Components</div>
+  <div class="nav-item" data-section="flow">Request Flow</div>
+  <div class="nav-item" data-section="usecases">Use Cases</div>
+  <div class="nav-item" data-section="tradeoffs">Tradeoffs</div>
+  <div class="nav-item" data-section="pitfalls">Pitfalls</div>
+  <div class="nav-item" data-section="capacity">Capacity & Scaling</div>
+  <div class="nav-item" data-section="comparison">Comparison</div>
+  <div class="nav-item" data-section="config">Configuration</div>
+  <div class="nav-item" data-section="playground">Playground</div>
+</nav>
+
+<!-- Architecture Section -->
+<section class="section" id="architecture">
+  <h2 class="section-title">Architecture Overview</h2>
+  <p class="section-subtitle">Kafka's distributed architecture — producers, brokers, consumers, and coordination layer</p>
+  <div class="arch-container">
+    <svg class="arch-svg" viewBox="0 0 1100 580" id="archSvg">
+      <!-- Background groups -->
+      <rect x="20" y="20" width="200" height="540" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+      <text x="120" y="50" text-anchor="middle" font-size="11" font-weight="700" fill="#3b82f6">PRODUCERS</text>
+
+      <rect x="280" y="20" width="540" height="540" rx="12" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
+      <text x="550" y="50" text-anchor="middle" font-size="11" font-weight="700" fill="#e85d04">KAFKA CLUSTER</text>
+
+      <rect x="880" y="20" width="200" height="540" rx="12" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1.5"/>
+      <text x="980" y="50" text-anchor="middle" font-size="11" font-weight="700" fill="#10b981">CONSUMERS</text>
+
+      <!-- Producers -->
+      <g class="component" data-tooltip="Application producing events to Kafka topics">
+        <rect x="50" y="80" width="140" height="60" rx="8" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/>
+        <text x="120" y="107" text-anchor="middle" font-size="11" font-weight="700" fill="white">Web Service</text>
+        <text x="120" y="125" text-anchor="middle" font-size="9" fill="#bfdbfe">Producer API</text>
+      </g>
+
+      <g class="component" data-tooltip="Mobile backend producing user events">
+        <rect x="50" y="170" width="140" height="60" rx="8" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/>
+        <text x="120" y="197" text-anchor="middle" font-size="11" font-weight="700" fill="white">Mobile Backend</text>
+        <text x="120" y="215" text-anchor="middle" font-size="9" fill="#bfdbfe">Producer API</text>
+      </g>
+
+      <g class="component" data-tooltip="IoT devices streaming sensor data">
+        <rect x="50" y="260" width="140" height="60" rx="8" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/>
+        <text x="120" y="287" text-anchor="middle" font-size="11" font-weight="700" fill="white">IoT Gateway</text>
+        <text x="120" y="305" text-anchor="middle" font-size="9" fill="#bfdbfe">Producer API</text>
+      </g>
+
+      <g class="component" data-tooltip="Database CDC connector (Debezium)">
+        <rect x="50" y="350" width="140" height="60" rx="8" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/>
+        <text x="120" y="377" text-anchor="middle" font-size="11" font-weight="700" fill="white">CDC Connector</text>
+        <text x="120" y="395" text-anchor="middle" font-size="9" fill="#bfdbfe">Kafka Connect</text>
+      </g>
+
+      <!-- Brokers -->
+      <g class="component" data-tooltip="Broker 1 — Leader for partitions 0,1 of topic-A">
+        <rect x="320" y="80" width="160" height="120" rx="8" fill="#e85d04" stroke="#c2410c" stroke-width="2"/>
+        <text x="400" y="107" text-anchor="middle" font-size="11" font-weight="700" fill="white">Broker 1</text>
+        <text x="400" y="127" text-anchor="middle" font-size="9" fill="#fed7aa">Leader: P0, P1</text>
+        <rect x="335" y="140" width="65" height="24" rx="4" fill="#c2410c"/>
+        <text x="367" y="156" text-anchor="middle" font-size="8" font-weight="600" fill="white">Topic-A P0</text>
+        <rect x="407" y="140" width="65" height="24" rx="4" fill="#c2410c"/>
+        <text x="439" y="156" text-anchor="middle" font-size="8" font-weight="600" fill="white">Topic-A P1</text>
+        <rect x="335" y="170" width="65" height="24" rx="4" fill="#9a3412" opacity="0.7"/>
+        <text x="367" y="186" text-anchor="middle" font-size="8" fill="#fed7aa">Replica P2</text>
+      </g>
+
+      <g class="component" data-tooltip="Broker 2 — Leader for partition 2 of topic-A">
+        <rect x="520" y="80" width="160" height="120" rx="8" fill="#e85d04" stroke="#c2410c" stroke-width="2"/>
+        <text x="600" y="107" text-anchor="middle" font-size="11" font-weight="700" fill="white">Broker 2</text>
+        <text x="600" y="127" text-anchor="middle" font-size="9" fill="#fed7aa">Leader: P2</text>
+        <rect x="535" y="140" width="65" height="24" rx="4" fill="#c2410c"/>
+        <text x="567" y="156" text-anchor="middle" font-size="8" font-weight="600" fill="white">Topic-A P2</text>
+        <rect x="607" y="140" width="65" height="24" rx="4" fill="#9a3412" opacity="0.7"/>
+        <text x="639" y="156" text-anchor="middle" font-size="8" fill="#fed7aa">Replica P0</text>
+        <rect x="535" y="170" width="65" height="24" rx="4" fill="#9a3412" opacity="0.7"/>
+        <text x="567" y="186" text-anchor="middle" font-size="8" fill="#fed7aa">Replica P1</text>
+      </g>
+
+      <g class="component" data-tooltip="Broker 3 — Follower replicas for fault tolerance">
+        <rect x="420" y="230" width="160" height="120" rx="8" fill="#e85d04" stroke="#c2410c" stroke-width="2"/>
+        <text x="500" y="257" text-anchor="middle" font-size="11" font-weight="700" fill="white">Broker 3</text>
+        <text x="500" y="277" text-anchor="middle" font-size="9" fill="#fed7aa">Follower replicas</text>
+        <rect x="435" y="290" width="65" height="24" rx="4" fill="#9a3412" opacity="0.7"/>
+        <text x="467" y="306" text-anchor="middle" font-size="8" fill="#fed7aa">Replica P0</text>
+        <rect x="507" y="290" width="65" height="24" rx="4" fill="#9a3412" opacity="0.7"/>
+        <text x="539" y="306" text-anchor="middle" font-size="8" fill="#fed7aa">Replica P1</text>
+        <rect x="435" y="320" width="65" height="24" rx="4" fill="#9a3412" opacity="0.7"/>
+        <text x="467" y="336" text-anchor="middle" font-size="8" fill="#fed7aa">Replica P2</text>
+      </g>
+
+      <!-- KRaft / ZooKeeper -->
+      <g class="component" data-tooltip="KRaft Controller Quorum — replaces ZooKeeper for metadata management">
+        <rect x="360" y="400" width="280" height="70" rx="8" fill="#8b5cf6" stroke="#7c3aed" stroke-width="2"/>
+        <text x="500" y="427" text-anchor="middle" font-size="11" font-weight="700" fill="white">KRaft Controller Quorum</text>
+        <text x="500" y="447" text-anchor="middle" font-size="9" fill="#ddd6fe">Metadata, Leader Election, Config</text>
+        <text x="500" y="462" text-anchor="middle" font-size="8" fill="#c4b5fd">(replaces ZooKeeper in Kafka 3.x+)</text>
+      </g>
+
+      <!-- Storage -->
+      <g class="component" data-tooltip="Tiered Storage — offload old segments to S3/GCS for cost efficiency">
+        <rect x="340" y="500" width="130" height="50" rx="8" fill="#f59e0b" stroke="#d97706" stroke-width="2"/>
+        <text x="405" y="522" text-anchor="middle" font-size="10" font-weight="700" fill="white">Local Disk</text>
+        <text x="405" y="538" text-anchor="middle" font-size="8" fill="#fef3c7">Segment Files</text>
+      </g>
+
+      <g class="component" data-tooltip="Object storage for tiered/archived data">
+        <rect x="500" y="500" width="130" height="50" rx="8" fill="#f59e0b" stroke="#d97706" stroke-width="2"/>
+        <text x="565" y="522" text-anchor="middle" font-size="10" font-weight="700" fill="white">Tiered Storage</text>
+        <text x="565" y="538" text-anchor="middle" font-size="8" fill="#fef3c7">S3 / GCS</text>
+      </g>
+
+      <!-- Consumers -->
+      <g class="component" data-tooltip="Consumer Group A — real-time stream processing">
+        <rect x="910" y="80" width="140" height="60" rx="8" fill="#10b981" stroke="#059669" stroke-width="2"/>
+        <text x="980" y="107" text-anchor="middle" font-size="11" font-weight="700" fill="white">Stream Proc.</text>
+        <text x="980" y="125" text-anchor="middle" font-size="9" fill="#a7f3d0">Consumer Group A</text>
+      </g>
+
+      <g class="component" data-tooltip="Consumer Group B — analytics pipeline">
+        <rect x="910" y="170" width="140" height="60" rx="8" fill="#10b981" stroke="#059669" stroke-width="2"/>
+        <text x="980" y="197" text-anchor="middle" font-size="11" font-weight="700" fill="white">Analytics</text>
+        <text x="980" y="215" text-anchor="middle" font-size="9" fill="#a7f3d0">Consumer Group B</text>
+      </g>
+
+      <g class="component" data-tooltip="Consumer Group C — search indexing">
+        <rect x="910" y="260" width="140" height="60" rx="8" fill="#10b981" stroke="#059669" stroke-width="2"/>
+        <text x="980" y="287" text-anchor="middle" font-size="11" font-weight="700" fill="white">Search Index</text>
+        <text x="980" y="305" text-anchor="middle" font-size="9" fill="#a7f3d0">Consumer Group C</text>
+      </g>
+
+      <g class="component" data-tooltip="Kafka Connect Sink — writing data to external systems">
+        <rect x="910" y="350" width="140" height="60" rx="8" fill="#10b981" stroke="#059669" stroke-width="2"/>
+        <text x="980" y="377" text-anchor="middle" font-size="11" font-weight="700" fill="white">Connect Sink</text>
+        <text x="980" y="395" text-anchor="middle" font-size="9" fill="#a7f3d0">HDFS / DB / ES</text>
+      </g>
+
+      <!-- Connections: Producers to Brokers -->
+      <line class="connection" x1="190" y1="110" x2="320" y2="110" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowBlue)"/>
+      <line class="connection" x1="190" y1="200" x2="320" y2="150" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowBlue)" style="animation-delay:0.2s"/>
+      <line class="connection" x1="190" y1="290" x2="420" y2="260" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowBlue)" style="animation-delay:0.4s"/>
+      <line class="connection" x1="190" y1="380" x2="520" y2="140" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowBlue)" style="animation-delay:0.6s"/>
+
+      <!-- Connections: Brokers to Consumers -->
+      <line class="connection" x1="680" y1="110" x2="910" y2="110" stroke="#10b981" stroke-width="2" marker-end="url(#arrowGreen)" style="animation-delay:0.8s"/>
+      <line class="connection" x1="680" y1="150" x2="910" y2="200" stroke="#10b981" stroke-width="2" marker-end="url(#arrowGreen)" style="animation-delay:1s"/>
+      <line class="connection" x1="580" y1="270" x2="910" y2="290" stroke="#10b981" stroke-width="2" marker-end="url(#arrowGreen)" style="animation-delay:1.2s"/>
+      <line class="connection" x1="580" y1="310" x2="910" y2="380" stroke="#10b981" stroke-width="2" marker-end="url(#arrowGreen)" style="animation-delay:1.4s"/>
+
+      <!-- Connections: Brokers to KRaft -->
+      <line class="connection" x1="400" y1="200" x2="430" y2="400" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowPurple)" style="animation-delay:1.6s"/>
+      <line class="connection" x1="600" y1="200" x2="570" y2="400" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowPurple)" style="animation-delay:1.8s"/>
+
+      <!-- Replication arrows between brokers -->
+      <line class="connection" x1="480" y1="140" x2="520" y2="140" stroke="#e85d04" stroke-width="1.5" stroke-dasharray="3,3" style="animation-delay:2s"/>
+
+      <!-- Arrow markers -->
+      <defs>
+        <marker id="arrowBlue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#3b82f6"/>
+        </marker>
+        <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#10b981"/>
+        </marker>
+        <marker id="arrowPurple" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#8b5cf6"/>
+        </marker>
+        <marker id="arrowOrange" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#e85d04"/>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+</section>
+
+<!-- Internals Section -->
+<section class="section" id="internals">
+  <h2 class="section-title">Kafka Internals</h2>
+  <p class="section-subtitle">How Kafka achieves high throughput and durability under the hood</p>
+
+  <div class="internals-grid">
+    <div class="internal-box">
+      <h4><span style="color:var(--kafka-orange)">&#9641;</span> Log-Structured Storage</h4>
+      <ul>
+        <li>Each partition is an ordered, append-only commit log</li>
+        <li>Messages stored in segment files (default 1GB each)</li>
+        <li>Index files map offsets to positions in segment files</li>
+        <li>Time-based and size-based retention (default 7 days)</li>
+        <li>Log compaction: keeps latest value per key forever</li>
+        <li>Segments are immutable once rolled — enables zero-copy reads</li>
+      </ul>
+    </div>
+
+    <div class="internal-box">
+      <h4><span style="color:var(--kafka-orange)">&#9641;</span> Zero-Copy Transfer</h4>
+      <ul>
+        <li>Uses <code>sendfile()</code> syscall — data goes from disk to NIC, bypassing user space</li>
+        <li>No serialization/deserialization on the broker for reads</li>
+        <li>Batch compression (gzip, snappy, lz4, zstd) at the producer</li>
+        <li>Consumers decompress — broker never touches message content</li>
+        <li>Page cache utilization — hot data served from OS cache</li>
+        <li>Sequential I/O patterns — 600MB/s writes on commodity hardware</li>
+      </ul>
+    </div>
+
+    <div class="internal-box">
+      <h4><span style="color:var(--kafka-orange)">&#9641;</span> Replication Protocol (ISR)</h4>
+      <ul>
+        <li>Each partition has one leader and N-1 follower replicas</li>
+        <li>ISR (In-Sync Replicas): followers caught up within <code>replica.lag.time.max.ms</code></li>
+        <li>Leader writes → followers pull → ack to producer</li>
+        <li>High watermark: highest offset replicated to all ISR members</li>
+        <li>Consumer only reads up to high watermark (committed data)</li>
+        <li>Unclean leader election: trade availability vs. data loss</li>
+      </ul>
+    </div>
+
+    <div class="internal-box">
+      <h4><span style="color:var(--kafka-orange)">&#9641;</span> Consumer Group Protocol</h4>
+      <ul>
+        <li>Group Coordinator broker manages consumer membership</li>
+        <li>Partition assignment strategies: Range, RoundRobin, Sticky, CooperativeSticky</li>
+        <li>Rebalance triggered on: join, leave, crash, topic partition change</li>
+        <li>Cooperative rebalance: incremental, avoids stop-the-world</li>
+        <li>Offset commit: stored in __consumer_offsets topic</li>
+        <li>Static group membership: <code>group.instance.id</code> prevents unnecessary rebalances</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Partition Visualizer -->
+  <h3 style="margin-top:40px; margin-bottom:20px; font-weight:700;">Partition & Offset Visualization</h3>
+  <div class="partition-viz" id="partitionViz">
+    <div class="partition-row">
+      <span class="partition-label">Partition 0</span>
+      <div class="partition-segments" id="p0-segments"></div>
+      <span class="offset-marker" id="p0-offset"></span>
+    </div>
+    <div class="partition-row">
+      <span class="partition-label">Partition 1</span>
+      <div class="partition-segments" id="p1-segments"></div>
+      <span class="offset-marker" id="p1-offset"></span>
+    </div>
+    <div class="partition-row">
+      <span class="partition-label">Partition 2</span>
+      <div class="partition-segments" id="p2-segments"></div>
+      <span class="offset-marker" id="p2-offset"></span>
+    </div>
+    <div style="margin-top:20px; display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
+      <button class="seq-btn play-btn" onclick="addMessage()">+ Produce Message</button>
+      <div style="display:flex; gap:12px; align-items:center; font-size:0.8rem; color:var(--text-muted);">
+        <span><span style="display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:3px;"></span> Committed</span>
+        <span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:3px;"></span> Uncommitted</span>
+        <span><span style="display:inline-block;width:12px;height:12px;background:#10b981;border-radius:3px;"></span> Consumer position</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Components Section -->
+<section class="section" id="components">
+  <h2 class="section-title">Core Components</h2>
+  <p class="section-subtitle">Detailed breakdown of each architectural component and its role</p>
+
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-icon" style="background:#eff6ff;color:#3b82f6;">P</div>
+      <h3>Producer</h3>
+      <p>Publishes records to topics. Handles partitioning (key-based hash, round-robin, or custom), batching for throughput, compression, retries with idempotence, and exactly-once semantics via transactions.</p>
+      <span class="tech-tag">Batching</span>
+      <span class="tech-tag">Compression</span>
+      <span class="tech-tag">Idempotent</span>
+      <span class="tech-tag">Transactional</span>
+    </div>
+
+    <div class="card">
+      <div class="card-icon" style="background:#fff7ed;color:#e85d04;">B</div>
+      <h3>Broker</h3>
+      <p>Stores and serves data. Handles replication, leader election, request routing. Each broker can be leader for some partitions and follower for others. Brokers coordinate via KRaft consensus.</p>
+      <span class="tech-tag">Zero-copy</span>
+      <span class="tech-tag">Page cache</span>
+      <span class="tech-tag">Sequential I/O</span>
+      <span class="tech-tag">ISR</span>
+    </div>
+
+    <div class="card">
+      <div class="card-icon" style="background:#ecfdf5;color:#10b981;">C</div>
+      <h3>Consumer</h3>
+      <p>Reads records from partitions. Part of a consumer group for parallel processing. Manages offsets (auto-commit or manual), handles rebalances. Each partition consumed by exactly one consumer in a group.</p>
+      <span class="tech-tag">Pull-based</span>
+      <span class="tech-tag">Offset tracking</span>
+      <span class="tech-tag">Group protocol</span>
+    </div>
+
+    <div class="card">
+      <div class="card-icon" style="background:#faf5ff;color:#8b5cf6;">K</div>
+      <h3>KRaft Controller</h3>
+      <p>Manages cluster metadata using Raft consensus (replaces ZooKeeper). Handles broker registration, topic/partition metadata, leader election, and configuration management. Single controller quorum for the cluster.</p>
+      <span class="tech-tag">Raft consensus</span>
+      <span class="tech-tag">Metadata log</span>
+      <span class="tech-tag">No ZK dependency</span>
+    </div>
+
+    <div class="card">
+      <div class="card-icon" style="background:#fefce8;color:#ca8a04;">T</div>
+      <h3>Topic & Partitions</h3>
+      <p>Topics are logical channels. Partitions provide parallelism and ordering. Each partition is an ordered log. Key-based partitioning ensures related messages go to the same partition (ordering guarantee per key).</p>
+      <span class="tech-tag">Ordered per partition</span>
+      <span class="tech-tag">Parallel reads</span>
+      <span class="tech-tag">Retention policy</span>
+    </div>
+
+    <div class="card">
+      <div class="card-icon" style="background:#fef2f2;color:#ef4444;">KC</div>
+      <h3>Kafka Connect</h3>
+      <p>Framework for streaming data between Kafka and external systems. Source connectors ingest (DB CDC, files, APIs). Sink connectors export (HDFS, Elasticsearch, DBs). Handles offsets, schema evolution, scaling.</p>
+      <span class="tech-tag">Source/Sink</span>
+      <span class="tech-tag">Distributed mode</span>
+      <span class="tech-tag">SMTs</span>
+    </div>
+
+    <div class="card">
+      <div class="card-icon" style="background:#f0fdf4;color:#16a34a;">KS</div>
+      <h3>Kafka Streams</h3>
+      <p>Client library for building stream processing applications. Supports stateful operations (joins, aggregations, windowing) with local state stores backed by changelog topics. No separate cluster needed.</p>
+      <span class="tech-tag">Stateful</span>
+      <span class="tech-tag">Exactly-once</span>
+      <span class="tech-tag">Interactive queries</span>
+    </div>
+
+    <div class="card">
+      <div class="card-icon" style="background:#eff6ff;color:#2563eb;">SR</div>
+      <h3>Schema Registry</h3>
+      <p>Stores and validates Avro, Protobuf, and JSON schemas. Enforces compatibility modes (backward, forward, full). Producers/consumers validate against registered schemas. Prevents data corruption.</p>
+      <span class="tech-tag">Avro / Protobuf</span>
+      <span class="tech-tag">Compatibility</span>
+      <span class="tech-tag">Evolution</span>
+    </div>
+  </div>
+</section>
+
+<!-- Request Flow Section -->
+<section class="section" id="flow">
+  <h2 class="section-title">Request Flow</h2>
+  <p class="section-subtitle">Animated sequence diagrams showing how data flows through Kafka</p>
+
+  <div class="sequence-container">
+    <div class="seq-controls">
+      <button class="seq-btn active" onclick="selectFlow('produce')">Produce Flow</button>
+      <button class="seq-btn" onclick="selectFlow('consume')">Consume Flow</button>
+      <button class="seq-btn" onclick="selectFlow('rebalance')">Rebalance Flow</button>
+      <div style="margin-left: auto; display:flex; gap:8px; align-items:center;">
+        <button class="seq-btn play-btn" id="playBtn" onclick="togglePlay()">&#9654; Play</button>
+        <button class="seq-btn" onclick="stepForward()">Step &#9654;|</button>
+        <button class="seq-btn" onclick="resetFlow()">Reset</button>
+      </div>
+    </div>
+    <div class="seq-step-counter" id="stepCounter">Step 0 / 0</div>
+    <svg id="seqSvg" width="100%" height="380" viewBox="0 0 900 380" style="min-width:700px;"></svg>
+    <div class="seq-narration" id="narration">Select a flow and press Play to see the sequence animation</div>
+  </div>
+</section>
+
+<!-- Use Cases Section -->
+<section class="section" id="usecases">
+  <h2 class="section-title">Use Cases</h2>
+  <p class="section-subtitle">Where Kafka shines in real-world system design — and concrete examples of each pattern</p>
+
+  <div class="usecase-grid">
+    <div class="usecase-card">
+      <h4>&#9889; Event-Driven Microservices</h4>
+      <p>Decouple services via events instead of synchronous API calls. Services publish domain events; others react asynchronously. Enables independent deployment and scaling.</p>
+      <div class="example">OrderService → "order.created" → InventoryService, NotificationService, AnalyticsService</div>
+    </div>
+
+    <div class="usecase-card">
+      <h4>&#128202; Real-Time Analytics Pipeline</h4>
+      <p>Stream clickstream, transactions, or sensor data to analytics systems in real-time. Replace batch ETL with continuous streaming. Sub-second data freshness.</p>
+      <div class="example">Clickstream → Kafka → Flink/Spark → Druid/ClickHouse → Dashboard</div>
+    </div>
+
+    <div class="usecase-card">
+      <h4>&#128196; Log Aggregation</h4>
+      <p>Centralize logs from hundreds of services. Higher throughput and lower latency than traditional log solutions. Enables real-time alerting alongside batch analysis.</p>
+      <div class="example">App logs → Kafka → ELK Stack / Splunk + S3 long-term archive</div>
+    </div>
+
+    <div class="usecase-card">
+      <h4>&#128257; Change Data Capture (CDC)</h4>
+      <p>Stream database changes as events. Keep derived data stores (search index, cache, data warehouse) synchronized. Debezium + Kafka is the industry standard.</p>
+      <div class="example">PostgreSQL WAL → Debezium → Kafka → Elasticsearch + Redis + Snowflake</div>
+    </div>
+
+    <div class="usecase-card">
+      <h4>&#128218; Event Sourcing</h4>
+      <p>Store state as a sequence of events rather than current state. Kafka's durable log is a natural event store. Replay events to rebuild state or create new views.</p>
+      <div class="example">Banking: Every transaction is an event → account balance derived from event replay</div>
+    </div>
+
+    <div class="usecase-card">
+      <h4>&#9881; Stream Processing</h4>
+      <p>Transform, enrich, aggregate, and join streams in real-time. Kafka Streams, Flink, or Spark Structured Streaming. Stateful processing with exactly-once guarantees.</p>
+      <div class="example">Fraud detection: Join payment stream with user profile stream, apply ML model in real-time</div>
+    </div>
+
+    <div class="usecase-card">
+      <h4>&#128640; CQRS (Command Query Separation)</h4>
+      <p>Separate write (command) path from read (query) path. Commands produce events to Kafka; read models subscribe and build optimized query views. Scale reads independently.</p>
+      <div class="example">Write → Kafka → Materialized View (DynamoDB) + Search (ES) + Analytics (Druid)</div>
+    </div>
+
+    <div class="usecase-card">
+      <h4>&#128268; System Integration / Data Mesh</h4>
+      <p>Kafka as the central nervous system connecting legacy and modern systems. Data products publish to shared topics. Schema Registry enforces contracts between teams.</p>
+      <div class="example">Legacy mainframe → Kafka Connect → Kafka → Modern microservices + Data Lake</div>
+    </div>
+
+    <div class="usecase-card">
+      <h4>&#128226; Activity Tracking / Metrics</h4>
+      <p>High-volume user activity (views, clicks, searches) and operational metrics. LinkedIn's original use case. Buffering layer between high-volume producers and slower consumers.</p>
+      <div class="example">100K events/sec → Kafka → Real-time recommendations + Batch analytics (daily)</div>
+    </div>
+  </div>
+</section>
+
+<!-- Tradeoffs Section -->
+<section class="section" id="tradeoffs">
+  <h2 class="section-title">Tradeoffs & Design Decisions</h2>
+  <p class="section-subtitle">Every architecture choice has costs — understanding Kafka's tradeoffs informs when to use it and how to configure it</p>
+
+  <table class="tradeoff-table">
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>Kafka's Choice</th>
+        <th>Benefit</th>
+        <th>Cost</th>
+        <th>When It Hurts</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Storage Model</strong></td>
+        <td>Append-only log with retention</td>
+        <td class="pro">Sequential I/O, replay, multi-consumer</td>
+        <td class="con">Disk grows with retention; no in-place delete</td>
+        <td>When you need immediate deletion (GDPR) or random-access patterns</td>
+      </tr>
+      <tr>
+        <td><strong>Delivery</strong></td>
+        <td>Pull-based consumers</td>
+        <td class="pro">Consumers control pace; natural backpressure</td>
+        <td class="con">Polling overhead; latency vs. CPU tradeoff in poll interval</td>
+        <td>Ultra-low-latency requirements (&lt;1ms) — push-based is faster</td>
+      </tr>
+      <tr>
+        <td><strong>Ordering</strong></td>
+        <td>Ordered per partition only</td>
+        <td class="pro">Enables parallelism; no global lock</td>
+        <td class="con">No global ordering across partitions</td>
+        <td>When total order across all events is required (use single partition, sacrifice throughput)</td>
+      </tr>
+      <tr>
+        <td><strong>Acks</strong></td>
+        <td>Configurable: acks=0, 1, all</td>
+        <td class="pro">Tune latency vs. durability per use case</td>
+        <td class="con">acks=all adds latency proportional to slowest ISR member</td>
+        <td>High-throughput + strong durability both needed: must choose or add brokers</td>
+      </tr>
+      <tr>
+        <td><strong>Semantics</strong></td>
+        <td>At-least-once default, exactly-once optional</td>
+        <td class="pro">Simple default; EOS available when needed</td>
+        <td class="con">EOS has ~3x latency overhead and requires idempotent producers + transactions</td>
+        <td>Financial systems needing EOS at high throughput — complex configuration</td>
+      </tr>
+      <tr>
+        <td><strong>Partitioning</strong></td>
+        <td>Fixed partition count at topic creation</td>
+        <td class="pro">Predictable routing; stable consumer assignment</td>
+        <td class="con">Increasing partitions breaks key-ordering guarantee; can't decrease</td>
+        <td>When workload is unpredictable — over-partition initially or re-architect</td>
+      </tr>
+      <tr>
+        <td><strong>Message Size</strong></td>
+        <td>Optimized for small messages (KB range)</td>
+        <td class="pro">High throughput, efficient batching</td>
+        <td class="con">Large messages (>1MB) degrade performance, memory, and replication</td>
+        <td>Video/file transfer — use claim-check pattern (store in S3, send reference)</td>
+      </tr>
+      <tr>
+        <td><strong>Consumer Groups</strong></td>
+        <td>Partition-level parallelism in groups</td>
+        <td class="pro">Simple scaling: more partitions = more consumers</td>
+        <td class="con">Max consumers = partition count; rebalances can pause consumption</td>
+        <td>Bursty workloads needing elastic scaling beyond partition count</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:48px; margin-bottom:20px; font-weight:700;">When NOT to Use Kafka</h3>
+  <div class="cards-grid">
+    <div class="card" style="border-left:4px solid var(--danger);">
+      <h3>Request-Response / RPC</h3>
+      <p>Kafka is designed for asynchronous event streaming. If you need synchronous request-response with &lt;10ms latency, use gRPC or HTTP. Kafka adds unnecessary complexity and latency.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--danger);">
+      <h3>Small-Scale / Simple Queuing</h3>
+      <p>For fewer than 1K messages/second with simple queue semantics, RabbitMQ or Redis Streams are simpler to operate. Kafka's operational overhead isn't justified at small scale.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--danger);">
+      <h3>Database Replacement</h3>
+      <p>Kafka is not a database. No ad-hoc queries, no secondary indexes, no efficient point lookups. Use it as a durable log that feeds actual databases.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--danger);">
+      <h3>Guaranteed Delivery to One Consumer</h3>
+      <p>If you need message delivery to exactly one consumer with acknowledgment per message and dead-letter queues, traditional message brokers (RabbitMQ, SQS) are better fits.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Pitfalls Section -->
+<section class="section" id="pitfalls">
+  <h2 class="section-title">Production Pitfalls</h2>
+  <p class="section-subtitle">Hard-won lessons from operating Kafka at scale — avoid these common mistakes</p>
+
+  <div class="pitfall-card">
+    <h4>Consumer Lag Explosion <span class="severity severity-high">HIGH</span></h4>
+    <p>Slow consumer processing causes lag to grow. If lag exceeds retention, <strong>data loss occurs silently</strong>. Consumers restart at earliest available offset and miss messages forever.</p>
+    <div class="solution"><strong>Mitigation:</strong> Monitor consumer lag (Burrow). Alert when lag exceeds 50% of retention window. Scale consumers, increase partitions, or add separate consumer groups for different processing speeds.</div>
+  </div>
+
+  <div class="pitfall-card">
+    <h4>Rebalance Storms <span class="severity severity-high">HIGH</span></h4>
+    <p>Frequent consumer joins/leaves trigger rebalances. During rebalance, ALL partitions in the group stop being consumed (eager protocol). Long GC pauses or slow heartbeats trigger cascading rebalances.</p>
+    <div class="solution"><strong>Mitigation:</strong> Use CooperativeSticky assignor. Set <code>session.timeout.ms=45000</code>, <code>heartbeat.interval.ms=15000</code>. Use static group membership (<code>group.instance.id</code>). Tune <code>max.poll.interval.ms</code> based on actual processing time.</div>
+  </div>
+
+  <div class="pitfall-card">
+    <h4>Under-Replicated Partitions <span class="severity severity-high">HIGH</span></h4>
+    <p>Broker disk full, network issues, or GC pauses cause followers to fall out of ISR. If <code>min.insync.replicas</code> isn't met, producers get errors. If unclean leader election is enabled, data loss on leader failure.</p>
+    <div class="solution"><strong>Mitigation:</strong> Monitor ISR shrink/expand. Keep <code>unclean.leader.election.enable=false</code>. Size disks for 2x expected usage. Use JBOD or RAID10 for disk failures. Set <code>min.insync.replicas=2</code> with replication factor 3.</div>
+  </div>
+
+  <div class="pitfall-card">
+    <h4>Hot Partitions (Skewed Keys) <span class="severity severity-medium">MEDIUM</span></h4>
+    <p>One key produces vastly more messages than others → one partition gets disproportionate load → one consumer is overwhelmed while others idle. Common with tenant-based partitioning when one tenant dominates.</p>
+    <div class="solution"><strong>Mitigation:</strong> Add salt to hot keys (e.g., <code>key + random(0-9)</code>). Use custom partitioner that spreads hot keys across multiple partitions. Monitor partition size distribution. Consider separate topics for high-volume tenants.</div>
+  </div>
+
+  <div class="pitfall-card">
+    <h4>Message Ordering Violations <span class="severity severity-medium">MEDIUM</span></h4>
+    <p>With <code>retries > 0</code> and <code>max.in.flight.requests.per.connection > 1</code>, failed batches retry out of order. Messages within the same partition arrive in wrong order silently.</p>
+    <div class="solution"><strong>Mitigation:</strong> Enable idempotent producer (<code>enable.idempotence=true</code>) which sets <code>max.in.flight=5</code> safely with sequence numbers. Or set <code>max.in.flight.requests.per.connection=1</code> (but reduces throughput by ~20%).</div>
+  </div>
+
+  <div class="pitfall-card">
+    <h4>Offset Commit Issues (Duplicate Processing) <span class="severity severity-medium">MEDIUM</span></h4>
+    <p>Auto-commit commits offsets before processing completes. If consumer crashes between commit and actual processing → message skipped. If commit fails → message re-processed. Neither is exactly-once.</p>
+    <div class="solution"><strong>Mitigation:</strong> Use manual offset commit AFTER processing. For exactly-once, use Kafka transactions or implement idempotent consumers (store offset alongside result in same transaction at the sink).</div>
+  </div>
+
+  <div class="pitfall-card">
+    <h4>Topic Partition Count Mismatch <span class="severity severity-medium">MEDIUM</span></h4>
+    <p>Too few partitions: can't scale consumers beyond partition count. Too many partitions: more memory per broker, longer leader elections, more open file handles, slower controlled shutdown.</p>
+    <div class="solution"><strong>Mitigation:</strong> Rule of thumb: partitions = max(target throughput / partition throughput, max consumer count). Start with 6-12 for moderate topics, 30-100 for high-volume. Kafka handles 10K+ partitions per broker in KRaft mode (better than ZK).</div>
+  </div>
+
+  <div class="pitfall-card">
+    <h4>Schema Evolution Breaking Consumers <span class="severity severity-low">LOW</span></h4>
+    <p>Producer changes message format without coordination. Consumers fail to deserialize new format. No Schema Registry means silent data corruption or crashes on incompatible changes.</p>
+    <div class="solution"><strong>Mitigation:</strong> Always use Schema Registry. Enforce BACKWARD compatibility (new schema can read old data). Never remove required fields. Use Avro/Protobuf, not JSON (schema embedded in every message wastes bandwidth).</div>
+  </div>
+
+  <div class="pitfall-card">
+    <h4>Large Messages Degrading Cluster <span class="severity severity-low">LOW</span></h4>
+    <p>Messages >1MB cause: broker memory pressure, slow replication, consumer fetch timeouts, and uneven batch sizes. <code>max.message.bytes</code> must be tuned across broker, topic, producer, AND consumer.</p>
+    <div class="solution"><strong>Mitigation:</strong> Use the claim-check pattern: store large payload in S3/GCS, send only the reference through Kafka. If unavoidable, tune <code>message.max.bytes</code>, <code>replica.fetch.max.bytes</code>, <code>fetch.max.bytes</code>, and <code>max.partition.fetch.bytes</code> consistently.</div>
+  </div>
+</section>
+
+<!-- Capacity & Scaling Section -->
+<section class="section" id="capacity">
+  <h2 class="section-title">Capacity & Scaling</h2>
+  <p class="section-subtitle">Back-of-envelope calculations and scaling strategies for production Kafka deployments</p>
+
+  <div class="capacity-grid">
+    <div class="capacity-card">
+      <div class="number">2M+</div>
+      <div class="label">messages/sec per broker</div>
+    </div>
+    <div class="capacity-card">
+      <div class="number">600 MB/s</div>
+      <div class="label">write throughput per broker</div>
+    </div>
+    <div class="capacity-card">
+      <div class="number">&lt;5ms</div>
+      <div class="label">p99 produce latency (acks=1)</div>
+    </div>
+    <div class="capacity-card">
+      <div class="number">~30ms</div>
+      <div class="label">p99 produce latency (acks=all)</div>
+    </div>
+    <div class="capacity-card">
+      <div class="number">4000+</div>
+      <div class="label">partitions per broker (KRaft)</div>
+    </div>
+    <div class="capacity-card">
+      <div class="number">7 days</div>
+      <div class="label">default retention</div>
+    </div>
+  </div>
+
+  <div class="internals-grid">
+    <div class="internal-box">
+      <h4><span style="color:var(--kafka-orange)">&#9650;</span> Scaling Strategies</h4>
+      <ul>
+        <li><strong>Horizontal:</strong> Add brokers → reassign partitions with kafka-reassign-partitions tool</li>
+        <li><strong>Partitions:</strong> More partitions = more parallelism. Scale consumers linearly up to partition count</li>
+        <li><strong>Tiered Storage:</strong> Offload old data to S3 — keep hot data on local SSDs, cold data in object store</li>
+        <li><strong>Multi-cluster:</strong> MirrorMaker2 / Cluster Linking for cross-region replication</li>
+        <li><strong>Rack awareness:</strong> Spread replicas across failure domains (AZs, racks)</li>
+        <li><strong>Quota management:</strong> Per-client throttling prevents one producer from starving others</li>
+      </ul>
+    </div>
+
+    <div class="internal-box">
+      <h4><span style="color:var(--kafka-orange)">&#9650;</span> Capacity Planning Formula</h4>
+      <ul>
+        <li><strong>Storage:</strong> msg_size × msgs/sec × retention_sec × replication_factor</li>
+        <li><strong>Network in:</strong> msg_size × msgs/sec × replication_factor (leader receives + replicates)</li>
+        <li><strong>Network out:</strong> msg_size × msgs/sec × num_consumer_groups</li>
+        <li><strong>Brokers:</strong> max(storage_needed / disk_per_broker, throughput_needed / broker_throughput)</li>
+        <li><strong>Partitions:</strong> max(target_throughput / partition_throughput, desired_consumer_parallelism)</li>
+        <li><strong>Memory:</strong> ~1MB page cache per active partition + OS overhead + JVM heap (6-8GB)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin-top:40px; margin-bottom:20px; font-weight:700;">Example: 100K events/sec, 1KB avg, 7-day retention, RF=3</h3>
+  <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+    <div class="card">
+      <h3>Ingestion</h3>
+      <p><strong>100 MB/s</strong> (100K × 1KB)</p>
+      <p style="margin-top:8px;">With RF=3: 300 MB/s total cluster write</p>
+    </div>
+    <div class="card">
+      <h3>Storage</h3>
+      <p><strong>~181 TB</strong></p>
+      <p style="margin-top:8px;">100MB/s × 86400s × 7d × 3 replicas</p>
+    </div>
+    <div class="card">
+      <h3>Brokers Needed</h3>
+      <p><strong>5-7 brokers</strong></p>
+      <p style="margin-top:8px;">~30TB disk each, headroom for bursts</p>
+    </div>
+    <div class="card">
+      <h3>Partitions</h3>
+      <p><strong>30-50</strong> per topic</p>
+      <p style="margin-top:8px;">10MB/s per partition, allows 30-50 consumers</p>
+    </div>
+  </div>
+</section>
+
+<!-- Comparison Section -->
+<section class="section" id="comparison">
+  <h2 class="section-title">Kafka vs. Alternatives</h2>
+  <p class="section-subtitle">When to choose Kafka over other messaging and streaming systems</p>
+
+  <div class="comparison-container">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Kafka</th>
+          <th>RabbitMQ</th>
+          <th>AWS SQS/SNS</th>
+          <th>Pulsar</th>
+          <th>Redis Streams</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Model</strong></td>
+          <td>Distributed log</td>
+          <td>Message broker (AMQP)</td>
+          <td>Managed queue/pub-sub</td>
+          <td>Distributed log + segments</td>
+          <td>In-memory log</td>
+        </tr>
+        <tr>
+          <td><strong>Throughput</strong></td>
+          <td class="pro">Millions/sec</td>
+          <td>~50K/sec per node</td>
+          <td>~3K/sec per queue</td>
+          <td class="pro">Millions/sec</td>
+          <td>~500K/sec</td>
+        </tr>
+        <tr>
+          <td><strong>Latency (p99)</strong></td>
+          <td>5-30ms</td>
+          <td class="pro">~1ms</td>
+          <td>20-100ms</td>
+          <td>5-20ms</td>
+          <td class="pro">&lt;1ms</td>
+        </tr>
+        <tr>
+          <td><strong>Replay</strong></td>
+          <td class="pro">Full replay by offset/time</td>
+          <td class="con">No (consumed = gone)</td>
+          <td class="con">No</td>
+          <td class="pro">Full replay</td>
+          <td>Limited (XRANGE)</td>
+        </tr>
+        <tr>
+          <td><strong>Ordering</strong></td>
+          <td>Per-partition</td>
+          <td>Per-queue (FIFO)</td>
+          <td>FIFO queues only</td>
+          <td>Per-partition</td>
+          <td>Per-stream</td>
+        </tr>
+        <tr>
+          <td><strong>Multi-consumer</strong></td>
+          <td class="pro">Consumer groups, independent</td>
+          <td>Competing consumers only</td>
+          <td>SNS fan-out</td>
+          <td class="pro">Subscriptions, independent</td>
+          <td>Consumer groups</td>
+        </tr>
+        <tr>
+          <td><strong>Operations</strong></td>
+          <td class="con">Complex (ZK/KRaft, brokers)</td>
+          <td>Moderate</td>
+          <td class="pro">Serverless</td>
+          <td class="con">Complex (BookKeeper)</td>
+          <td class="pro">Simple</td>
+        </tr>
+        <tr>
+          <td><strong>Best For</strong></td>
+          <td>High-volume streaming, event sourcing</td>
+          <td>Task queues, RPC, routing</td>
+          <td>Serverless, simple queuing</td>
+          <td>Multi-tenant streaming</td>
+          <td>Low-latency, caching + streams</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Configuration Section -->
+<section class="section" id="config">
+  <h2 class="section-title">Critical Configuration</h2>
+  <p class="section-subtitle">The most impactful Kafka settings — with production-recommended values and explanations</p>
+
+  <div class="tab-group">
+    <div class="tab active" onclick="selectConfigTab('producer')">Producer</div>
+    <div class="tab" onclick="selectConfigTab('broker')">Broker</div>
+    <div class="tab" onclick="selectConfigTab('consumer')">Consumer</div>
+  </div>
+
+  <div class="config-block" id="configBlock">
+    <!-- Filled by JS -->
+  </div>
+</section>
+
+<!-- Playground Section -->
+<section class="section" id="playground">
+  <h2 class="section-title">Interactive Playground</h2>
+  <p class="section-subtitle">Experiment with Kafka's core mechanics — producer/consumer rates, partition distribution, backpressure, and capacity planning</p>
+
+  <!-- Playground 1: Throughput & Backpressure Simulator -->
+  <div class="playground-container">
+    <h3>Producer/Consumer Rate Simulator</h3>
+    <p class="subtitle">Adjust producer and consumer throughput to see lag build up, backpressure effects, and partition distribution in real-time</p>
+
+    <div class="pg-presets">
+      <button class="pg-preset active" onclick="loadPreset('normal')">Normal Traffic</button>
+      <button class="pg-preset" onclick="loadPreset('spike')">Traffic Spike</button>
+      <button class="pg-preset" onclick="loadPreset('slow-consumer')">Slow Consumer</button>
+      <button class="pg-preset" onclick="loadPreset('recovery')">Recovery</button>
+    </div>
+
+    <div class="pg-controls">
+      <div class="pg-control-group">
+        <label>Producer Rate</label>
+        <input type="range" id="producerRate" min="0" max="10000" value="1000" oninput="updateSimConfig()">
+        <span class="pg-value" id="producerRateVal">1,000 msg/s</span>
+      </div>
+      <div class="pg-control-group">
+        <label>Consumer Rate</label>
+        <input type="range" id="consumerRate" min="0" max="10000" value="1200" oninput="updateSimConfig()">
+        <span class="pg-value" id="consumerRateVal">1,200 msg/s</span>
+      </div>
+      <div class="pg-control-group">
+        <label>Partitions</label>
+        <select id="simPartitions" onchange="resetSim()">
+          <option value="3">3 partitions</option>
+          <option value="6" selected>6 partitions</option>
+          <option value="12">12 partitions</option>
+          <option value="24">24 partitions</option>
+        </select>
+      </div>
+      <div class="pg-control-group">
+        <label>Consumers in Group</label>
+        <select id="simConsumers" onchange="updateSimConfig()">
+          <option value="1">1 consumer</option>
+          <option value="2">2 consumers</option>
+          <option value="3" selected>3 consumers</option>
+          <option value="6">6 consumers</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="pg-metrics" id="simMetrics">
+      <div class="pg-metric"><span class="value" id="metricProduced" style="color:var(--producer)">0</span><span class="label">Produced</span></div>
+      <div class="pg-metric"><span class="value" id="metricConsumed" style="color:var(--consumer)">0</span><span class="label">Consumed</span></div>
+      <div class="pg-metric"><span class="value" id="metricLag" style="color:var(--danger)">0</span><span class="label">Total Lag</span></div>
+      <div class="pg-metric"><span class="value" id="metricThroughput" style="color:var(--kafka-orange)">0</span><span class="label">Net Rate (msg/s)</span></div>
+      <div class="pg-metric"><span class="value" id="metricBackpressure" style="color:var(--zk)">None</span><span class="label">Backpressure</span></div>
+    </div>
+
+    <div class="pg-viz-area" id="simVizArea">
+      <!-- Partition lanes rendered by JS -->
+    </div>
+
+    <div class="pg-actions">
+      <button class="pg-btn pg-btn-primary" id="simPlayBtn" onclick="toggleSim()">&#9654; Start</button>
+      <button class="pg-btn pg-btn-secondary" onclick="resetSim()">&#8635; Reset</button>
+      <button class="pg-btn pg-btn-danger" onclick="killConsumer()">Kill Consumer</button>
+      <button class="pg-btn pg-btn-secondary" onclick="addConsumer()">+ Add Consumer</button>
+    </div>
+
+    <div class="pg-narration" id="simNarration">Adjust rates and press Start to simulate Kafka message flow across partitions.</div>
+  </div>
+
+  <!-- Playground 2: Capacity Calculator -->
+  <div class="playground-container">
+    <h3>Capacity Estimator</h3>
+    <p class="subtitle">Back-of-envelope math for Kafka cluster sizing — estimate storage, bandwidth, and broker count</p>
+
+    <div class="pg-presets">
+      <button class="pg-preset" onclick="loadCalcPreset('startup')">Small Startup</button>
+      <button class="pg-preset" onclick="loadCalcPreset('midscale')">Mid-Scale</button>
+      <button class="pg-preset" onclick="loadCalcPreset('faang')">FAANG-Scale</button>
+    </div>
+
+    <div class="calc-grid">
+      <div class="calc-inputs">
+        <div class="calc-row">
+          <label>Messages/sec</label>
+          <input type="number" id="calcMsgRate" value="50000" onchange="recalcCapacity()">
+        </div>
+        <div class="calc-row">
+          <label>Avg message size (bytes)</label>
+          <input type="number" id="calcMsgSize" value="1024" onchange="recalcCapacity()">
+        </div>
+        <div class="calc-row">
+          <label>Replication factor</label>
+          <input type="number" id="calcReplFactor" value="3" min="1" max="5" onchange="recalcCapacity()">
+        </div>
+        <div class="calc-row">
+          <label>Retention (days)</label>
+          <input type="number" id="calcRetention" value="7" onchange="recalcCapacity()">
+        </div>
+        <div class="calc-row">
+          <label>Consumer groups</label>
+          <input type="number" id="calcConsumerGroups" value="3" onchange="recalcCapacity()">
+        </div>
+        <div class="calc-row">
+          <label>Broker throughput (MB/s)</label>
+          <input type="number" id="calcBrokerThroughput" value="100" onchange="recalcCapacity()">
+        </div>
+      </div>
+      <div class="calc-results" id="calcResults">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+
+    <div class="pg-narration" id="calcNarration">Adjust inputs to estimate your Kafka cluster requirements. Calculations use standard production assumptions.</div>
+  </div>
+
+  <!-- Playground 3: Partition Key Distribution -->
+  <div class="playground-container">
+    <h3>Partition Key Distribution Tester</h3>
+    <p class="subtitle">See how different key strategies affect message distribution across partitions — detect hotspots before they happen</p>
+
+    <div class="pg-controls">
+      <div class="pg-control-group">
+        <label>Key Strategy</label>
+        <select id="keyStrategy" onchange="runKeyDistribution()">
+          <option value="userid">User ID (uniform)</option>
+          <option value="country">Country Code (skewed)</option>
+          <option value="timestamp">Timestamp (round-robin-ish)</option>
+          <option value="custom">Custom Keys (type below)</option>
+        </select>
+      </div>
+      <div class="pg-control-group">
+        <label>Number of Partitions</label>
+        <select id="keyPartitions" onchange="runKeyDistribution()">
+          <option value="4">4</option>
+          <option value="6" selected>6</option>
+          <option value="8">8</option>
+          <option value="12">12</option>
+        </select>
+      </div>
+      <div class="pg-control-group">
+        <label>Messages to Distribute</label>
+        <input type="range" id="keyMsgCount" min="100" max="10000" step="100" value="1000" oninput="runKeyDistribution()">
+        <span class="pg-value" id="keyMsgCountVal">1,000</span>
+      </div>
+    </div>
+
+    <div class="pg-control-group" id="customKeyGroup" style="display:none; margin-bottom:20px;">
+      <label>Custom Keys (comma-separated)</label>
+      <input type="text" id="customKeys" placeholder="user-1, user-2, order-99, TX, CA, NY" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); font-family:var(--mono); font-size:0.85rem;" oninput="runKeyDistribution()">
+    </div>
+
+    <div class="pg-viz-area" id="keyDistViz">
+      <!-- Filled by JS -->
+    </div>
+
+    <div class="pg-narration" id="keyNarration">Select a key strategy to see how messages distribute across partitions. Uniform distribution is ideal — skew creates hotspots.</div>
+  </div>
+</section>
+
+<div class="footer">
+  Apache Kafka Deep Dive — Interactive System Design Visualization<br>
+  Built for learning system design concepts through interactive exploration
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ============ NAVIGATION ============
+const navItems = document.querySelectorAll('.nav-item');
+navItems.forEach(item => {
+  item.addEventListener('click', () => {
+    navItems.forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    const section = document.getElementById(item.dataset.section);
+    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+// Intersection observer for nav
+const sections = document.querySelectorAll('.section');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navItems.forEach(i => i.classList.remove('active'));
+      const navItem = document.querySelector(`.nav-item[data-section="${entry.target.id}"]`);
+      if (navItem) navItem.classList.add('active');
+    }
+  });
+}, { threshold: 0.2, rootMargin: '-80px 0px 0px 0px' });
+
+sections.forEach(s => observer.observe(s));
+
+// ============ TOOLTIP ============
+const tooltip = document.getElementById('tooltip');
+document.querySelectorAll('[data-tooltip]').forEach(el => {
+  el.addEventListener('mouseenter', e => {
+    tooltip.textContent = el.dataset.tooltip;
+    tooltip.classList.add('visible');
+  });
+  el.addEventListener('mousemove', e => {
+    tooltip.style.left = e.clientX + 12 + 'px';
+    tooltip.style.top = e.clientY + 12 + 'px';
+  });
+  el.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('visible');
+  });
+});
+
+// ============ PARTITION VISUALIZER ============
+const partitions = [[], [], []];
+const consumerOffsets = [0, 0, 0];
+let totalMessages = 0;
+
+function renderPartitions() {
+  for (let i = 0; i < 3; i++) {
+    const container = document.getElementById(`p${i}-segments`);
+    const offsetEl = document.getElementById(`p${i}-offset`);
+    container.innerHTML = '';
+
+    partitions[i].forEach((msg, idx) => {
+      const seg = document.createElement('div');
+      seg.className = 'segment';
+      const isCommitted = idx < consumerOffsets[i];
+      const isConsumerPos = idx === consumerOffsets[i];
+
+      if (isConsumerPos) {
+        seg.style.background = '#10b981';
+      } else if (isCommitted) {
+        seg.style.background = '#3b82f6';
+      } else {
+        seg.style.background = '#f59e0b';
+      }
+
+      seg.textContent = msg.offset;
+      seg.style.animationDelay = `${idx * 0.05}s`;
+      container.appendChild(seg);
+    });
+
+    offsetEl.textContent = `HW: ${partitions[i].length} | Consumer: ${consumerOffsets[i]}`;
+  }
+}
+
+function addMessage() {
+  const partition = totalMessages % 3;
+  const offset = partitions[partition].length;
+  partitions[partition].push({ offset, key: `key-${totalMessages}` });
+  totalMessages++;
+
+  // Consumer catches up with slight delay
+  setTimeout(() => {
+    for (let i = 0; i < 3; i++) {
+      if (consumerOffsets[i] < partitions[i].length - 1) {
+        consumerOffsets[i]++;
+        renderPartitions();
+      }
+    }
+  }, 800);
+
+  renderPartitions();
+}
+
+// Initialize with some data
+for (let i = 0; i < 15; i++) addMessage();
+for (let i = 0; i < 3; i++) consumerOffsets[i] = Math.max(0, partitions[i].length - 2);
+renderPartitions();
+
+// ============ SEQUENCE DIAGRAM ============
+const flows = {
+  produce: {
+    actors: ['Producer', 'Partition Leader', 'Follower 1', 'Follower 2', 'Producer (ack)'],
+    steps: [
+      { from: 0, to: 1, label: '1. Send ProduceRequest (batch)', desc: 'Producer serializes messages, applies compression (lz4/snappy), and sends a batch to the partition leader broker.' },
+      { from: 1, to: 1, label: '2. Append to log', desc: 'Leader appends the batch to its local log segment file. Message gets an offset assigned sequentially.' },
+      { from: 1, to: 2, label: '3. Replicate to follower', desc: 'Follower 1 fetches the new data from the leader (pull-based replication) and appends to its local log.' },
+      { from: 1, to: 3, label: '4. Replicate to follower', desc: 'Follower 2 also fetches and appends. Both followers are now in ISR (In-Sync Replicas).' },
+      { from: 2, to: 1, label: '5. Ack replication', desc: 'Follower 1 acknowledges successful replication to the leader.' },
+      { from: 3, to: 1, label: '6. Ack replication', desc: 'Follower 2 acknowledges. Leader advances the High Watermark — data is now committed.' },
+      { from: 1, to: 4, label: '7. ProduceResponse (success)', desc: 'With acks=all, leader responds to producer only after all ISR members have the data. Offset and timestamp returned.' },
+    ]
+  },
+  consume: {
+    actors: ['Consumer', 'Group Coordinator', 'Partition Leader', 'Consumer (process)', 'Offset Topic'],
+    steps: [
+      { from: 0, to: 1, label: '1. JoinGroup / Heartbeat', desc: 'Consumer sends heartbeat to Group Coordinator broker. If new, triggers partition assignment via consumer group protocol.' },
+      { from: 1, to: 0, label: '2. Partition assignment', desc: 'Coordinator assigns partitions using the configured strategy (Range/RoundRobin/Sticky). Consumer gets list of its partitions.' },
+      { from: 0, to: 2, label: '3. FetchRequest (offset, maxBytes)', desc: 'Consumer sends FetchRequest to partition leaders for its assigned partitions, specifying start offset and max bytes.' },
+      { from: 2, to: 0, label: '4. FetchResponse (records)', desc: 'Leader returns records from the offset up to min(high watermark, max bytes). Uses zero-copy (sendfile) for efficiency.' },
+      { from: 0, to: 3, label: '5. Process records', desc: 'Consumer deserializes and processes records. Business logic executes. This is where application code runs.' },
+      { from: 3, to: 4, label: '6. Commit offset', desc: 'After successful processing, consumer commits the offset to __consumer_offsets topic. Next fetch starts from committed+1.' },
+      { from: 0, to: 2, label: '7. Next FetchRequest', desc: 'Consumer polls again with the new offset. Long-polling: broker holds request for fetch.max.wait.ms if no new data.' },
+    ]
+  },
+  rebalance: {
+    actors: ['Consumer 1', 'Consumer 2 (new)', 'Group Coordinator', 'Consumer 1 (after)', 'Consumer 2 (after)'],
+    steps: [
+      { from: 1, to: 2, label: '1. JoinGroup request', desc: 'New consumer instance joins the group. Group Coordinator detects membership change and initiates a rebalance.' },
+      { from: 2, to: 0, label: '2. Rebalance notification', desc: 'Coordinator notifies existing consumers via heartbeat response that a rebalance is in progress. Consumption STOPS.' },
+      { from: 0, to: 2, label: '3. JoinGroup (rejoin)', desc: 'Existing consumer commits offsets and rejoins. One consumer elected as leader to compute new assignment.' },
+      { from: 2, to: 2, label: '4. Compute assignment', desc: 'Group leader runs partition assignment algorithm. With CooperativeSticky, only moved partitions are revoked.' },
+      { from: 2, to: 3, label: '5. SyncGroup → C1 assignment', desc: 'Consumer 1 receives its new partition assignment (fewer partitions now that load is shared).' },
+      { from: 2, to: 4, label: '6. SyncGroup → C2 assignment', desc: 'Consumer 2 receives its partition assignment. Both consumers now have non-overlapping partition sets.' },
+      { from: 3, to: 3, label: '7. Resume fetching', desc: 'Both consumers resume fetching from their assigned partitions at the last committed offset. Rebalance complete.' },
+    ]
+  }
+};
+
+let currentFlow = 'produce';
+let currentStep = -1;
+let isPlaying = false;
+let playInterval = null;
+
+function selectFlow(flow) {
+  currentFlow = flow;
+  currentStep = -1;
+  isPlaying = false;
+  clearInterval(playInterval);
+  document.getElementById('playBtn').innerHTML = '&#9654; Play';
+
+  document.querySelectorAll('.seq-controls .seq-btn:not(.play-btn):not(:nth-last-child(-n+2))').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+
+  renderSequence();
+  document.getElementById('narration').textContent = 'Press Play to see the sequence animation';
+  document.getElementById('stepCounter').textContent = `Step 0 / ${flows[currentFlow].steps.length}`;
+}
+
+function renderSequence() {
+  const svg = document.getElementById('seqSvg');
+  const flow = flows[currentFlow];
+  const actorCount = flow.actors.length;
+  const spacing = 800 / (actorCount - 1);
+
+  let html = '';
+
+  // Actor lifelines
+  flow.actors.forEach((actor, i) => {
+    const x = 50 + i * spacing;
+    html += `<rect x="${x-40}" y="10" width="80" height="36" rx="6" fill="${i===0 ? '#3b82f6' : i===actorCount-1 ? '#10b981' : '#e85d04'}" />`;
+    html += `<text x="${x}" y="33" text-anchor="middle" font-size="9" font-weight="700" fill="white">${actor.length > 12 ? actor.substring(0,12)+'…' : actor}</text>`;
+    html += `<line x1="${x}" y1="50" x2="${x}" y2="370" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4,4" />`;
+  });
+
+  // Steps
+  flow.steps.forEach((step, i) => {
+    const y = 75 + i * 42;
+    const fromX = 50 + step.from * spacing;
+    const toX = 50 + step.to * spacing;
+    const isActive = i <= currentStep;
+    const isCurrent = i === currentStep;
+
+    const color = isActive ? (isCurrent ? '#e85d04' : '#64748b') : '#e2e8f0';
+    const textColor = isActive ? (isCurrent ? '#e85d04' : '#475569') : '#cbd5e1';
+    const strokeWidth = isCurrent ? 2.5 : 1.5;
+
+    if (fromX === toX) {
+      // Self-arrow
+      html += `<path d="M${fromX} ${y} Q${fromX+40} ${y} ${fromX+40} ${y+15} Q${fromX+40} ${y+30} ${fromX} ${y+30}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" marker-end="url(#seqArrow${isActive ? 'Active' : ''})"/>`;
+      html += `<text x="${fromX+45}" y="${y+18}" font-size="8" fill="${textColor}" font-weight="${isCurrent ? '700' : '500'}">${step.label}</text>`;
+    } else {
+      html += `<line x1="${fromX}" y1="${y}" x2="${toX}" y2="${y}" stroke="${color}" stroke-width="${strokeWidth}" marker-end="url(#seqArrow${isActive ? 'Active' : ''})"/>`;
+      const midX = (fromX + toX) / 2;
+      html += `<text x="${midX}" y="${y-6}" text-anchor="middle" font-size="8" fill="${textColor}" font-weight="${isCurrent ? '700' : '500'}">${step.label}</text>`;
+    }
+  });
+
+  // Arrow markers
+  html += `<defs>
+    <marker id="seqArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#e2e8f0"/></marker>
+    <marker id="seqArrowActive" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#64748b"/></marker>
+  </defs>`;
+
+  svg.innerHTML = html;
+}
+
+function stepForward() {
+  const flow = flows[currentFlow];
+  if (currentStep < flow.steps.length - 1) {
+    currentStep++;
+    renderSequence();
+    document.getElementById('narration').textContent = flow.steps[currentStep].desc;
+    document.getElementById('stepCounter').textContent = `Step ${currentStep + 1} / ${flow.steps.length}`;
+  }
+}
+
+function togglePlay() {
+  if (isPlaying) {
+    isPlaying = false;
+    clearInterval(playInterval);
+    document.getElementById('playBtn').innerHTML = '&#9654; Play';
+  } else {
+    isPlaying = true;
+    document.getElementById('playBtn').innerHTML = '&#9646;&#9646; Pause';
+    if (currentStep >= flows[currentFlow].steps.length - 1) {
+      currentStep = -1;
+    }
+    playInterval = setInterval(() => {
+      if (currentStep >= flows[currentFlow].steps.length - 1) {
+        isPlaying = false;
+        clearInterval(playInterval);
+        document.getElementById('playBtn').innerHTML = '&#9654; Play';
+        return;
+      }
+      stepForward();
+    }, 1500);
+  }
+}
+
+function resetFlow() {
+  isPlaying = false;
+  clearInterval(playInterval);
+  currentStep = -1;
+  document.getElementById('playBtn').innerHTML = '&#9654; Play';
+  renderSequence();
+  document.getElementById('narration').textContent = 'Press Play to see the sequence animation';
+  document.getElementById('stepCounter').textContent = `Step 0 / ${flows[currentFlow].steps.length}`;
+}
+
+renderSequence();
+
+// ============ CONFIGURATION TABS ============
+const configs = {
+  producer: `<span class="comment"># === PRODUCER CONFIGURATION (production-recommended) ===</span>
+
+<span class="key">acks</span> = <span class="value">all</span>                            <span class="comment"># Wait for all ISR replicas — strongest durability</span>
+<span class="key">enable.idempotence</span> = <span class="value">true</span>            <span class="comment"># Prevent duplicates on retry (requires acks=all)</span>
+<span class="key">retries</span> = <span class="value">2147483647</span>                 <span class="comment"># Effectively infinite — rely on delivery.timeout.ms</span>
+<span class="key">delivery.timeout.ms</span> = <span class="value">120000</span>          <span class="comment"># Total time to deliver message including retries</span>
+<span class="key">max.in.flight.requests.per.connection</span> = <span class="value">5</span>  <span class="comment"># Safe with idempotence ON (sequence numbers)</span>
+
+<span class="comment"># --- Batching & Throughput ---</span>
+<span class="key">batch.size</span> = <span class="value">65536</span>                     <span class="comment"># 64KB batch — larger = better throughput, more latency</span>
+<span class="key">linger.ms</span> = <span class="value">20</span>                          <span class="comment"># Wait 20ms to fill batch — tradeoff latency for throughput</span>
+<span class="key">compression.type</span> = <span class="value">lz4</span>               <span class="comment"># Best throughput/compression ratio; zstd for best ratio</span>
+<span class="key">buffer.memory</span> = <span class="value">67108864</span>              <span class="comment"># 64MB producer buffer — increase for bursty workloads</span>
+
+<span class="comment"># --- Exactly-Once (Transactions) ---</span>
+<span class="key">transactional.id</span> = <span class="value">my-app-txn-01</span>      <span class="comment"># Required for exactly-once across partitions/topics</span>
+<span class="key">transaction.timeout.ms</span> = <span class="value">60000</span>       <span class="comment"># Abort if transaction open too long</span>`,
+
+  broker: `<span class="comment"># === BROKER CONFIGURATION (production-recommended) ===</span>
+
+<span class="comment"># --- Replication & Durability ---</span>
+<span class="key">default.replication.factor</span> = <span class="value">3</span>          <span class="comment"># Tolerate 2 broker failures</span>
+<span class="key">min.insync.replicas</span> = <span class="value">2</span>               <span class="comment"># At least 2 replicas must ack — prevents data loss</span>
+<span class="key">unclean.leader.election.enable</span> = <span class="value">false</span> <span class="comment"># NEVER elect out-of-sync replica — data loss prevention</span>
+
+<span class="comment"># --- Log & Retention ---</span>
+<span class="key">log.retention.hours</span> = <span class="value">168</span>             <span class="comment"># 7 days default; set per-topic for different needs</span>
+<span class="key">log.retention.bytes</span> = <span class="value">-1</span>              <span class="comment"># No size limit (rely on time-based retention)</span>
+<span class="key">log.segment.bytes</span> = <span class="value">1073741824</span>       <span class="comment"># 1GB segments — larger = fewer files, slower compaction</span>
+<span class="key">log.cleanup.policy</span> = <span class="value">delete</span>           <span class="comment"># 'compact' for changelog topics, 'delete,compact' for both</span>
+
+<span class="comment"># --- Performance ---</span>
+<span class="key">num.io.threads</span> = <span class="value">16</span>                    <span class="comment"># I/O threads — set to 2x disk count</span>
+<span class="key">num.network.threads</span> = <span class="value">8</span>               <span class="comment"># Network threads — usually 3-8 per broker</span>
+<span class="key">num.replica.fetchers</span> = <span class="value">4</span>              <span class="comment"># Parallel replication fetchers — speeds up ISR catch-up</span>
+<span class="key">socket.receive.buffer.bytes</span> = <span class="value">1048576</span>  <span class="comment"># 1MB receive buffer — tune for high-throughput</span>
+<span class="key">replica.lag.time.max.ms</span> = <span class="value">30000</span>       <span class="comment"># Remove from ISR if follower lags 30s</span>
+
+<span class="comment"># --- KRaft Mode ---</span>
+<span class="key">process.roles</span> = <span class="value">broker,controller</span>       <span class="comment"># Combined mode for small clusters; separate for large</span>
+<span class="key">controller.quorum.voters</span> = <span class="value">1@host1:9093,2@host2:9093,3@host3:9093</span>`,
+
+  consumer: `<span class="comment"># === CONSUMER CONFIGURATION (production-recommended) ===</span>
+
+<span class="comment"># --- Group & Rebalance ---</span>
+<span class="key">group.id</span> = <span class="value">my-service-consumer-group</span>   <span class="comment"># Unique per logical consumer application</span>
+<span class="key">group.instance.id</span> = <span class="value">consumer-host-1</span>   <span class="comment"># Static membership — prevents rebalance on restart</span>
+<span class="key">partition.assignment.strategy</span> = <span class="value">CooperativeStickyAssignor</span>  <span class="comment"># Incremental rebalance</span>
+<span class="key">session.timeout.ms</span> = <span class="value">45000</span>            <span class="comment"># Time before coordinator considers consumer dead</span>
+<span class="key">heartbeat.interval.ms</span> = <span class="value">15000</span>         <span class="comment"># 1/3 of session timeout — standard ratio</span>
+
+<span class="comment"># --- Fetching ---</span>
+<span class="key">fetch.min.bytes</span> = <span class="value">1048576</span>              <span class="comment"># 1MB minimum — reduces fetch requests, adds latency</span>
+<span class="key">fetch.max.wait.ms</span> = <span class="value">500</span>               <span class="comment"># Wait up to 500ms if min.bytes not met (long polling)</span>
+<span class="key">max.poll.records</span> = <span class="value">500</span>                <span class="comment"># Max records per poll() — tune to processing speed</span>
+<span class="key">max.poll.interval.ms</span> = <span class="value">300000</span>         <span class="comment"># Max time between polls before rebalance — set > processing time</span>
+
+<span class="comment"># --- Offset Management ---</span>
+<span class="key">enable.auto.commit</span> = <span class="value">false</span>             <span class="comment"># MANUAL commit after processing — prevents data loss</span>
+<span class="key">auto.offset.reset</span> = <span class="value">earliest</span>          <span class="comment"># Start from beginning if no committed offset exists</span>
+
+<span class="comment"># --- Isolation (for exactly-once) ---</span>
+<span class="key">isolation.level</span> = <span class="value">read_committed</span>       <span class="comment"># Only read committed transactional messages</span>`
+};
+
+function selectConfigTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('configBlock').innerHTML = configs[tab];
+}
+
+// Initialize
+document.getElementById('configBlock').innerHTML = configs.producer;
+
+// ============ KEYBOARD SHORTCUTS ============
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    togglePlay();
+  } else if (e.code === 'ArrowRight') {
+    stepForward();
+  } else if (e.code === 'KeyR') {
+    resetFlow();
+  }
+});
+
+// ============ PLAYGROUND: THROUGHPUT SIMULATOR ============
+let simRunning = false;
+let simInterval = null;
+let simState = {
+  partitions: [],
+  produced: 0,
+  consumed: 0,
+  consumerCount: 3,
+  producerRate: 1000,
+  consumerRate: 1200,
+  partitionCount: 6,
+};
+
+function initSimState() {
+  const pc = parseInt(document.getElementById('simPartitions').value);
+  simState.partitionCount = pc;
+  simState.consumerCount = parseInt(document.getElementById('simConsumers').value);
+  simState.produced = 0;
+  simState.consumed = 0;
+  simState.partitions = [];
+  for (let i = 0; i < pc; i++) {
+    simState.partitions.push({ produced: 0, consumed: 0, lag: 0, assignedConsumer: i % simState.consumerCount });
+  }
+}
+
+function updateSimConfig() {
+  const pr = parseInt(document.getElementById('producerRate').value);
+  const cr = parseInt(document.getElementById('consumerRate').value);
+  simState.producerRate = pr;
+  simState.consumerRate = cr;
+  simState.consumerCount = parseInt(document.getElementById('simConsumers').value);
+  document.getElementById('producerRateVal').textContent = pr.toLocaleString() + ' msg/s';
+  document.getElementById('consumerRateVal').textContent = cr.toLocaleString() + ' msg/s';
+
+  // Reassign partitions to consumers
+  for (let i = 0; i < simState.partitions.length; i++) {
+    simState.partitions[i].assignedConsumer = i % simState.consumerCount;
+  }
+  renderSimViz();
+}
+
+function renderSimViz() {
+  const area = document.getElementById('simVizArea');
+  const maxOffset = Math.max(1, ...simState.partitions.map(p => p.produced));
+  let html = '';
+
+  simState.partitions.forEach((p, i) => {
+    const producedPct = (p.produced / maxOffset) * 100;
+    const consumedPct = (p.consumed / maxOffset) * 100;
+    const lag = p.produced - p.consumed;
+    const lagColor = lag > 500 ? 'var(--danger)' : lag > 100 ? 'var(--warning)' : 'var(--success)';
+
+    html += `<div class="pg-partition-lane">
+      <span class="pg-partition-label">P${i} <span style="font-size:0.65rem;color:var(--consumer);">C${p.assignedConsumer}</span></span>
+      <div class="pg-partition-bar">
+        <div class="pg-partition-fill" style="width:${producedPct}%; background:var(--producer); opacity:0.3;"></div>
+        <div class="pg-partition-fill" style="width:${consumedPct}%; background:var(--consumer); opacity:0.7;">${p.consumed > 0 ? p.consumed.toLocaleString() : ''}</div>
+        ${p.produced > 0 ? `<div class="pg-partition-consumer" style="left:${consumedPct}%;"></div>` : ''}
+      </div>
+      <span class="pg-lag-indicator" style="color:${lagColor};">lag: ${lag.toLocaleString()}</span>
+    </div>`;
+  });
+
+  area.innerHTML = html;
+
+  // Update metrics
+  const totalLag = simState.partitions.reduce((s, p) => s + (p.produced - p.consumed), 0);
+  const netRate = simState.producerRate - simState.consumerRate;
+  document.getElementById('metricProduced').textContent = simState.produced.toLocaleString();
+  document.getElementById('metricConsumed').textContent = simState.consumed.toLocaleString();
+  document.getElementById('metricLag').textContent = totalLag.toLocaleString();
+  document.getElementById('metricThroughput').textContent = (netRate >= 0 ? '+' : '') + netRate.toLocaleString();
+  document.getElementById('metricThroughput').style.color = netRate > 0 ? 'var(--danger)' : 'var(--success)';
+
+  let bpLevel = 'None';
+  let bpColor = 'var(--success)';
+  if (totalLag > 5000) { bpLevel = 'Critical'; bpColor = 'var(--danger)'; }
+  else if (totalLag > 2000) { bpLevel = 'High'; bpColor = 'var(--warning)'; }
+  else if (totalLag > 500) { bpLevel = 'Moderate'; bpColor = 'var(--storage)'; }
+  document.getElementById('metricBackpressure').textContent = bpLevel;
+  document.getElementById('metricBackpressure').style.color = bpColor;
+}
+
+function simTick() {
+  const pc = simState.partitionCount;
+  const perPartitionProduce = simState.producerRate / pc / 10; // 10 ticks per second
+  const perConsumerConsume = simState.consumerRate / simState.consumerCount / 10;
+
+  // Produce to partitions (round-robin with slight randomness)
+  for (let i = 0; i < pc; i++) {
+    const jitter = 0.8 + Math.random() * 0.4;
+    const produced = Math.floor(perPartitionProduce * jitter);
+    simState.partitions[i].produced += produced;
+    simState.produced += produced;
+  }
+
+  // Consume from partitions (per consumer capacity)
+  const consumePerPartition = [];
+  for (let c = 0; c < simState.consumerCount; c++) {
+    const assignedPartitions = simState.partitions.filter(p => p.assignedConsumer === c);
+    const perPart = perConsumerConsume / Math.max(1, assignedPartitions.length);
+    assignedPartitions.forEach(p => {
+      const canConsume = Math.min(Math.floor(perPart * (0.9 + Math.random() * 0.2)), p.produced - p.consumed);
+      if (canConsume > 0) {
+        p.consumed += canConsume;
+        simState.consumed += canConsume;
+      }
+    });
+  }
+
+  renderSimViz();
+  updateSimNarration();
+}
+
+function updateSimNarration() {
+  const totalLag = simState.partitions.reduce((s, p) => s + (p.produced - p.consumed), 0);
+  const narr = document.getElementById('simNarration');
+  if (totalLag > 5000) {
+    narr.textContent = `Critical lag detected (${totalLag.toLocaleString()} msgs). Consumers cannot keep up — consider adding more consumers or increasing partition count.`;
+  } else if (totalLag > 2000) {
+    narr.textContent = `Lag is building (${totalLag.toLocaleString()} msgs). Consumer throughput is below producer rate. Monitor closely.`;
+  } else if (totalLag > 500) {
+    narr.textContent = `Moderate lag (${totalLag.toLocaleString()} msgs). System is slightly behind but may recover if traffic subsides.`;
+  } else if (simRunning) {
+    narr.textContent = `Healthy state. Consumers are keeping up with producers. Lag is minimal (${totalLag.toLocaleString()} msgs).`;
+  }
+}
+
+function toggleSim() {
+  if (simRunning) {
+    simRunning = false;
+    clearInterval(simInterval);
+    document.getElementById('simPlayBtn').innerHTML = '&#9654; Start';
+  } else {
+    if (simState.partitions.length === 0) initSimState();
+    simRunning = true;
+    document.getElementById('simPlayBtn').innerHTML = '&#9646;&#9646; Pause';
+    simInterval = setInterval(simTick, 100);
+  }
+}
+
+function resetSim() {
+  simRunning = false;
+  clearInterval(simInterval);
+  document.getElementById('simPlayBtn').innerHTML = '&#9654; Start';
+  initSimState();
+  updateSimConfig();
+  renderSimViz();
+  document.getElementById('simNarration').textContent = 'Adjust rates and press Start to simulate Kafka message flow across partitions.';
+}
+
+function killConsumer() {
+  if (simState.consumerCount <= 1) {
+    document.getElementById('simNarration').textContent = 'Cannot kill the last consumer! At least one consumer must remain in the group.';
+    return;
+  }
+  simState.consumerCount--;
+  document.getElementById('simConsumers').value = simState.consumerCount;
+  for (let i = 0; i < simState.partitions.length; i++) {
+    simState.partitions[i].assignedConsumer = i % simState.consumerCount;
+  }
+  renderSimViz();
+  document.getElementById('simNarration').textContent = `Consumer killed! Rebalance triggered — ${simState.partitionCount} partitions redistributed across ${simState.consumerCount} remaining consumer(s). Expect temporary lag spike.`;
+}
+
+function addConsumer() {
+  const maxConsumers = simState.partitionCount;
+  if (simState.consumerCount >= maxConsumers) {
+    document.getElementById('simNarration').textContent = `Cannot add more consumers than partitions (${maxConsumers}). Extra consumers would be idle.`;
+    return;
+  }
+  simState.consumerCount++;
+  document.getElementById('simConsumers').value = simState.consumerCount;
+  for (let i = 0; i < simState.partitions.length; i++) {
+    simState.partitions[i].assignedConsumer = i % simState.consumerCount;
+  }
+  renderSimViz();
+  document.getElementById('simNarration').textContent = `Consumer added! Rebalance complete — partitions redistributed across ${simState.consumerCount} consumers. Throughput should improve.`;
+}
+
+function loadPreset(preset) {
+  document.querySelectorAll('.pg-presets .pg-preset').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  switch (preset) {
+    case 'normal':
+      document.getElementById('producerRate').value = 1000;
+      document.getElementById('consumerRate').value = 1200;
+      break;
+    case 'spike':
+      document.getElementById('producerRate').value = 8000;
+      document.getElementById('consumerRate').value = 1200;
+      break;
+    case 'slow-consumer':
+      document.getElementById('producerRate').value = 2000;
+      document.getElementById('consumerRate').value = 400;
+      break;
+    case 'recovery':
+      document.getElementById('producerRate').value = 500;
+      document.getElementById('consumerRate').value = 3000;
+      break;
+  }
+  updateSimConfig();
+}
+
+// Initialize simulator
+initSimState();
+updateSimConfig();
+renderSimViz();
+
+// ============ PLAYGROUND: CAPACITY CALCULATOR ============
+function recalcCapacity() {
+  const msgRate = parseInt(document.getElementById('calcMsgRate').value) || 0;
+  const msgSize = parseInt(document.getElementById('calcMsgSize').value) || 0;
+  const replFactor = parseInt(document.getElementById('calcReplFactor').value) || 1;
+  const retention = parseInt(document.getElementById('calcRetention').value) || 1;
+  const consumerGroups = parseInt(document.getElementById('calcConsumerGroups').value) || 1;
+  const brokerThroughput = parseInt(document.getElementById('calcBrokerThroughput').value) || 100;
+
+  // Calculations
+  const ingestBytesPerSec = msgRate * msgSize;
+  const ingestMBps = ingestBytesPerSec / (1024 * 1024);
+  const replicatedMBps = ingestMBps * replFactor;
+  const readMBps = ingestMBps * consumerGroups;
+  const totalBandwidthMBps = replicatedMBps + readMBps;
+
+  const storagePerDayGB = (ingestBytesPerSec * 86400 * replFactor) / (1024 * 1024 * 1024);
+  const totalStorageGB = storagePerDayGB * retention;
+  const totalStorageTB = totalStorageGB / 1024;
+
+  const brokersForThroughput = Math.ceil(totalBandwidthMBps / brokerThroughput);
+  const brokersForReplication = Math.max(replFactor, 3);
+  const recommendedBrokers = Math.max(brokersForThroughput, brokersForReplication);
+
+  const partitionsRecommended = Math.max(msgRate / 5000, recommendedBrokers * 3);
+
+  const resultsEl = document.getElementById('calcResults');
+  resultsEl.innerHTML = `
+    <div class="calc-result-item"><span class="label">Write Bandwidth</span><span class="value">${replicatedMBps.toFixed(1)} MB/s</span></div>
+    <div class="calc-result-item"><span class="label">Read Bandwidth</span><span class="value">${readMBps.toFixed(1)} MB/s</span></div>
+    <div class="calc-result-item"><span class="label">Total Bandwidth</span><span class="value">${totalBandwidthMBps.toFixed(1)} MB/s</span></div>
+    <div class="calc-result-item"><span class="label">Storage (total)</span><span class="value">${totalStorageTB >= 1 ? totalStorageTB.toFixed(2) + ' TB' : totalStorageGB.toFixed(0) + ' GB'}</span></div>
+    <div class="calc-result-item"><span class="label">Min Brokers</span><span class="value">${recommendedBrokers}</span></div>
+    <div class="calc-result-item"><span class="label">Recommended Partitions</span><span class="value">${Math.ceil(partitionsRecommended)}</span></div>
+  `;
+
+  const narr = document.getElementById('calcNarration');
+  narr.textContent = `At ${msgRate.toLocaleString()} msg/s × ${msgSize}B × RF${replFactor}: you need ${recommendedBrokers} brokers (${brokersForThroughput} for throughput, min ${brokersForReplication} for HA) with ${totalStorageTB >= 1 ? totalStorageTB.toFixed(1) + 'TB' : totalStorageGB.toFixed(0) + 'GB'} storage for ${retention}d retention.`;
+}
+
+function loadCalcPreset(preset) {
+  document.querySelectorAll('#playground .playground-container:nth-child(3) .pg-preset').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  switch (preset) {
+    case 'startup':
+      document.getElementById('calcMsgRate').value = 5000;
+      document.getElementById('calcMsgSize').value = 512;
+      document.getElementById('calcReplFactor').value = 3;
+      document.getElementById('calcRetention').value = 3;
+      document.getElementById('calcConsumerGroups').value = 2;
+      document.getElementById('calcBrokerThroughput').value = 100;
+      break;
+    case 'midscale':
+      document.getElementById('calcMsgRate').value = 100000;
+      document.getElementById('calcMsgSize').value = 1024;
+      document.getElementById('calcReplFactor').value = 3;
+      document.getElementById('calcRetention').value = 7;
+      document.getElementById('calcConsumerGroups').value = 5;
+      document.getElementById('calcBrokerThroughput').value = 150;
+      break;
+    case 'faang':
+      document.getElementById('calcMsgRate').value = 2000000;
+      document.getElementById('calcMsgSize').value = 500;
+      document.getElementById('calcReplFactor').value = 3;
+      document.getElementById('calcRetention').value = 14;
+      document.getElementById('calcConsumerGroups').value = 10;
+      document.getElementById('calcBrokerThroughput').value = 200;
+      break;
+  }
+  recalcCapacity();
+}
+
+recalcCapacity();
+
+// ============ PLAYGROUND: KEY DISTRIBUTION ============
+function murmur2Hash(str) {
+  let h = 0x9747b28c;
+  for (let i = 0; i < str.length; i++) {
+    const k = str.charCodeAt(i);
+    h = Math.imul(h ^ k, 0x5bd1e995);
+    h ^= h >>> 13;
+  }
+  return Math.abs(h);
+}
+
+function runKeyDistribution() {
+  const strategy = document.getElementById('keyStrategy').value;
+  const partitionCount = parseInt(document.getElementById('keyPartitions').value);
+  const msgCount = parseInt(document.getElementById('keyMsgCount').value);
+  document.getElementById('keyMsgCountVal').textContent = msgCount.toLocaleString();
+
+  document.getElementById('customKeyGroup').style.display = strategy === 'custom' ? 'block' : 'none';
+
+  const distribution = new Array(partitionCount).fill(0);
+  let keys = [];
+
+  switch (strategy) {
+    case 'userid':
+      for (let i = 0; i < msgCount; i++) {
+        const key = `user-${Math.floor(Math.random() * 100000)}`;
+        distribution[murmur2Hash(key) % partitionCount]++;
+      }
+      break;
+    case 'country':
+      const countries = ['US','US','US','US','US','US','UK','UK','UK','DE','DE','FR','JP','IN','IN','IN','BR','CA','AU','KR'];
+      for (let i = 0; i < msgCount; i++) {
+        const key = countries[Math.floor(Math.random() * countries.length)];
+        distribution[murmur2Hash(key) % partitionCount]++;
+      }
+      break;
+    case 'timestamp':
+      for (let i = 0; i < msgCount; i++) {
+        distribution[i % partitionCount]++;
+      }
+      break;
+    case 'custom':
+      const customInput = document.getElementById('customKeys').value || 'key-1, key-2, key-3';
+      keys = customInput.split(',').map(k => k.trim()).filter(k => k);
+      if (keys.length === 0) keys = ['default'];
+      for (let i = 0; i < msgCount; i++) {
+        const key = keys[Math.floor(Math.random() * keys.length)];
+        distribution[murmur2Hash(key) % partitionCount]++;
+      }
+      break;
+  }
+
+  renderKeyDistribution(distribution, partitionCount, msgCount);
+}
+
+function renderKeyDistribution(distribution, partitionCount, msgCount) {
+  const area = document.getElementById('keyDistViz');
+  const maxCount = Math.max(...distribution);
+  const ideal = msgCount / partitionCount;
+  const skewRatio = maxCount / ideal;
+
+  let html = '';
+  distribution.forEach((count, i) => {
+    const pct = (count / maxCount) * 100;
+    const deviation = ((count - ideal) / ideal * 100).toFixed(1);
+    const isHot = count > ideal * 1.5;
+    const isCold = count < ideal * 0.5;
+    const barColor = isHot ? 'var(--danger)' : isCold ? 'var(--info)' : 'var(--kafka-orange)';
+
+    html += `<div class="pg-partition-lane">
+      <span class="pg-partition-label">P${i}</span>
+      <div class="pg-partition-bar">
+        <div class="pg-partition-fill" style="width:${pct}%; background:${barColor};">
+          ${count.toLocaleString()}
+        </div>
+      </div>
+      <span class="pg-lag-indicator" style="color:${isHot ? 'var(--danger)' : isCold ? 'var(--info)' : 'var(--text-muted)'};">
+        ${deviation > 0 ? '+' : ''}${deviation}%
+      </span>
+    </div>`;
+  });
+
+  // Summary row
+  html += `<div style="margin-top:16px; display:flex; gap:16px; flex-wrap:wrap; font-size:0.8rem;">
+    <span><strong>Ideal:</strong> ${Math.round(ideal).toLocaleString()} msgs/partition</span>
+    <span><strong>Skew ratio:</strong> <span style="color:${skewRatio > 2 ? 'var(--danger)' : skewRatio > 1.3 ? 'var(--warning)' : 'var(--success)'}; font-weight:700;">${skewRatio.toFixed(2)}x</span></span>
+    <span><strong>Verdict:</strong> ${skewRatio > 2 ? '<span style="color:var(--danger); font-weight:700;">Hotspot detected!</span>' : skewRatio > 1.3 ? '<span style="color:var(--warning); font-weight:700;">Slight skew</span>' : '<span style="color:var(--success); font-weight:700;">Well distributed</span>'}</span>
+  </div>`;
+
+  area.innerHTML = html;
+
+  const narr = document.getElementById('keyNarration');
+  if (skewRatio > 2) {
+    narr.textContent = `Hotspot detected (${skewRatio.toFixed(1)}x skew). Some partitions are getting much more traffic than others. Consider using a composite key or more partitions to distribute load.`;
+  } else if (skewRatio > 1.3) {
+    narr.textContent = `Slight skew (${skewRatio.toFixed(1)}x). Distribution is acceptable but not perfectly uniform. Monitor the hot partitions.`;
+  } else {
+    narr.textContent = `Excellent distribution (${skewRatio.toFixed(2)}x skew). Messages are spread evenly across partitions. This key strategy works well for ${partitionCount} partitions.`;
+  }
+}
+
+runKeyDistribution();
+</script>
+</body>
+</html>

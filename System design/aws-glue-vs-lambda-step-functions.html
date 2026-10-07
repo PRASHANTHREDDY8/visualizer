@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS Glue vs Lambda + Step Functions — Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f4f6f9;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --accent-glue: #8b5cf6;
+      --accent-lambda: #f59e0b;
+      --accent-step: #06b6d4;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-blue: #3b82f6;
+      --shadow: 0 4px 24px rgba(0,0,0,0.06);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.1);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+
+    .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      height: 56px;
+      overflow-x: auto;
+    }
+
+    .nav-brand {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--accent-glue);
+      white-space: nowrap;
+      letter-spacing: -0.02em;
+    }
+
+    .nav a {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      white-space: nowrap;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .nav a:hover { color: var(--text); background: var(--surface-alt); }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 3rem 1rem 2rem;
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--accent-glue), var(--accent-step));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      margin-top: 0.75rem;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    section {
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    /* Architecture Diagram */
+    .arch-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    .arch-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .arch-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+
+    .arch-card.glue::before { background: var(--accent-glue); }
+    .arch-card.lambda-sf::before { background: linear-gradient(90deg, var(--accent-lambda), var(--accent-step)); }
+
+    .arch-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .arch-svg {
+      width: 100%;
+      height: 320px;
+    }
+
+    /* Component Cards */
+    .components-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    .component-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .component-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .component-card .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .badge-glue { background: #ede9fe; color: var(--accent-glue); }
+    .badge-lambda { background: #fef3c7; color: #d97706; }
+    .badge-step { background: #cffafe; color: #0891b2; }
+
+    .component-card h4 { font-size: 1rem; margin-bottom: 0.5rem; }
+    .component-card p { font-size: 0.85rem; color: var(--text-muted); }
+
+    .component-card .tech {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--accent-blue);
+      font-weight: 500;
+    }
+
+    /* Sequence Diagram */
+    .sequence-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .seq-btn {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .seq-btn:hover { background: var(--surface-alt); }
+    .seq-btn.active { background: var(--accent-glue); color: white; border-color: var(--accent-glue); }
+
+    .flow-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-left: auto;
+    }
+
+    .flow-tab {
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      background: var(--surface-alt);
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .flow-tab.active { border-color: var(--accent-glue); color: var(--accent-glue); background: #f5f3ff; }
+
+    .sequence-area {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      min-height: 400px;
+      overflow-x: auto;
+    }
+
+    .seq-narration {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      min-height: 3rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .seq-narration .step-num {
+      font-weight: 700;
+      color: var(--accent-glue);
+      margin-right: 0.75rem;
+      font-size: 1rem;
+    }
+
+    /* Comparison Table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 2px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr:hover td { background: var(--surface-alt); }
+
+    .comparison-table .highlight td {
+      background: #f5f3ff;
+      border-left: 3px solid var(--accent-glue);
+    }
+
+    .decision-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .decision-card {
+      padding: 1.25rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .decision-card h5 {
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .decision-card ul {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding-left: 1.2rem;
+    }
+
+    .decision-card ul li { margin-bottom: 0.3rem; }
+
+    /* Pitfalls */
+    .pitfall {
+      background: var(--surface);
+      border: 1px solid #fde68a;
+      border-left: 4px solid var(--accent-lambda);
+      border-radius: var(--radius-sm);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .pitfall-header {
+      padding: 1rem 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .pitfall-header::after {
+      content: '+';
+      margin-left: auto;
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+
+    .pitfall.open .pitfall-header::after { content: '-'; }
+
+    .pitfall-body {
+      display: none;
+      padding: 0 1.25rem 1.25rem;
+      font-size: 0.85rem;
+    }
+
+    .pitfall.open .pitfall-body { display: block; }
+
+    .pitfall-body .sub-section {
+      margin-bottom: 0.75rem;
+    }
+
+    .pitfall-body .sub-section strong {
+      display: block;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+    }
+
+    .pitfall-body .sub-section strong.mistake { color: var(--accent-red); }
+    .pitfall-body .sub-section strong.why { color: var(--accent-lambda); }
+    .pitfall-body .sub-section strong.consequence { color: #7c3aed; }
+    .pitfall-body .sub-section strong.fix { color: var(--accent-green); }
+
+    /* Best Practices */
+    .practices-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .practice-group {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent-green);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+    }
+
+    .practice-group h4 {
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+      color: var(--accent-green);
+    }
+
+    .practice-group ul {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      padding-left: 1.2rem;
+    }
+
+    .practice-group ul li { margin-bottom: 0.5rem; }
+
+    /* Scaling */
+    .scaling-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .scaling-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .scaling-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.83rem;
+    }
+
+    .metric:last-child { border-bottom: none; }
+    .metric .label { color: var(--text-muted); }
+    .metric .value { font-weight: 600; }
+
+    .pill {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .pill-green { background: #d1fae5; color: #065f46; }
+    .pill-yellow { background: #fef3c7; color: #92400e; }
+    .pill-red { background: #fee2e2; color: #991b1b; }
+
+    /* Use Cases */
+    .usecases-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .usecase-card {
+      padding: 1.25rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    .usecase-card h5 { font-size: 0.88rem; margin-bottom: 0.5rem; }
+    .usecase-card p { font-size: 0.8rem; color: var(--text-muted); }
+
+    .anti-use {
+      border-color: #fecaca;
+      background: #fff5f5;
+    }
+
+    .anti-use h5 { color: var(--accent-red); }
+
+    @media (max-width: 1024px) {
+      .arch-container, .components-grid, .decision-cards, .practices-grid, .scaling-grid, .usecases-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 1.8rem; }
+      .container { padding: 1rem; }
+      .nav-inner { gap: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <span class="nav-brand">AWS Data Processing</span>
+      <a href="#architecture">Architecture</a>
+      <a href="#components">Components</a>
+      <a href="#sequence">Request Flow</a>
+      <a href="#comparison">Comparison</a>
+      <a href="#usecases">Use Cases</a>
+      <a href="#pitfalls">Pitfalls</a>
+      <a href="#practices">Best Practices</a>
+      <a href="#scaling">Scaling</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="hero">
+      <h1>AWS Glue vs Lambda + Step Functions</h1>
+      <p>Understanding when to use AWS Glue Jobs alone versus orchestrating Lambda functions with Step Functions for ETL and data processing workflows</p>
+    </div>
+
+    <!-- Section 1: Architecture -->
+    <section id="architecture">
+      <h2 class="section-title">Architecture Diagrams</h2>
+      <div class="arch-container">
+        <div class="arch-card glue">
+          <h3><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="3" fill="#8b5cf6" opacity="0.2"/><path d="M6 9h6M9 6v6" stroke="#8b5cf6" stroke-width="1.5" stroke-linecap="round"/></svg> AWS Glue Job (Standalone)</h3>
+          <svg class="arch-svg" viewBox="0 0 500 300" id="glue-arch">
+            <!-- S3 Source -->
+            <rect x="20" y="120" width="90" height="60" rx="8" fill="#f0fdf4" stroke="#10b981" stroke-width="1.5"/>
+            <text x="65" y="147" text-anchor="middle" font-size="10" font-weight="600" fill="#065f46">S3 Source</text>
+            <text x="65" y="163" text-anchor="middle" font-size="8" fill="#64748b">Raw Data</text>
+
+            <!-- Arrow -->
+            <path d="M115 150 L155 150" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+
+            <!-- Glue Crawler -->
+            <rect x="160" y="60" width="100" height="50" rx="8" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.5"/>
+            <text x="210" y="82" text-anchor="middle" font-size="9" font-weight="600" fill="#5b21b6">Glue Crawler</text>
+            <text x="210" y="96" text-anchor="middle" font-size="8" fill="#64748b">Schema Discovery</text>
+
+            <!-- Data Catalog -->
+            <rect x="160" y="190" width="100" height="50" rx="8" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.5"/>
+            <text x="210" y="212" text-anchor="middle" font-size="9" font-weight="600" fill="#5b21b6">Data Catalog</text>
+            <text x="210" y="226" text-anchor="middle" font-size="8" fill="#64748b">Metadata Store</text>
+
+            <!-- Arrows to catalog -->
+            <path d="M210 110 L210 185" stroke="#a78bfa" stroke-width="1" stroke-dasharray="4,3"/>
+
+            <!-- Glue ETL Job -->
+            <rect x="165" y="120" width="90" height="60" rx="8" fill="#8b5cf6" stroke="#6d28d9" stroke-width="1.5"/>
+            <text x="210" y="147" text-anchor="middle" font-size="10" font-weight="700" fill="white">Glue ETL</text>
+            <text x="210" y="163" text-anchor="middle" font-size="8" fill="#e9d5ff">Spark/Python</text>
+
+            <!-- Arrow -->
+            <path d="M260 150 L305 150" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+
+            <!-- Transform -->
+            <rect x="310" y="120" width="80" height="60" rx="8" fill="#faf5ff" stroke="#a78bfa" stroke-width="1.5"/>
+            <text x="350" y="145" text-anchor="middle" font-size="9" font-weight="600" fill="#6d28d9">Transform</text>
+            <text x="350" y="160" text-anchor="middle" font-size="8" fill="#64748b">Filter, Join</text>
+            <text x="350" y="173" text-anchor="middle" font-size="8" fill="#64748b">Aggregate</text>
+
+            <!-- Arrow -->
+            <path d="M395 150 L430 150" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+
+            <!-- S3 Target / Redshift -->
+            <rect x="435" y="100" width="55" height="40" rx="8" fill="#f0fdf4" stroke="#10b981" stroke-width="1.5"/>
+            <text x="462" y="123" text-anchor="middle" font-size="9" font-weight="600" fill="#065f46">S3</text>
+
+            <rect x="435" y="155" width="55" height="40" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="462" y="178" text-anchor="middle" font-size="9" font-weight="600" fill="#1d4ed8">Redshift</text>
+
+            <defs>
+              <marker id="arrow-gray" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" fill="#94a3b8"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+
+        <div class="arch-card lambda-sf">
+          <h3><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" fill="#06b6d4" opacity="0.2"/><path d="M6 6l3 3-3 3M10 6l3 3-3 3" stroke="#06b6d4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Lambda + Step Functions</h3>
+          <svg class="arch-svg" viewBox="0 0 500 300" id="lambda-arch">
+            <!-- Trigger -->
+            <rect x="15" y="125" width="70" height="50" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+            <text x="50" y="148" text-anchor="middle" font-size="9" font-weight="600" fill="#92400e">Trigger</text>
+            <text x="50" y="162" text-anchor="middle" font-size="8" fill="#64748b">S3/Event</text>
+
+            <!-- Arrow -->
+            <path d="M90 150 L120 150" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow-gray2)"/>
+
+            <!-- Step Functions -->
+            <rect x="125" y="80" width="120" height="140" rx="10" fill="#ecfeff" stroke="#06b6d4" stroke-width="2"/>
+            <text x="185" y="100" text-anchor="middle" font-size="9" font-weight="700" fill="#0e7490">Step Functions</text>
+
+            <!-- Lambda 1 -->
+            <rect x="140" y="110" width="90" height="30" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+            <text x="185" y="129" text-anchor="middle" font-size="8" font-weight="600" fill="#92400e">Lambda: Validate</text>
+
+            <!-- Lambda 2 -->
+            <rect x="140" y="148" width="90" height="30" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+            <text x="185" y="167" text-anchor="middle" font-size="8" font-weight="600" fill="#92400e">Lambda: Transform</text>
+
+            <!-- Lambda 3 -->
+            <rect x="140" y="186" width="90" height="30" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+            <text x="185" y="205" text-anchor="middle" font-size="8" font-weight="600" fill="#92400e">Lambda: Load</text>
+
+            <!-- Arrows between lambdas -->
+            <path d="M185 140 L185 148" stroke="#06b6d4" stroke-width="1"/>
+            <path d="M185 178 L185 186" stroke="#06b6d4" stroke-width="1"/>
+
+            <!-- Arrow out -->
+            <path d="M250 150 L285 150" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow-gray2)"/>
+
+            <!-- Error Handler -->
+            <rect x="280" y="60" width="80" height="35" rx="6" fill="#fee2e2" stroke="#ef4444" stroke-width="1"/>
+            <text x="320" y="78" text-anchor="middle" font-size="8" font-weight="600" fill="#991b1b">Error Handler</text>
+            <text x="320" y="90" text-anchor="middle" font-size="7" fill="#64748b">Retry / DLQ</text>
+
+            <path d="M245 100 L280 80" stroke="#ef4444" stroke-width="1" stroke-dasharray="3,2"/>
+
+            <!-- DynamoDB -->
+            <rect x="290" y="115" width="75" height="35" rx="6" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="327" y="136" text-anchor="middle" font-size="8" font-weight="600" fill="#1d4ed8">DynamoDB</text>
+
+            <!-- S3 Output -->
+            <rect x="290" y="160" width="75" height="35" rx="6" fill="#f0fdf4" stroke="#10b981" stroke-width="1.5"/>
+            <text x="327" y="181" text-anchor="middle" font-size="8" font-weight="600" fill="#065f46">S3 Output</text>
+
+            <!-- SNS -->
+            <rect x="380" y="135" width="70" height="35" rx="6" fill="#fdf4ff" stroke="#a855f7" stroke-width="1.5"/>
+            <text x="415" y="156" text-anchor="middle" font-size="8" font-weight="600" fill="#7e22ce">SNS Notify</text>
+
+            <path d="M365 175 L380 160" stroke="#cbd5e1" stroke-width="1" marker-end="url(#arrow-gray2)"/>
+
+            <!-- CloudWatch -->
+            <rect x="380" y="185" width="70" height="35" rx="6" fill="#f5f5f4" stroke="#78716c" stroke-width="1.5"/>
+            <text x="415" y="206" text-anchor="middle" font-size="8" font-weight="600" fill="#44403c">CloudWatch</text>
+
+            <defs>
+              <marker id="arrow-gray2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" fill="#94a3b8"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Components -->
+    <section id="components">
+      <h2 class="section-title">Component Breakdown</h2>
+      <div class="components-grid">
+        <div class="component-card">
+          <span class="badge badge-glue">AWS Glue</span>
+          <h4>Glue ETL Job</h4>
+          <p>Managed Apache Spark environment for large-scale data transformations. Handles schema evolution, data partitioning, and bookmark-based incremental processing.</p>
+          <div class="tech">Spark / PySpark / Scala | DPU-based pricing</div>
+        </div>
+        <div class="component-card">
+          <span class="badge badge-glue">AWS Glue</span>
+          <h4>Data Catalog</h4>
+          <p>Centralized metadata repository compatible with Hive Metastore. Auto-discovers schemas via crawlers and serves as a shared schema registry across services.</p>
+          <div class="tech">Hive-compatible | Versioned schemas</div>
+        </div>
+        <div class="component-card">
+          <span class="badge badge-glue">AWS Glue</span>
+          <h4>Glue Workflow</h4>
+          <p>Built-in orchestration for chaining crawlers and jobs. Limited branching logic but sufficient for linear ETL pipelines with dependencies.</p>
+          <div class="tech">Trigger-based | Cron or event-driven</div>
+        </div>
+        <div class="component-card">
+          <span class="badge badge-lambda">Lambda</span>
+          <h4>Lambda Function</h4>
+          <p>Serverless compute for small, focused tasks. Each function handles one step: validate, transform, enrich, or load. Max 15-min execution, 10GB memory.</p>
+          <div class="tech">Any runtime | Per-invocation pricing</div>
+        </div>
+        <div class="component-card">
+          <span class="badge badge-step">Step Functions</span>
+          <h4>State Machine</h4>
+          <p>Visual workflow orchestrator with built-in retries, parallel execution, error handling, and conditional branching. Maintains execution state durably.</p>
+          <div class="tech">ASL (JSON) | Standard or Express mode</div>
+        </div>
+        <div class="component-card">
+          <span class="badge badge-step">Step Functions</span>
+          <h4>Error Handling</h4>
+          <p>Catch/retry policies per state, dead-letter queues, and fallback paths. Provides full execution history for debugging failed workflows.</p>
+          <div class="tech">Exponential backoff | Max attempts config</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Sequence Diagram -->
+    <section id="sequence">
+      <h2 class="section-title">Request Flow</h2>
+      <div class="sequence-controls">
+        <button class="seq-btn" id="seq-play">Play</button>
+        <button class="seq-btn" id="seq-step">Step</button>
+        <button class="seq-btn" id="seq-reset">Reset</button>
+        <input type="range" id="seq-speed" min="1" max="5" value="3" style="width:100px;">
+        <span style="font-size:0.78rem;color:var(--text-muted);">Speed</span>
+        <div class="flow-tabs">
+          <button class="flow-tab active" data-flow="glue">Glue Flow</button>
+          <button class="flow-tab" data-flow="lambda">Lambda + SF Flow</button>
+        </div>
+      </div>
+      <div class="sequence-area">
+        <svg id="sequence-svg" width="100%" height="350" viewBox="0 0 800 350"></svg>
+      </div>
+      <div class="seq-narration" id="seq-narration">
+        <span class="step-num" id="narr-step"></span>
+        <span id="narr-text">Press Play or Step to begin the animation.</span>
+      </div>
+    </section>
+
+    <!-- Section 4: Comparison -->
+    <section id="comparison">
+      <h2 class="section-title">Comparison with Alternatives</h2>
+      <div class="card" style="overflow-x:auto;">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Aspect</th>
+              <th>AWS Glue Job</th>
+              <th>Lambda + Step Functions</th>
+              <th>EMR (Managed Spark)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Best for</strong></td>
+              <td>Batch ETL, large datasets (GB-TB), schema-heavy</td>
+              <td>Event-driven, lightweight transforms, complex orchestration</td>
+              <td>Custom Spark clusters, ML pipelines, long-running</td>
+            </tr>
+            <tr>
+              <td><strong>Data Volume</strong></td>
+              <td><span class="pill pill-green">GB to TB</span></td>
+              <td><span class="pill pill-yellow">KB to GB</span></td>
+              <td><span class="pill pill-green">TB+</span></td>
+            </tr>
+            <tr>
+              <td><strong>Cold Start</strong></td>
+              <td>~1-10 min (Spark cluster spin-up)</td>
+              <td>~100ms-1s (Lambda); near-zero with provisioned</td>
+              <td>~5-15 min (cluster provisioning)</td>
+            </tr>
+            <tr>
+              <td><strong>Max Duration</strong></td>
+              <td>48 hours</td>
+              <td>15 min/function; 1 year workflow</td>
+              <td>Unlimited (cluster stays up)</td>
+            </tr>
+            <tr>
+              <td><strong>Cost Model</strong></td>
+              <td>Per DPU-hour (~$0.44/DPU-hr)</td>
+              <td>Per invocation + duration (very cheap for small jobs)</td>
+              <td>Per EC2 instance-hour</td>
+            </tr>
+            <tr>
+              <td><strong>Orchestration</strong></td>
+              <td>Glue Workflows (basic) or external</td>
+              <td>Built-in via Step Functions (powerful)</td>
+              <td>External (Airflow, Step Functions)</td>
+            </tr>
+            <tr>
+              <td><strong>Error Handling</strong></td>
+              <td>Job-level retry; manual checkpoint</td>
+              <td>Per-step retry, catch, fallback (granular)</td>
+              <td>Application-level</td>
+            </tr>
+            <tr>
+              <td><strong>Schema Management</strong></td>
+              <td>Data Catalog (built-in, excellent)</td>
+              <td>Manual / Glue Catalog as add-on</td>
+              <td>Hive Metastore / Glue Catalog</td>
+            </tr>
+            <tr>
+              <td><strong>Latency Tolerance</strong></td>
+              <td>Minutes to hours (batch)</td>
+              <td>Seconds to minutes (near real-time)</td>
+              <td>Minutes to hours</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="decision-cards">
+        <div class="decision-card" style="border-color:#8b5cf6;">
+          <h5><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="3" fill="#8b5cf6" opacity="0.2"/></svg> Choose Glue when...</h5>
+          <ul>
+            <li>Processing large datasets (100s of GBs+)</li>
+            <li>Need schema discovery & evolution</li>
+            <li>Complex joins/aggregations across datasets</li>
+            <li>Batch ETL on a schedule (hourly/daily)</li>
+            <li>Team already uses Spark/PySpark</li>
+          </ul>
+        </div>
+        <div class="decision-card" style="border-color:#06b6d4;">
+          <h5><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="#06b6d4" opacity="0.2"/></svg> Choose Lambda + SF when...</h5>
+          <ul>
+            <li>Event-driven processing (file upload triggers)</li>
+            <li>Complex workflow logic (branching, parallelism)</li>
+            <li>Small to medium data per invocation</li>
+            <li>Need sub-second cold start</li>
+            <li>Tight budget with sporadic workloads</li>
+          </ul>
+        </div>
+        <div class="decision-card" style="border-color:#3b82f6;">
+          <h5><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" fill="#3b82f6" opacity="0.2"/></svg> Choose EMR when...</h5>
+          <ul>
+            <li>Need full Spark ecosystem control</li>
+            <li>Running ML training pipelines</li>
+            <li>Custom libraries / native dependencies</li>
+            <li>Already managing Hadoop/Spark clusters</li>
+            <li>Processing petabyte-scale data</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Use Cases & Pitfalls -->
+    <section id="usecases">
+      <h2 class="section-title">Use Cases</h2>
+      <div class="usecases-grid">
+        <div class="usecase-card">
+          <h5>Daily Data Warehouse Load (Glue)</h5>
+          <p>Nightly ingestion from 50+ S3 data sources into Redshift. Glue crawlers detect schema changes, DynamicFrames handle nested JSON, bookmarks track incremental progress.</p>
+        </div>
+        <div class="usecase-card">
+          <h5>Real-time File Processing (Lambda + SF)</h5>
+          <p>S3 upload triggers validation, thumbnail generation, metadata extraction, and indexing. Step Functions orchestrate the parallel fan-out and aggregate results.</p>
+        </div>
+        <div class="usecase-card">
+          <h5>CDC Pipeline (Lambda + SF)</h5>
+          <p>DynamoDB streams trigger Lambda to capture changes, transform, and replicate to Elasticsearch. Step Functions handle dead-letter retry and alerting on persistent failures.</p>
+        </div>
+        <div class="usecase-card">
+          <h5>Data Lake Compaction (Glue)</h5>
+          <p>Consolidate thousands of small Parquet files into optimally-sized partitions. Glue's Spark engine handles the shuffle efficiently with auto-scaling DPUs.</p>
+        </div>
+        <div class="usecase-card">
+          <h5>Multi-step Order Processing (Lambda + SF)</h5>
+          <p>Validate payment, check inventory, reserve stock, send confirmation. Step Functions provide exactly-once semantics with compensation logic for rollbacks.</p>
+        </div>
+        <div class="usecase-card anti-use">
+          <h5>Anti-Pattern: Glue for Small Events</h5>
+          <p>Don't use Glue for processing individual API events or small files. The 1-10 min cold start and DPU minimum make it 100x more expensive than Lambda for sub-MB payloads.</p>
+        </div>
+        <div class="usecase-card anti-use">
+          <h5>Anti-Pattern: Lambda for TB-Scale Joins</h5>
+          <p>Lambda's 10GB memory and 15-min timeout can't handle distributed joins across terabytes. You'd need thousands of functions with manual shuffle logic—use Spark instead.</p>
+        </div>
+        <div class="usecase-card anti-use">
+          <h5>Anti-Pattern: Step Functions for Simple Cron</h5>
+          <p>If your workflow is "run one thing on a schedule" with no branching or retries, EventBridge + Lambda is simpler and cheaper than Step Functions overhead.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="pitfalls">
+      <h2 class="section-title">Common Pitfalls</h2>
+
+      <div class="pitfall" onclick="this.classList.toggle('open')">
+        <div class="pitfall-header">Using Glue for real-time requirements</div>
+        <div class="pitfall-body">
+          <div class="sub-section"><strong class="mistake">The mistake</strong>Deploying Glue ETL jobs expecting sub-minute latency for event-driven processing.</div>
+          <div class="sub-section"><strong class="why">Why it happens</strong>Glue handles the full ETL lifecycle, so teams assume it can also do near-real-time. The marketing says "serverless" which implies instant.</div>
+          <div class="sub-section"><strong class="consequence">The consequence</strong>1-10 minute cold starts per job run, with minimum billing of 1 DPU (10 min). A job processing 1KB costs the same as one processing 1GB.</div>
+          <div class="sub-section"><strong class="fix">The fix</strong>Use Lambda for event-driven lightweight transforms. Reserve Glue for scheduled batch jobs or micro-batching at 5+ minute intervals.</div>
+        </div>
+      </div>
+
+      <div class="pitfall" onclick="this.classList.toggle('open')">
+        <div class="pitfall-header">Lambda payload size limits breaking pipelines</div>
+        <div class="pitfall-body">
+          <div class="sub-section"><strong class="mistake">The mistake</strong>Passing large datasets between Lambda functions via Step Functions state (256KB limit) or synchronous invocation payload (6MB).</div>
+          <div class="sub-section"><strong class="why">Why it happens</strong>Works fine in dev with small test data, then fails in production when real data exceeds limits.</div>
+          <div class="sub-section"><strong class="consequence">The consequence</strong>StateTooLarge errors crash the workflow, data is lost, and there's no built-in recovery for partial progress.</div>
+          <div class="sub-section"><strong class="fix">The fix</strong>Pass S3 pointers (bucket + key) between steps, not data. Each Lambda reads from and writes to S3. Use Step Functions only for orchestration metadata.</div>
+        </div>
+      </div>
+
+      <div class="pitfall" onclick="this.classList.toggle('open')">
+        <div class="pitfall-header">Not using Glue job bookmarks for incremental loads</div>
+        <div class="pitfall-body">
+          <div class="sub-section"><strong class="mistake">The mistake</strong>Reprocessing the entire dataset on every Glue job run instead of using bookmarks to track what's already been processed.</div>
+          <div class="sub-section"><strong class="why">Why it happens</strong>Bookmarks require specific source formats and aren't enabled by default. Teams skip them to "keep things simple."</div>
+          <div class="sub-section"><strong class="consequence">The consequence</strong>Linear cost growth as data accumulates. A job processing 1TB daily becomes 30TB monthly because it rescans everything.</div>
+          <div class="sub-section"><strong class="fix">The fix</strong>Enable job bookmarks, partition source data by date, and use pushdown predicates to read only new partitions.</div>
+        </div>
+      </div>
+
+      <div class="pitfall" onclick="this.classList.toggle('open')">
+        <div class="pitfall-header">Step Functions Standard vs Express mode confusion</div>
+        <div class="pitfall-body">
+          <div class="sub-section"><strong class="mistake">The mistake</strong>Using Standard workflows (priced per state transition) for high-volume, short-duration tasks that should use Express workflows.</div>
+          <div class="sub-section"><strong class="why">Why it happens</strong>Standard is the default. Express requires async invocation patterns that are less intuitive.</div>
+          <div class="sub-section"><strong class="consequence">The consequence</strong>10,000 events/hour at 5 states each = 50,000 transitions = $1.25/hour on Standard. Express would cost ~$0.05/hour for the same workload.</div>
+          <div class="sub-section"><strong class="fix">The fix</strong>Use Express for high-volume, short-lived workflows (&lt;5 min). Reserve Standard for long-running workflows needing exactly-once execution history.</div>
+        </div>
+      </div>
+
+      <div class="pitfall" onclick="this.classList.toggle('open')">
+        <div class="pitfall-header">Over-provisioning Glue DPUs "just in case"</div>
+        <div class="pitfall-body">
+          <div class="sub-section"><strong class="mistake">The mistake</strong>Setting max DPUs to 100 when the job only needs 10, or not enabling auto-scaling.</div>
+          <div class="sub-section"><strong class="why">Why it happens</strong>Fear of OOM errors or job failures during peak loads. "More DPUs = safer" mentality.</div>
+          <div class="sub-section"><strong class="consequence">The consequence</strong>Paying $44/hour for idle Spark executors. A 10-DPU job costing $4.40/hr ballooning to $44/hr with no performance gain.</div>
+          <div class="sub-section"><strong class="fix">The fix</strong>Enable Glue auto-scaling (Glue 3.0+). Start with 2-5 DPUs, monitor with CloudWatch, and only increase after profiling bottlenecks.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: Best Practices -->
+    <section id="practices">
+      <h2 class="section-title">Best Practices</h2>
+      <div class="practices-grid">
+        <div class="practice-group">
+          <h4>Design Phase</h4>
+          <ul>
+            <li>Map data volume and velocity first — this determines Glue vs Lambda before anything else</li>
+            <li>Define latency SLA upfront: seconds = Lambda, minutes = either, hours = Glue</li>
+            <li>Estimate cost at 10x scale early — Glue DPU costs compound faster than Lambda per-invocation</li>
+            <li>Design for idempotency in both approaches — duplicate processing should produce same results</li>
+          </ul>
+        </div>
+        <div class="practice-group">
+          <h4>Implementation</h4>
+          <ul>
+            <li>Glue: Use DynamicFrames over DataFrames for schema flexibility; apply resolveChoice() for type conflicts</li>
+            <li>Lambda: Keep functions focused (single responsibility); share code via Lambda Layers</li>
+            <li>Step Functions: Pass references (S3 URIs) not data; use ResultPath to preserve original input</li>
+            <li>Both: Implement dead-letter queues for failed records; never silently drop data</li>
+          </ul>
+        </div>
+        <div class="practice-group">
+          <h4>Operations</h4>
+          <ul>
+            <li>Glue: Enable continuous logging, set CloudWatch alarms on job duration and DPU utilization</li>
+            <li>Lambda: Set concurrency limits to prevent downstream overwhelm; use reserved concurrency for critical functions</li>
+            <li>Step Functions: Use execution input/output for debugging; enable X-Ray tracing for latency analysis</li>
+            <li>Both: Tag all resources with pipeline name for cost allocation and quick identification</li>
+          </ul>
+        </div>
+        <div class="practice-group">
+          <h4>Scaling</h4>
+          <ul>
+            <li>Glue: Partition output data by date/region; enables Athena queries without full scans</li>
+            <li>Lambda: Use SQS with batch window to smooth spiky loads; set maxBatchingWindow for micro-batching</li>
+            <li>Hybrid: Use Lambda for ingestion/validation, Glue for heavy transforms — combine strengths</li>
+            <li>Monitor costs weekly; set AWS Budgets alerts at 80% threshold for each service</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 7: Scaling -->
+    <section id="scaling">
+      <h2 class="section-title">Scaling & Trade-offs</h2>
+      <div class="scaling-grid">
+        <div class="scaling-card">
+          <h4>Capacity Estimation: Glue</h4>
+          <div class="metric"><span class="label">100GB daily ingest</span><span class="value">~10 DPUs x 30 min = $2.20/run</span></div>
+          <div class="metric"><span class="label">1TB daily ingest</span><span class="value">~50 DPUs x 2 hrs = $44/run</span></div>
+          <div class="metric"><span class="label">Scaling to 10x</span><span class="value">Auto-scaling DPUs (up to 300)</span></div>
+          <div class="metric"><span class="label">Monthly cost (1TB/day)</span><span class="value">~$1,320/month</span></div>
+        </div>
+        <div class="scaling-card">
+          <h4>Capacity Estimation: Lambda + SF</h4>
+          <div class="metric"><span class="label">10K events/hour</span><span class="value">~$0.20/hour (128MB, 1s avg)</span></div>
+          <div class="metric"><span class="label">100K events/hour</span><span class="value">~$2.00/hour</span></div>
+          <div class="metric"><span class="label">Scaling to 10x</span><span class="value">Automatic (concurrent limit 1000 default)</span></div>
+          <div class="metric"><span class="label">Monthly cost (100K/hr)</span><span class="value">~$1,440/month + SF transitions</span></div>
+        </div>
+        <div class="scaling-card">
+          <h4>Trade-off: Latency vs Throughput</h4>
+          <div class="metric"><span class="label">Glue</span><span class="value"><span class="pill pill-red">High latency</span> <span class="pill pill-green">High throughput</span></span></div>
+          <div class="metric"><span class="label">Lambda + SF</span><span class="value"><span class="pill pill-green">Low latency</span> <span class="pill pill-yellow">Med throughput</span></span></div>
+          <div class="metric"><span class="label">Sweet spot</span><span class="value">Glue for batch; Lambda for events</span></div>
+        </div>
+        <div class="scaling-card">
+          <h4>Failure Scenarios</h4>
+          <div class="metric"><span class="label">Glue job OOM</span><span class="value">Increase DPUs or partition input</span></div>
+          <div class="metric"><span class="label">Lambda timeout</span><span class="value">Chunk work or switch to Glue</span></div>
+          <div class="metric"><span class="label">SF state limit</span><span class="value">25K history events; use child workflows</span></div>
+          <div class="metric"><span class="label">Throttling</span><span class="value">SQS buffer (Lambda) or scheduling (Glue)</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Sequence Diagram Animation
+    const flows = {
+      glue: {
+        actors: ['S3 Source', 'Glue Crawler', 'Data Catalog', 'Glue ETL', 'S3 Target'],
+        steps: [
+          { from: 0, to: 1, label: 'Trigger crawl', desc: 'EventBridge triggers Glue Crawler on schedule to discover new data in S3 source bucket.' },
+          { from: 1, to: 2, label: 'Update schema', desc: 'Crawler detects schema (column types, partitions) and updates the Data Catalog with metadata.' },
+          { from: 2, to: 3, label: 'Schema info', desc: 'Glue ETL job starts, reads schema from Data Catalog to understand source data structure.' },
+          { from: 0, to: 3, label: 'Read data', desc: 'ETL job reads raw data from S3 using DynamicFrames with pushdown predicates for partition pruning.' },
+          { from: 3, to: 3, label: 'Transform', desc: 'Spark executors apply transformations: filter nulls, resolve schema conflicts, join with reference data, aggregate.' },
+          { from: 3, to: 4, label: 'Write results', desc: 'Transformed data written to S3 in Parquet format with Snappy compression, partitioned by date.' },
+          { from: 3, to: 2, label: 'Update bookmark', desc: 'Job bookmark updated in Data Catalog to track processing progress for next incremental run.' }
+        ]
+      },
+      lambda: {
+        actors: ['S3 Event', 'Step Functions', 'Lambda Validate', 'Lambda Transform', 'S3 Output'],
+        steps: [
+          { from: 0, to: 1, label: 'S3 notification', desc: 'New file lands in S3. EventBridge rule matches the PutObject event and starts the Step Functions execution.' },
+          { from: 1, to: 2, label: 'Invoke validate', desc: 'Step Functions invokes the validation Lambda. It checks file format, schema, and record count against expected.' },
+          { from: 2, to: 1, label: 'Validation result', desc: 'Lambda returns validation status. If failed, Step Functions routes to error handler with DLQ notification.' },
+          { from: 1, to: 3, label: 'Invoke transform', desc: 'On success, Step Functions invokes transform Lambda with S3 pointer. Function reads, transforms, writes to temp location.' },
+          { from: 3, to: 4, label: 'Write output', desc: 'Transform Lambda writes cleaned/enriched data to the output S3 bucket in the target format.' },
+          { from: 3, to: 1, label: 'Return status', desc: 'Lambda returns completion status and output location. Step Functions logs the transition and moves to next state.' },
+          { from: 1, to: 4, label: 'Finalize', desc: 'Step Functions executes final state: updates DynamoDB tracking table, sends SNS success notification.' }
+        ]
+      }
+    };
+
+    let currentFlow = 'glue';
+    let currentStep = -1;
+    let isPlaying = false;
+    let playInterval = null;
+
+    function getSpeed() {
+      return 2000 / document.getElementById('seq-speed').value;
+    }
+
+    function drawSequence(flowName) {
+      const flow = flows[flowName];
+      const svg = document.getElementById('sequence-svg');
+      const actorCount = flow.actors.length;
+      const spacing = 750 / (actorCount - 1);
+
+      let html = '';
+
+      // Draw actors and lifelines
+      flow.actors.forEach((actor, i) => {
+        const x = 40 + i * spacing;
+        html += `<rect x="${x - 40}" y="10" width="80" height="32" rx="6" fill="${i === 0 || i === actorCount - 1 ? '#f0fdf4' : flowName === 'glue' ? '#ede9fe' : '#ecfeff'}" stroke="${i === 0 || i === actorCount - 1 ? '#10b981' : flowName === 'glue' ? '#8b5cf6' : '#06b6d4'}" stroke-width="1.5"/>`;
+        html += `<text x="${x}" y="30" text-anchor="middle" font-size="9" font-weight="600" fill="#1a202c">${actor}</text>`;
+        html += `<line x1="${x}" y1="42" x2="${x}" y2="340" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,3"/>`;
+      });
+
+      // Draw steps (arrows)
+      flow.steps.forEach((step, i) => {
+        const fromX = 40 + step.from * spacing;
+        const toX = 40 + step.to * spacing;
+        const y = 75 + i * 38;
+        const isActive = i <= currentStep;
+        const isCurrent = i === currentStep;
+        const color = isActive ? (flowName === 'glue' ? '#8b5cf6' : '#06b6d4') : '#cbd5e1';
+        const opacity = isActive ? 1 : 0.4;
+
+        if (step.from === step.to) {
+          // Self-arrow
+          html += `<path d="M${fromX + 4} ${y} Q${fromX + 50} ${y - 15} ${fromX + 4} ${y - 25}" fill="none" stroke="${color}" stroke-width="1.5" opacity="${opacity}"/>`;
+          html += `<text x="${fromX + 55}" y="${y - 8}" font-size="8" fill="${color}" opacity="${opacity}">${step.label}</text>`;
+        } else {
+          const dir = toX > fromX ? 1 : -1;
+          html += `<line x1="${fromX + dir * 5}" y1="${y}" x2="${toX - dir * 5}" y2="${y}" stroke="${color}" stroke-width="1.5" opacity="${opacity}" marker-end="url(#seq-arrow-${isActive ? 'active' : 'inactive'}-${flowName})"/>`;
+          const midX = (fromX + toX) / 2;
+          html += `<text x="${midX}" y="${y - 6}" text-anchor="middle" font-size="8" fill="${color}" opacity="${opacity}" font-weight="${isCurrent ? '700' : '400'}">${step.label}</text>`;
+        }
+
+        if (isCurrent) {
+          html += `<circle cx="${toX}" cy="${y}" r="4" fill="${color}" opacity="0.6"><animate attributeName="r" values="4;7;4" dur="1s" repeatCount="indefinite"/></circle>`;
+        }
+      });
+
+      // Markers
+      const activeColor = flowName === 'glue' ? '#8b5cf6' : '#06b6d4';
+      html += `<defs>
+        <marker id="seq-arrow-active-${flowName}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,1 L7,4 L0,7 Z" fill="${activeColor}"/></marker>
+        <marker id="seq-arrow-inactive-${flowName}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,1 L7,4 L0,7 Z" fill="#cbd5e1"/></marker>
+      </defs>`;
+
+      svg.innerHTML = html;
+    }
+
+    function updateNarration() {
+      const flow = flows[currentFlow];
+      const stepEl = document.getElementById('narr-step');
+      const textEl = document.getElementById('narr-text');
+
+      if (currentStep >= 0 && currentStep < flow.steps.length) {
+        stepEl.textContent = `Step ${currentStep + 1}`;
+        textEl.textContent = flow.steps[currentStep].desc;
+      } else if (currentStep >= flow.steps.length) {
+        stepEl.textContent = 'Done';
+        textEl.textContent = 'Flow complete. Press Reset to restart or switch to another flow.';
+        stopPlaying();
+      } else {
+        stepEl.textContent = '';
+        textEl.textContent = 'Press Play or Step to begin the animation.';
+      }
+    }
+
+    function stepForward() {
+      const flow = flows[currentFlow];
+      if (currentStep < flow.steps.length - 1) {
+        currentStep++;
+        drawSequence(currentFlow);
+        updateNarration();
+      } else {
+        currentStep = flow.steps.length;
+        updateNarration();
+        stopPlaying();
+      }
+    }
+
+    function resetSequence() {
+      stopPlaying();
+      currentStep = -1;
+      drawSequence(currentFlow);
+      updateNarration();
+    }
+
+    function startPlaying() {
+      if (isPlaying) return;
+      if (currentStep >= flows[currentFlow].steps.length - 1) resetSequence();
+      isPlaying = true;
+      document.getElementById('seq-play').textContent = 'Pause';
+      document.getElementById('seq-play').classList.add('active');
+      playInterval = setInterval(stepForward, getSpeed());
+    }
+
+    function stopPlaying() {
+      isPlaying = false;
+      document.getElementById('seq-play').textContent = 'Play';
+      document.getElementById('seq-play').classList.remove('active');
+      if (playInterval) { clearInterval(playInterval); playInterval = null; }
+    }
+
+    document.getElementById('seq-play').addEventListener('click', () => {
+      if (isPlaying) stopPlaying(); else startPlaying();
+    });
+
+    document.getElementById('seq-step').addEventListener('click', () => {
+      stopPlaying();
+      stepForward();
+    });
+
+    document.getElementById('seq-reset').addEventListener('click', resetSequence);
+
+    document.getElementById('seq-speed').addEventListener('input', () => {
+      if (isPlaying) {
+        clearInterval(playInterval);
+        playInterval = setInterval(stepForward, getSpeed());
+      }
+    });
+
+    document.querySelectorAll('.flow-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.flow-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFlow = tab.dataset.flow;
+        resetSequence();
+      });
+    });
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') { e.preventDefault(); if (isPlaying) stopPlaying(); else startPlaying(); }
+      if (e.code === 'ArrowRight') { e.preventDefault(); stopPlaying(); stepForward(); }
+      if (e.code === 'KeyR') { e.preventDefault(); resetSequence(); }
+    });
+
+    // Smooth scroll for nav
+    document.querySelectorAll('.nav a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = document.querySelector(link.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    // Initialize
+    drawSequence(currentFlow);
+    updateNarration();
+  </script>
+</body>
+</html>

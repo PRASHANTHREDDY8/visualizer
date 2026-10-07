@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idempotency in Distributed Systems — Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f3f4f8;
+      --border: #e2e5eb;
+      --text: #1a1d26;
+      --text-muted: #5a6072;
+      --accent: #4f46e5;
+      --accent-light: #eef2ff;
+      --accent-dark: #3730a3;
+      --green: #059669;
+      --green-light: #ecfdf5;
+      --orange: #d97706;
+      --orange-light: #fffbeb;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --blue: #2563eb;
+      --blue-light: #eff6ff;
+      --purple: #7c3aed;
+      --purple-light: #f5f3ff;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.1);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #2563eb 100%);
+      padding: 64px 32px;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30Z' fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='1'/%3E%3C/svg%3E");
+    }
+
+    .hero h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      opacity: 0.9;
+      max-width: 680px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 20px;
+      position: relative;
+    }
+
+    .badge {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    section {
+      padding: 64px 0;
+    }
+
+    .section-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .section-subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 40px;
+    }
+
+    /* Architecture Diagram */
+    .arch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .arch-svg {
+      width: 100%;
+      height: 520px;
+    }
+
+    .arch-svg text {
+      font-family: var(--font);
+    }
+
+    .arch-node {
+      cursor: pointer;
+      transition: filter 0.2s, transform 0.2s;
+    }
+
+    .arch-node:hover {
+      filter: drop-shadow(0 4px 12px rgba(79, 70, 229, 0.3));
+    }
+
+    .arch-connection {
+      transition: opacity 0.3s, stroke-width 0.3s;
+    }
+
+    .arch-connection.dimmed {
+      opacity: 0.15;
+    }
+
+    .arch-node.dimmed rect,
+    .arch-node.dimmed ellipse,
+    .arch-node.dimmed polygon,
+    .arch-node.dimmed path {
+      opacity: 0.2;
+    }
+
+    .arch-node.dimmed text {
+      opacity: 0.2;
+    }
+
+    .tooltip {
+      position: absolute;
+      background: var(--text);
+      color: white;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      max-width: 260px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 100;
+      line-height: 1.5;
+    }
+
+    .tooltip.visible {
+      opacity: 1;
+    }
+
+    /* Component Cards */
+    .components-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 20px;
+    }
+
+    .component-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+
+    .component-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 1.3rem;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .card-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    .card-tech {
+      display: inline-block;
+      background: var(--accent-light);
+      color: var(--accent);
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+
+    .card-note {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      border-left: 3px solid var(--accent);
+    }
+
+    /* Sequence Diagram */
+    .sequence-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .sequence-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-alt);
+      flex-wrap: wrap;
+    }
+
+    .flow-selector {
+      display: flex;
+      gap: 8px;
+    }
+
+    .flow-btn {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font);
+    }
+
+    .flow-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .flow-btn:hover:not(.active) {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .playback-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .ctrl-btn {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font);
+    }
+
+    .ctrl-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .ctrl-btn.playing {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .speed-control input[type="range"] {
+      width: 80px;
+      accent-color: var(--accent);
+    }
+
+    .sequence-svg {
+      width: 100%;
+      height: 440px;
+      display: block;
+    }
+
+    .sequence-narration {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-alt);
+      font-size: 0.9rem;
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .step-badge {
+      background: var(--accent);
+      color: white;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* Strategies Section */
+    .strategies-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .strategy-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .strategy-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .strategy-num {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .strategy-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .strategy-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    .strategy-code {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+
+    .strategy-code .keyword { color: #cba6f7; }
+    .strategy-code .string { color: #a6e3a1; }
+    .strategy-code .comment { color: #6c7086; font-style: italic; }
+    .strategy-code .func { color: #89b4fa; }
+    .strategy-code .var { color: #f9e2af; }
+
+    /* Trade-offs */
+    .tradeoffs-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .tradeoff-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tradeoff-row:last-child {
+      border-bottom: none;
+    }
+
+    .tradeoff-left, .tradeoff-right {
+      font-size: 0.9rem;
+    }
+
+    .tradeoff-left {
+      font-weight: 600;
+      text-align: right;
+      padding-right: 20px;
+    }
+
+    .tradeoff-right {
+      color: var(--text-muted);
+      padding-left: 20px;
+    }
+
+    .tradeoff-vs {
+      background: var(--orange-light);
+      color: var(--orange);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    /* Failure scenarios */
+    .failure-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .failure-card {
+      padding: 20px;
+      border-radius: var(--radius-sm);
+      border: 1px solid;
+    }
+
+    .failure-card.warning {
+      background: var(--orange-light);
+      border-color: #fde68a;
+    }
+
+    .failure-card.danger {
+      background: var(--red-light);
+      border-color: #fecaca;
+    }
+
+    .failure-card.info {
+      background: var(--blue-light);
+      border-color: #bfdbfe;
+    }
+
+    .failure-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+    }
+
+    .failure-card p {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+    }
+
+    /* Interactive Demo */
+    .demo-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .demo-header {
+      padding: 20px 24px;
+      background: var(--surface-alt);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .demo-header h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .demo-header p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .demo-body {
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .demo-panel {
+      min-height: 300px;
+    }
+
+    .demo-panel h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .demo-input-group {
+      margin-bottom: 14px;
+    }
+
+    .demo-input-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+      color: var(--text-muted);
+    }
+
+    .demo-input-group input, .demo-input-group select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: var(--font);
+      font-size: 0.88rem;
+      transition: border-color 0.2s;
+    }
+
+    .demo-input-group input:focus, .demo-input-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+
+    .demo-btn {
+      padding: 10px 20px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: var(--font);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+
+    .demo-btn:hover {
+      background: var(--accent-dark);
+    }
+
+    .demo-btn:active {
+      transform: scale(0.97);
+    }
+
+    .demo-btn.secondary {
+      background: var(--surface);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    .demo-btn.secondary:hover {
+      background: var(--accent-light);
+    }
+
+    .demo-log {
+      background: #1e1e2e;
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: #cdd6f4;
+      height: 300px;
+      overflow-y: auto;
+      line-height: 1.8;
+    }
+
+    .log-entry {
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .log-time { color: #6c7086; }
+    .log-success { color: #a6e3a1; }
+    .log-warning { color: #f9e2af; }
+    .log-error { color: #f38ba8; }
+    .log-info { color: #89b4fa; }
+    .log-key { color: #cba6f7; }
+
+    @media (max-width: 900px) {
+      .hero h1 { font-size: 2rem; }
+      .demo-body { grid-template-columns: 1fr; }
+      .tradeoff-row { grid-template-columns: 1fr; gap: 8px; }
+      .tradeoff-left { text-align: left; padding-right: 0; }
+      .tradeoff-right { padding-left: 0; }
+      .tradeoff-vs { justify-self: start; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Idempotency in Distributed Systems</h1>
+  <p>Ensuring that performing the same operation multiple times produces the same result — critical for reliability when networks are unreliable</p>
+  <div class="badge-row">
+    <span class="badge">At-Most-Once Semantics</span>
+    <span class="badge">Retry Safety</span>
+    <span class="badge">Exactly-Once Delivery</span>
+  </div>
+</div>
+
+<section>
+  <div class="container">
+    <h2 class="section-title">Architecture Overview</h2>
+    <p class="section-subtitle">How idempotency fits into a typical distributed payment system</p>
+
+    <div class="arch-diagram" id="archDiagram">
+      <div class="tooltip" id="tooltip"></div>
+      <svg class="arch-svg" id="archSvg" viewBox="0 0 1100 500">
+        <!-- Layer labels -->
+        <text x="60" y="30" font-size="11" font-weight="600" fill="#5a6072" text-anchor="middle">CLIENT</text>
+        <text x="250" y="30" font-size="11" font-weight="600" fill="#5a6072" text-anchor="middle">GATEWAY</text>
+        <text x="500" y="30" font-size="11" font-weight="600" fill="#5a6072" text-anchor="middle">IDEMPOTENCY LAYER</text>
+        <text x="780" y="30" font-size="11" font-weight="600" fill="#5a6072" text-anchor="middle">SERVICES</text>
+        <text x="1000" y="30" font-size="11" font-weight="600" fill="#5a6072" text-anchor="middle">DATA</text>
+
+        <!-- Connections (drawn first, behind nodes) -->
+        <g class="connections">
+          <!-- Client to Gateway -->
+          <g class="arch-connection" data-from="client" data-to="gateway">
+            <line x1="120" y1="160" x2="185" y2="160" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+            <text x="152" y="148" font-size="9" fill="#94a3b8" text-anchor="middle">HTTPS</text>
+          </g>
+          <!-- Gateway to Idempotency -->
+          <g class="arch-connection" data-from="gateway" data-to="idempotency">
+            <line x1="315" y1="160" x2="395" y2="160" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+            <text x="355" y="148" font-size="9" fill="#94a3b8" text-anchor="middle">Check Key</text>
+          </g>
+          <!-- Idempotency to Cache -->
+          <g class="arch-connection" data-from="idempotency" data-to="cache">
+            <line x1="500" y1="220" x2="500" y2="310" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+            <text x="515" y="270" font-size="9" fill="#94a3b8">GET/SET</text>
+          </g>
+          <!-- Idempotency to Payment Service -->
+          <g class="arch-connection" data-from="idempotency" data-to="payment">
+            <line x1="605" y1="140" x2="690" y2="110" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+            <text x="648" y="115" font-size="9" fill="#94a3b8">Process</text>
+          </g>
+          <!-- Idempotency to Order Service -->
+          <g class="arch-connection" data-from="idempotency" data-to="order">
+            <line x1="605" y1="170" x2="690" y2="200" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+            <text x="648" y="194" font-size="9" fill="#94a3b8">Process</text>
+          </g>
+          <!-- Payment to DB -->
+          <g class="arch-connection" data-from="payment" data-to="db">
+            <line x1="870" y1="100" x2="940" y2="150" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+          </g>
+          <!-- Order to DB -->
+          <g class="arch-connection" data-from="order" data-to="db">
+            <line x1="870" y1="210" x2="940" y2="180" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+          </g>
+          <!-- Client retry arrow -->
+          <g class="arch-connection" data-from="client" data-to="gateway">
+            <path d="M 60 200 C 60 240, 60 240, 60 200" fill="none" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4"/>
+            <text x="60" y="238" font-size="9" fill="#d97706" text-anchor="middle">Retry</text>
+          </g>
+          <!-- Idempotency Store to Idempotency (response) -->
+          <g class="arch-connection" data-from="cache" data-to="idempotency">
+            <line x1="460" y1="330" x2="460" y2="220" stroke="#059669" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrowGreen)"/>
+            <text x="430" y="280" font-size="9" fill="#059669">Cached Response</text>
+          </g>
+        </g>
+
+        <!-- Arrow markers -->
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/>
+          </marker>
+          <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#059669"/>
+          </marker>
+        </defs>
+
+        <!-- Client -->
+        <g class="arch-node" data-id="client" data-tooltip="Mobile/Web client that generates an idempotency key (UUID v4) before making requests. Retries with the same key on timeout or failure.">
+          <rect x="15" y="120" width="105" height="80" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+          <text x="68" y="155" font-size="22" text-anchor="middle">📱</text>
+          <text x="68" y="180" font-size="12" font-weight="600" fill="#1e40af" text-anchor="middle">Client</text>
+          <text x="68" y="194" font-size="9" fill="#64748b" text-anchor="middle">+ Idempotency Key</text>
+        </g>
+
+        <!-- API Gateway -->
+        <g class="arch-node" data-id="gateway" data-tooltip="API Gateway validates the request, authenticates the caller, and forwards the idempotency key header to the idempotency middleware.">
+          <polygon points="250,110 315,140 315,180 250,210 185,180 185,140" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+          <text x="250" y="155" font-size="18" text-anchor="middle">🔀</text>
+          <text x="250" y="175" font-size="11" font-weight="600" fill="#5b21b6" text-anchor="middle">API Gateway</text>
+        </g>
+
+        <!-- Idempotency Layer -->
+        <g class="arch-node" data-id="idempotency" data-tooltip="The core middleware: checks if the idempotency key exists in the store. If yes, returns cached response. If no, acquires a lock, processes the request, stores the result, and returns.">
+          <rect x="395" y="110" width="210" height="110" rx="14" fill="#eef2ff" stroke="#4f46e5" stroke-width="2.5"/>
+          <text x="500" y="148" font-size="14" font-weight="700" fill="#3730a3" text-anchor="middle">Idempotency</text>
+          <text x="500" y="168" font-size="14" font-weight="700" fill="#3730a3" text-anchor="middle">Middleware</text>
+          <text x="500" y="195" font-size="10" fill="#6366f1" text-anchor="middle">Check → Lock → Process → Store</text>
+          <rect x="405" y="100" width="190" height="4" rx="2" fill="#4f46e5"/>
+        </g>
+
+        <!-- Idempotency Store (Redis) -->
+        <g class="arch-node" data-id="cache" data-tooltip="Redis-based idempotency store. Holds key → {status, response, created_at} with configurable TTL (typically 24-48h). Uses SETNX for distributed locking.">
+          <ellipse cx="500" cy="360" rx="80" ry="40" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+          <text x="500" y="354" font-size="15" text-anchor="middle">⚡</text>
+          <text x="500" y="374" font-size="11" font-weight="600" fill="#047857" text-anchor="middle">Redis Store</text>
+          <text x="500" y="390" font-size="9" fill="#64748b" text-anchor="middle">Keys + Locks + TTL</text>
+        </g>
+
+        <!-- Payment Service -->
+        <g class="arch-node" data-id="payment" data-tooltip="Payment processing service. Must be idempotent — charges should happen at most once per idempotency key. Uses the idempotency key as a deduplication token with the payment provider.">
+          <rect x="690" y="70" width="180" height="70" rx="12" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
+          <text x="780" y="100" font-size="16" text-anchor="middle">💳</text>
+          <text x="780" y="120" font-size="11" font-weight="600" fill="#92400e" text-anchor="middle">Payment Service</text>
+          <text x="780" y="134" font-size="9" fill="#64748b" text-anchor="middle">Charge at-most-once</text>
+        </g>
+
+        <!-- Order Service -->
+        <g class="arch-node" data-id="order" data-tooltip="Order management service. Creates orders with the idempotency key as a unique constraint, preventing duplicate order creation on retries.">
+          <rect x="690" y="175" width="180" height="70" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+          <text x="780" y="205" font-size="16" text-anchor="middle">📦</text>
+          <text x="780" y="225" font-size="11" font-weight="600" fill="#166534" text-anchor="middle">Order Service</text>
+          <text x="780" y="239" font-size="9" fill="#64748b" text-anchor="middle">Deduplicate creation</text>
+        </g>
+
+        <!-- Database -->
+        <g class="arch-node" data-id="db" data-tooltip="Primary PostgreSQL database with unique constraints on idempotency keys per table. Provides the ultimate consistency guarantee via UNIQUE indexes.">
+          <path d="M940,130 h120 v70 q-60,20 -120,0 Z" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+          <path d="M940,130 q60,20 120,0" fill="none" stroke="#dc2626" stroke-width="2"/>
+          <text x="1000" y="165" font-size="16" text-anchor="middle">🗄️</text>
+          <text x="1000" y="185" font-size="11" font-weight="600" fill="#991b1b" text-anchor="middle">PostgreSQL</text>
+        </g>
+
+        <!-- Legend -->
+        <g transform="translate(690, 320)">
+          <rect x="0" y="0" width="260" height="110" rx="8" fill="var(--surface-alt)" stroke="var(--border)"/>
+          <text x="14" y="22" font-size="10" font-weight="600" fill="#5a6072">LEGEND</text>
+          <line x1="14" y1="42" x2="44" y2="42" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="52" y="46" font-size="10" fill="#5a6072">Request flow</text>
+          <line x1="14" y1="64" x2="44" y2="64" stroke="#059669" stroke-width="1.5" stroke-dasharray="4"/>
+          <text x="52" y="68" font-size="10" fill="#5a6072">Cached response (on retry)</text>
+          <line x1="14" y1="86" x2="44" y2="86" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4"/>
+          <text x="52" y="90" font-size="10" fill="#5a6072">Client retry</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section style="background: var(--surface-alt);">
+  <div class="container">
+    <h2 class="section-title">Component Breakdown</h2>
+    <p class="section-subtitle">Each component's role in ensuring idempotent request handling</p>
+
+    <div class="components-grid">
+      <div class="component-card">
+        <div class="card-icon" style="background: var(--accent-light); color: var(--accent);">🔑</div>
+        <h3 class="card-title">Idempotency Key</h3>
+        <p class="card-desc">A client-generated unique identifier (UUID v4) sent as a header with each request. The same key on a retry signals "this is the same operation."</p>
+        <span class="card-tech">UUID v4</span>
+        <span class="card-tech">Client-Generated</span>
+        <span class="card-tech">Header: Idempotency-Key</span>
+        <div class="card-note">Keys should be generated before the first attempt and reused on all retries of that specific operation.</div>
+      </div>
+
+      <div class="component-card">
+        <div class="card-icon" style="background: var(--green-light); color: var(--green);">⚡</div>
+        <h3 class="card-title">Idempotency Store</h3>
+        <p class="card-desc">A fast key-value store that maps idempotency keys to their processing status and cached responses. Must support atomic operations for locking.</p>
+        <span class="card-tech">Redis</span>
+        <span class="card-tech">SETNX (distributed lock)</span>
+        <span class="card-tech">TTL: 24-48h</span>
+        <div class="card-note">Redis SETNX provides atomic check-and-set needed for the distributed lock. TTL prevents unbounded growth.</div>
+      </div>
+
+      <div class="component-card">
+        <div class="card-icon" style="background: var(--purple-light); color: var(--purple);">🛡️</div>
+        <h3 class="card-title">Idempotency Middleware</h3>
+        <p class="card-desc">Intercepts requests before reaching business logic. Implements the full lifecycle: lookup → lock → delegate → store → respond.</p>
+        <span class="card-tech">Middleware Pattern</span>
+        <span class="card-tech">Lock Timeout: 10s</span>
+        <span class="card-tech">Retry-After Header</span>
+        <div class="card-note">Returns 409 Conflict if a concurrent request is still processing, with a Retry-After header for the client.</div>
+      </div>
+
+      <div class="component-card">
+        <div class="card-icon" style="background: var(--orange-light); color: var(--orange);">🔒</div>
+        <h3 class="card-title">Distributed Lock</h3>
+        <p class="card-desc">Prevents race conditions when two identical requests arrive simultaneously. Only the first acquires the lock; the second waits or gets 409.</p>
+        <span class="card-tech">Redis SETNX</span>
+        <span class="card-tech">Lock TTL: 30s</span>
+        <span class="card-tech">Fencing Tokens</span>
+        <div class="card-note">Lock auto-expires to prevent deadlocks if the holder crashes mid-processing.</div>
+      </div>
+
+      <div class="component-card">
+        <div class="card-icon" style="background: var(--blue-light); color: var(--blue);">📋</div>
+        <h3 class="card-title">Request Fingerprint</h3>
+        <p class="card-desc">Hash of the request body tied to the idempotency key. Detects misuse where the same key is sent with different payloads (returns 422).</p>
+        <span class="card-tech">SHA-256</span>
+        <span class="card-tech">Body Hash</span>
+        <span class="card-tech">Mismatch → 422</span>
+        <div class="card-note">Prevents accidental key reuse across different operations — a common integration mistake.</div>
+      </div>
+
+      <div class="component-card">
+        <div class="card-icon" style="background: var(--red-light); color: var(--red);">🔄</div>
+        <h3 class="card-title">State Machine</h3>
+        <p class="card-desc">Each idempotency record transitions through states: STARTED → PROCESSING → COMPLETED/FAILED. Enables proper handling at each stage.</p>
+        <span class="card-tech">STARTED</span>
+        <span class="card-tech">PROCESSING</span>
+        <span class="card-tech">COMPLETED</span>
+        <span class="card-tech">FAILED</span>
+        <div class="card-note">FAILED state allows retries — only COMPLETED responses are cached and returned to clients.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 class="section-title">Request Flow</h2>
+    <p class="section-subtitle">Watch how requests flow through the idempotency layer in different scenarios</p>
+
+    <div class="sequence-container">
+      <div class="sequence-controls">
+        <div class="flow-selector">
+          <button class="flow-btn active" data-flow="first">First Request</button>
+          <button class="flow-btn" data-flow="retry">Retry (Cache Hit)</button>
+          <button class="flow-btn" data-flow="concurrent">Concurrent Duplicate</button>
+        </div>
+        <div class="playback-controls">
+          <button class="ctrl-btn" id="prevBtn" title="Previous step">◀</button>
+          <button class="ctrl-btn" id="playBtn" title="Play/Pause">▶</button>
+          <button class="ctrl-btn" id="nextBtn" title="Next step">▶</button>
+          <div class="speed-control">
+            <span>Speed:</span>
+            <input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="1">
+            <span id="speedLabel">1x</span>
+          </div>
+        </div>
+      </div>
+
+      <svg class="sequence-svg" id="sequenceSvg" viewBox="0 0 1000 400">
+        <!-- Will be drawn by JS -->
+      </svg>
+
+      <div class="sequence-narration" id="narration">
+        <span class="step-badge">Ready</span>
+        <span>Select a flow and press play to see the sequence</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="background: var(--surface-alt);">
+  <div class="container">
+    <h2 class="section-title">Idempotency Strategies</h2>
+    <p class="section-subtitle">Common patterns for implementing idempotency at different layers</p>
+
+    <div class="strategies-grid">
+      <div class="strategy-card">
+        <div class="strategy-header">
+          <span class="strategy-num">1</span>
+          <span class="strategy-title">Idempotency Key in Middleware</span>
+        </div>
+        <p class="strategy-desc">The most common approach — a middleware layer checks/stores keys in Redis before delegating to business logic.</p>
+        <div class="strategy-code">
+<span class="keyword">async function</span> <span class="func">idempotencyMiddleware</span>(req, res, next) {
+  <span class="keyword">const</span> <span class="var">key</span> = req.headers[<span class="string">'idempotency-key'</span>];
+  <span class="keyword">const</span> <span class="var">cached</span> = <span class="keyword">await</span> redis.<span class="func">get</span>(<span class="string">`idem:</span>${key}<span class="string">`</span>);
+
+  <span class="keyword">if</span> (cached?.status === <span class="string">'completed'</span>) {
+    <span class="keyword">return</span> res.<span class="func">json</span>(cached.response); <span class="comment">// Return cached</span>
+  }
+
+  <span class="comment">// Acquire lock, process, store result</span>
+  <span class="keyword">const</span> <span class="var">lock</span> = <span class="keyword">await</span> redis.<span class="func">setnx</span>(<span class="string">`lock:</span>${key}<span class="string">`</span>, <span class="string">'1'</span>, <span class="string">'EX'</span>, 30);
+  <span class="keyword">if</span> (!lock) <span class="keyword">return</span> res.<span class="func">status</span>(409).<span class="func">json</span>({...});
+
+  next(); <span class="comment">// Proceed to handler</span>
+}
+        </div>
+      </div>
+
+      <div class="strategy-card">
+        <div class="strategy-header">
+          <span class="strategy-num">2</span>
+          <span class="strategy-title">Database Unique Constraint</span>
+        </div>
+        <p class="strategy-desc">Use the idempotency key as a unique constraint in the database. The DB rejects duplicate inserts atomically.</p>
+        <div class="strategy-code">
+<span class="comment">-- Schema</span>
+<span class="keyword">CREATE TABLE</span> payments (
+  id UUID <span class="keyword">PRIMARY KEY</span>,
+  idempotency_key VARCHAR(255) <span class="keyword">UNIQUE</span>,
+  amount DECIMAL,
+  status VARCHAR(20)
+);
+
+<span class="comment">-- Insert (rejects duplicates automatically)</span>
+<span class="keyword">INSERT INTO</span> payments (id, idempotency_key, amount)
+<span class="keyword">VALUES</span> ($1, $2, $3)
+<span class="keyword">ON CONFLICT</span> (idempotency_key) <span class="keyword">DO NOTHING</span>
+<span class="keyword">RETURNING</span> *;
+        </div>
+      </div>
+
+      <div class="strategy-card">
+        <div class="strategy-header">
+          <span class="strategy-num">3</span>
+          <span class="strategy-title">Conditional Writes (Optimistic)</span>
+        </div>
+        <p class="strategy-desc">Use version numbers or ETags to ensure writes are applied only if the resource hasn't changed since the client last read it.</p>
+        <div class="strategy-code">
+<span class="keyword">async function</span> <span class="func">updateBalance</span>(accountId, amount, version) {
+  <span class="keyword">const</span> <span class="var">result</span> = <span class="keyword">await</span> db.<span class="func">query</span>(<span class="string">`
+    UPDATE accounts
+    SET balance = balance + $1,
+        version = version + 1
+    WHERE id = $2 AND version = $3
+  `</span>, [amount, accountId, version]);
+
+  <span class="keyword">if</span> (result.rowCount === 0) {
+    <span class="keyword">throw new</span> <span class="func">ConflictError</span>(<span class="string">'Stale version'</span>);
+  }
+}
+        </div>
+      </div>
+
+      <div class="strategy-card">
+        <div class="strategy-header">
+          <span class="strategy-num">4</span>
+          <span class="strategy-title">Naturally Idempotent Operations</span>
+        </div>
+        <p class="strategy-desc">Design operations that are inherently idempotent — setting absolute values rather than relative deltas.</p>
+        <div class="strategy-code">
+<span class="comment">// ❌ NOT idempotent — repeated calls keep adding</span>
+<span class="keyword">await</span> account.<span class="func">incrementBalance</span>(100);
+
+<span class="comment">// ✅ Idempotent — same result no matter how many times</span>
+<span class="keyword">await</span> account.<span class="func">setBalance</span>(existingBalance + 100, {
+  <span class="var">transactionId</span>: <span class="string">'txn_abc123'</span> <span class="comment">// dedup key</span>
+});
+
+<span class="comment">// ✅ Idempotent — PUT replaces entire resource</span>
+<span class="keyword">await</span> <span class="func">fetch</span>(<span class="string">'/api/users/42'</span>, {
+  method: <span class="string">'PUT'</span>,
+  body: { name: <span class="string">'Alice'</span>, email: <span class="string">'a@b.com'</span> }
+});
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 class="section-title">Interactive Demo</h2>
+    <p class="section-subtitle">Simulate idempotent request handling — send requests, retries, and concurrent duplicates</p>
+
+    <div class="demo-container">
+      <div class="demo-header">
+        <h3>Payment API Simulator</h3>
+        <p>Send payment requests with idempotency keys and observe the system behavior</p>
+      </div>
+      <div class="demo-body">
+        <div class="demo-panel">
+          <h4>Send Request</h4>
+          <div class="demo-input-group">
+            <label>Idempotency Key</label>
+            <input type="text" id="demoKey" value="" placeholder="Auto-generated UUID">
+          </div>
+          <div class="demo-input-group">
+            <label>Amount ($)</label>
+            <input type="number" id="demoAmount" value="99.99" min="0" step="0.01">
+          </div>
+          <div class="demo-input-group">
+            <label>Scenario</label>
+            <select id="demoScenario">
+              <option value="normal">Normal (succeeds)</option>
+              <option value="timeout">Network timeout (then retry)</option>
+              <option value="concurrent">Concurrent duplicate</option>
+              <option value="mismatch">Key reuse with different body</option>
+            </select>
+          </div>
+          <button class="demo-btn" id="demoSend">Send Request</button>
+          <button class="demo-btn secondary" id="demoNewKey">New Key</button>
+          <button class="demo-btn secondary" id="demoClear">Clear Log</button>
+        </div>
+        <div class="demo-panel">
+          <h4>Server Log</h4>
+          <div class="demo-log" id="demoLog"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="background: var(--surface-alt);">
+  <div class="container">
+    <h2 class="section-title">Trade-offs & Failure Scenarios</h2>
+    <p class="section-subtitle">Key decisions and what can go wrong</p>
+
+    <div class="tradeoffs-container">
+      <div class="tradeoff-row">
+        <div class="tradeoff-left">Short TTL (1h)</div>
+        <span class="tradeoff-vs">vs</span>
+        <div class="tradeoff-right">Long TTL (48h) — More storage cost but handles slow retries from mobile clients with poor connectivity</div>
+      </div>
+      <div class="tradeoff-row">
+        <div class="tradeoff-left">Redis (fast, volatile)</div>
+        <span class="tradeoff-vs">vs</span>
+        <div class="tradeoff-right">Database (durable, slower) — Redis is fast but keys can be lost on restart; DB is authoritative but adds latency</div>
+      </div>
+      <div class="tradeoff-row">
+        <div class="tradeoff-left">Client-generated keys</div>
+        <span class="tradeoff-vs">vs</span>
+        <div class="tradeoff-right">Server-generated keys — Client keys enable retry, server keys ensure format but require an extra round trip</div>
+      </div>
+      <div class="tradeoff-row">
+        <div class="tradeoff-left">Return 409 on lock</div>
+        <span class="tradeoff-vs">vs</span>
+        <div class="tradeoff-right">Wait and poll — 409 is simpler but pushes retry logic to client; waiting blocks server resources</div>
+      </div>
+      <div class="tradeoff-row">
+        <div class="tradeoff-left">Per-endpoint idempotency</div>
+        <span class="tradeoff-vs">vs</span>
+        <div class="tradeoff-right">Global idempotency — Per-endpoint allows key reuse across endpoints; global is simpler but keys can't be shared</div>
+      </div>
+    </div>
+
+    <div class="failure-cards">
+      <div class="failure-card danger">
+        <h4>🔴 Redis Crashes Mid-Processing</h4>
+        <p>The lock is lost. A retry may trigger duplicate processing. Mitigation: use DB unique constraint as the final safety net.</p>
+      </div>
+      <div class="failure-card warning">
+        <h4>🟡 Lock Expires Before Completion</h4>
+        <p>Long-running operations outlive the lock TTL. Another request acquires the lock. Mitigation: extend locks with a background heartbeat.</p>
+      </div>
+      <div class="failure-card info">
+        <h4>🔵 Clock Skew Between Nodes</h4>
+        <p>TTL-based expiration may behave inconsistently across nodes with drifted clocks. Mitigation: use Redis PEXPIRE (server-side) not client-calculated times.</p>
+      </div>
+      <div class="failure-card warning">
+        <h4>🟡 Partial Failure (Half-Completed)</h4>
+        <p>Service crashes after charging payment but before storing the response. Retry sees no cached result and charges again. Mitigation: store PROCESSING state before calling downstream.</p>
+      </div>
+      <div class="failure-card danger">
+        <h4>🔴 Hot Key (Thundering Herd)</h4>
+        <p>Many retries hit the same idempotency key simultaneously. Redis serializes them via SETNX but the first request is still in-flight. Mitigation: return 409 with Retry-After.</p>
+      </div>
+      <div class="failure-card info">
+        <h4>🔵 Key Reuse After TTL Expiry</h4>
+        <p>A very delayed retry arrives after the key expired from the store. It's processed as a new request. Mitigation: use DB unique constraints as a durable fallback.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// ===== ARCHITECTURE DIAGRAM INTERACTIONS =====
+(function() {
+  const diagram = document.getElementById('archDiagram');
+  const tooltip = document.getElementById('tooltip');
+  const nodes = document.querySelectorAll('.arch-node');
+  const connections = document.querySelectorAll('.arch-connection');
+
+  nodes.forEach(node => {
+    node.addEventListener('mouseenter', (e) => {
+      const text = node.dataset.tooltip;
+      const id = node.dataset.id;
+      tooltip.textContent = text;
+      tooltip.classList.add('visible');
+
+      // Dim unrelated nodes and connections
+      nodes.forEach(n => {
+        if (n.dataset.id !== id) n.classList.add('dimmed');
+      });
+      connections.forEach(c => {
+        if (c.dataset.from !== id && c.dataset.to !== id) c.classList.add('dimmed');
+      });
+    });
+
+    node.addEventListener('mousemove', (e) => {
+      const rect = diagram.getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+      tooltip.style.top = (e.clientY - rect.top - 40) + 'px';
+    });
+
+    node.addEventListener('mouseleave', () => {
+      tooltip.classList.remove('visible');
+      nodes.forEach(n => n.classList.remove('dimmed'));
+      connections.forEach(c => c.classList.remove('dimmed'));
+    });
+  });
+})();
+
+// ===== SEQUENCE DIAGRAM =====
+(function() {
+  const svg = document.getElementById('sequenceSvg');
+  const narration = document.getElementById('narration');
+  const playBtn = document.getElementById('playBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const speedSlider = document.getElementById('speedSlider');
+  const speedLabel = document.getElementById('speedLabel');
+  const flowBtns = document.querySelectorAll('.flow-btn');
+
+  let currentFlow = 'first';
+  let currentStep = -1;
+  let isPlaying = false;
+  let playInterval = null;
+  let speed = 1;
+
+  const actors = [
+    { id: 'client', label: 'Client', x: 100 },
+    { id: 'gateway', label: 'API Gateway', x: 280 },
+    { id: 'middleware', label: 'Idempotency MW', x: 460 },
+    { id: 'redis', label: 'Redis Store', x: 640 },
+    { id: 'service', label: 'Payment Svc', x: 820 },
+  ];
+
+  const flows = {
+    first: [
+      { from: 0, to: 1, label: 'POST /pay + Key: abc123', desc: 'Client sends payment request with idempotency key in header' },
+      { from: 1, to: 2, label: 'Forward request', desc: 'API Gateway authenticates and forwards to idempotency middleware' },
+      { from: 2, to: 3, label: 'GET idem:abc123', desc: 'Middleware checks Redis for existing record with this key' },
+      { from: 3, to: 2, label: 'null (not found)', desc: 'Key not found — this is the first time this request is seen', color: '#059669' },
+      { from: 2, to: 3, label: 'SETNX lock:abc123', desc: 'Acquire distributed lock to prevent concurrent processing' },
+      { from: 3, to: 2, label: 'OK (lock acquired)', desc: 'Lock acquired successfully — safe to proceed', color: '#059669' },
+      { from: 2, to: 3, label: 'SET idem:abc123 → PROCESSING', desc: 'Store PROCESSING state before calling downstream service' },
+      { from: 2, to: 4, label: 'Process payment $99.99', desc: 'Delegate to payment service to actually charge the customer' },
+      { from: 4, to: 2, label: '200 OK {txn_id: ...}', desc: 'Payment processed successfully — got transaction ID back', color: '#059669' },
+      { from: 2, to: 3, label: 'SET idem:abc123 → COMPLETED + response', desc: 'Cache the successful response with TTL for future retries' },
+      { from: 2, to: 1, label: '200 OK {txn_id: ...}', desc: 'Return success response to gateway', color: '#059669' },
+      { from: 1, to: 0, label: '200 OK', desc: 'Client receives successful payment confirmation', color: '#059669' },
+    ],
+    retry: [
+      { from: 0, to: 1, label: 'POST /pay + Key: abc123 (retry)', desc: 'Client retries the same request with the same idempotency key' },
+      { from: 1, to: 2, label: 'Forward request', desc: 'Gateway forwards — it doesn\'t know or care that this is a retry' },
+      { from: 2, to: 3, label: 'GET idem:abc123', desc: 'Middleware checks Redis for existing record' },
+      { from: 3, to: 2, label: '{status: COMPLETED, response: {...}}', desc: 'Found! Previous response is cached with COMPLETED status', color: '#059669' },
+      { from: 2, to: 2, label: 'Verify request fingerprint', desc: 'Verify the request body hash matches the original (prevents misuse)', self: true },
+      { from: 2, to: 1, label: '200 OK {txn_id: ...} (from cache)', desc: 'Return the cached response — no duplicate processing!', color: '#059669' },
+      { from: 1, to: 0, label: '200 OK (same response)', desc: 'Client gets the same response as the first time — idempotent!', color: '#059669' },
+    ],
+    concurrent: [
+      { from: 0, to: 1, label: 'POST /pay + Key: abc123 (req A)', desc: 'First request arrives at the gateway' },
+      { from: 1, to: 2, label: 'Forward (req A)', desc: 'Gateway forwards request A to middleware' },
+      { from: 2, to: 3, label: 'SETNX lock:abc123 (req A)', desc: 'Request A acquires the lock' },
+      { from: 3, to: 2, label: 'OK (lock acquired by A)', desc: 'Lock granted to request A', color: '#059669' },
+      { from: 0, to: 1, label: 'POST /pay + Key: abc123 (req B)', desc: 'Concurrent duplicate arrives milliseconds later', color: '#d97706' },
+      { from: 1, to: 2, label: 'Forward (req B)', desc: 'Gateway forwards request B (doesn\'t know about A)', color: '#d97706' },
+      { from: 2, to: 3, label: 'SETNX lock:abc123 (req B)', desc: 'Request B tries to acquire the same lock', color: '#d97706' },
+      { from: 3, to: 2, label: 'FAIL (locked by A)', desc: 'Lock denied — another request is already processing this key', color: '#dc2626' },
+      { from: 2, to: 1, label: '409 Conflict + Retry-After: 2s', desc: 'Return 409 to request B, telling it to retry in 2 seconds', color: '#dc2626' },
+      { from: 1, to: 0, label: '409 (retry later)', desc: 'Client receives 409 — should wait and retry', color: '#dc2626' },
+      { from: 2, to: 4, label: 'Process payment (req A continues)', desc: 'Meanwhile, request A finishes processing normally' },
+      { from: 4, to: 2, label: '200 OK', desc: 'Payment succeeds for request A', color: '#059669' },
+    ]
+  };
+
+  function drawBase() {
+    svg.innerHTML = '';
+    const ns = 'http://www.w3.org/2000/svg';
+
+    // Actor lifelines
+    actors.forEach(actor => {
+      // Header box
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', actor.x - 55);
+      rect.setAttribute('y', 10);
+      rect.setAttribute('width', 110);
+      rect.setAttribute('height', 36);
+      rect.setAttribute('rx', 6);
+      rect.setAttribute('fill', '#eef2ff');
+      rect.setAttribute('stroke', '#4f46e5');
+      rect.setAttribute('stroke-width', '1.5');
+      svg.appendChild(rect);
+
+      // Label
+      const text = document.createElementNS(ns, 'text');
+      text.setAttribute('x', actor.x);
+      text.setAttribute('y', 33);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('font-size', '11');
+      text.setAttribute('font-weight', '600');
+      text.setAttribute('fill', '#3730a3');
+      text.setAttribute('font-family', 'Inter, sans-serif');
+      text.textContent = actor.label;
+      svg.appendChild(text);
+
+      // Lifeline
+      const line = document.createElementNS(ns, 'line');
+      line.setAttribute('x1', actor.x);
+      line.setAttribute('y1', 46);
+      line.setAttribute('x2', actor.x);
+      line.setAttribute('y2', 390);
+      line.setAttribute('stroke', '#e2e5eb');
+      line.setAttribute('stroke-width', '1.5');
+      line.setAttribute('stroke-dasharray', '4');
+      svg.appendChild(line);
+    });
+  }
+
+  function drawStep(stepIdx) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const steps = flows[currentFlow];
+    if (stepIdx < 0 || stepIdx >= steps.length) return;
+
+    const step = steps[stepIdx];
+    const y = 70 + stepIdx * 27;
+    const fromX = actors[step.from].x;
+    const toX = step.self ? actors[step.from].x : actors[step.to].x;
+    const color = step.color || '#4f46e5';
+
+    if (step.self) {
+      // Self-arrow (loop)
+      const path = document.createElementNS(ns, 'path');
+      path.setAttribute('d', `M ${fromX} ${y} C ${fromX + 40} ${y}, ${fromX + 40} ${y + 16}, ${fromX} ${y + 16}`);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', color);
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('marker-end', 'url(#seqArrow)');
+      path.style.opacity = '0';
+      path.style.transition = 'opacity 0.3s';
+      svg.appendChild(path);
+      setTimeout(() => path.style.opacity = '1', 50);
+
+      const text = document.createElementNS(ns, 'text');
+      text.setAttribute('x', fromX + 46);
+      text.setAttribute('y', y + 10);
+      text.setAttribute('font-size', '9');
+      text.setAttribute('fill', color);
+      text.setAttribute('font-family', 'Inter, sans-serif');
+      text.textContent = step.label;
+      text.style.opacity = '0';
+      text.style.transition = 'opacity 0.3s';
+      svg.appendChild(text);
+      setTimeout(() => text.style.opacity = '1', 100);
+    } else {
+      // Arrow
+      const line = document.createElementNS(ns, 'line');
+      line.setAttribute('x1', fromX);
+      line.setAttribute('y1', y);
+      line.setAttribute('x2', toX);
+      line.setAttribute('y2', y);
+      line.setAttribute('stroke', color);
+      line.setAttribute('stroke-width', '2');
+      line.setAttribute('marker-end', 'url(#seqArrow' + color.replace('#', '') + ')');
+      line.style.opacity = '0';
+      line.style.transition = 'opacity 0.3s';
+      svg.appendChild(line);
+      setTimeout(() => line.style.opacity = '1', 50);
+
+      // Add marker def
+      let marker = svg.querySelector(`#seqArrow${color.replace('#', '')}`);
+      if (!marker) {
+        const defs = svg.querySelector('defs') || svg.insertBefore(document.createElementNS(ns, 'defs'), svg.firstChild);
+        marker = document.createElementNS(ns, 'marker');
+        marker.setAttribute('id', 'seqArrow' + color.replace('#', ''));
+        marker.setAttribute('markerWidth', '8');
+        marker.setAttribute('markerHeight', '6');
+        marker.setAttribute('refX', '8');
+        marker.setAttribute('refY', '3');
+        marker.setAttribute('orient', 'auto');
+        const poly = document.createElementNS(ns, 'polygon');
+        poly.setAttribute('points', '0 0, 8 3, 0 6');
+        poly.setAttribute('fill', color);
+        marker.appendChild(poly);
+        defs.appendChild(marker);
+      }
+
+      // Label
+      const midX = (fromX + toX) / 2;
+      const text = document.createElementNS(ns, 'text');
+      text.setAttribute('x', midX);
+      text.setAttribute('y', y - 6);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('font-size', '9');
+      text.setAttribute('fill', color);
+      text.setAttribute('font-family', 'Inter, sans-serif');
+      text.textContent = step.label;
+      text.style.opacity = '0';
+      text.style.transition = 'opacity 0.3s';
+      svg.appendChild(text);
+      setTimeout(() => text.style.opacity = '1', 100);
+    }
+
+    // Update narration
+    narration.innerHTML = `<span class="step-badge">Step ${stepIdx + 1}/${steps.length}</span><span>${step.desc}</span>`;
+  }
+
+  function reset() {
+    currentStep = -1;
+    drawBase();
+    narration.innerHTML = `<span class="step-badge">Ready</span><span>Press play or step through the ${currentFlow === 'first' ? 'first request' : currentFlow === 'retry' ? 'retry' : 'concurrent duplicate'} flow</span>`;
+  }
+
+  function stepForward() {
+    const steps = flows[currentFlow];
+    if (currentStep < steps.length - 1) {
+      currentStep++;
+      drawStep(currentStep);
+    } else {
+      stopPlaying();
+    }
+  }
+
+  function stepBackward() {
+    if (currentStep >= 0) {
+      currentStep--;
+      drawBase();
+      for (let i = 0; i <= currentStep; i++) {
+        drawStep(i);
+      }
+      if (currentStep >= 0) {
+        const step = flows[currentFlow][currentStep];
+        narration.innerHTML = `<span class="step-badge">Step ${currentStep + 1}/${flows[currentFlow].length}</span><span>${step.desc}</span>`;
+      } else {
+        narration.innerHTML = `<span class="step-badge">Ready</span><span>Press play or step through the flow</span>`;
+      }
+    }
+  }
+
+  function startPlaying() {
+    isPlaying = true;
+    playBtn.textContent = '⏸';
+    playBtn.classList.add('playing');
+    playInterval = setInterval(() => {
+      stepForward();
+      if (currentStep >= flows[currentFlow].length - 1) stopPlaying();
+    }, 1200 / speed);
+  }
+
+  function stopPlaying() {
+    isPlaying = false;
+    playBtn.textContent = '▶';
+    playBtn.classList.remove('playing');
+    if (playInterval) clearInterval(playInterval);
+  }
+
+  playBtn.addEventListener('click', () => {
+    if (isPlaying) {
+      stopPlaying();
+    } else {
+      if (currentStep >= flows[currentFlow].length - 1) reset();
+      startPlaying();
+    }
+  });
+
+  prevBtn.addEventListener('click', stepBackward);
+  nextBtn.addEventListener('click', stepForward);
+
+  speedSlider.addEventListener('input', () => {
+    speed = parseFloat(speedSlider.value);
+    speedLabel.textContent = speed + 'x';
+    if (isPlaying) {
+      stopPlaying();
+      startPlaying();
+    }
+  });
+
+  flowBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      flowBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFlow = btn.dataset.flow;
+      stopPlaying();
+      reset();
+    });
+  });
+
+  // Keyboard controls
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    if (e.code === 'Space') { e.preventDefault(); playBtn.click(); }
+    if (e.code === 'ArrowRight') { e.preventDefault(); stepForward(); }
+    if (e.code === 'ArrowLeft') { e.preventDefault(); stepBackward(); }
+  });
+
+  reset();
+})();
+
+// ===== INTERACTIVE DEMO =====
+(function() {
+  const log = document.getElementById('demoLog');
+  const keyInput = document.getElementById('demoKey');
+  const amountInput = document.getElementById('demoAmount');
+  const scenarioSelect = document.getElementById('demoScenario');
+  const sendBtn = document.getElementById('demoSend');
+  const newKeyBtn = document.getElementById('demoNewKey');
+  const clearBtn = document.getElementById('demoClear');
+
+  // Simulated store
+  const store = {};
+
+  function uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
+  function time() {
+    return new Date().toLocaleTimeString('en-US', { hour12: false });
+  }
+
+  function addLog(type, msg) {
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-time">[${time()}]</span> <span class="log-${type}">${msg}</span>`;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function generateKey() {
+    keyInput.value = uuid();
+  }
+
+  generateKey();
+
+  newKeyBtn.addEventListener('click', generateKey);
+  clearBtn.addEventListener('click', () => { log.innerHTML = ''; });
+
+  async function delay(ms) {
+    return new Promise(r => setTimeout(r, ms));
+  }
+
+  sendBtn.addEventListener('click', async () => {
+    sendBtn.disabled = true;
+    const key = keyInput.value || uuid();
+    const amount = amountInput.value;
+    const scenario = scenarioSelect.value;
+
+    addLog('info', `━━━ New Request ━━━`);
+    addLog('info', `POST /api/payments`);
+    addLog('key', `Idempotency-Key: ${key}`);
+    addLog('info', `Body: { amount: $${amount} }`);
+
+    await delay(300);
+
+    if (scenario === 'mismatch' && store[key]) {
+      addLog('info', `Checking idempotency store...`);
+      await delay(400);
+      addLog('warning', `Key found! Verifying request fingerprint...`);
+      await delay(300);
+      addLog('error', `✗ FINGERPRINT MISMATCH — stored body hash ≠ current body hash`);
+      addLog('error', `→ 422 Unprocessable Entity: same key, different payload`);
+      addLog('error', `This prevents accidental key reuse across different operations`);
+      sendBtn.disabled = false;
+      return;
+    }
+
+    if (store[key] && store[key].status === 'completed') {
+      addLog('info', `Checking idempotency store...`);
+      await delay(400);
+      addLog('success', `✓ CACHE HIT — Key found with status: COMPLETED`);
+      await delay(200);
+      addLog('success', `→ Returning cached response (no duplicate processing)`);
+      addLog('success', `→ 200 OK: { txn_id: "${store[key].txnId}", cached: true }`);
+      sendBtn.disabled = false;
+      return;
+    }
+
+    if (scenario === 'concurrent') {
+      addLog('info', `Checking idempotency store...`);
+      await delay(200);
+      addLog('info', `Key not found. Acquiring lock...`);
+      await delay(300);
+      addLog('success', `✓ Lock acquired (request A)`);
+      store[key] = { status: 'processing' };
+      addLog('info', `Status → PROCESSING`);
+      await delay(200);
+
+      addLog('warning', `━━━ Concurrent Request B arrives ━━━`);
+      addLog('warning', `Same key: ${key}`);
+      await delay(300);
+      addLog('warning', `Attempting lock... SETNX lock:${key.slice(0, 8)}...`);
+      await delay(400);
+      addLog('error', `✗ LOCK DENIED — already held by request A`);
+      addLog('error', `→ 409 Conflict { retry_after: 2 }`);
+      await delay(500);
+
+      addLog('info', `(Request A continues processing...)`);
+      await delay(600);
+      const txnId = 'txn_' + uuid().slice(0, 8);
+      store[key] = { status: 'completed', txnId, amount };
+      addLog('success', `✓ Request A completed: { txn_id: "${txnId}" }`);
+      addLog('success', `Status → COMPLETED (cached for future retries)`);
+      sendBtn.disabled = false;
+      return;
+    }
+
+    if (scenario === 'timeout') {
+      addLog('info', `Checking idempotency store...`);
+      await delay(200);
+      addLog('info', `Key not found. Acquiring lock...`);
+      await delay(200);
+      addLog('success', `✓ Lock acquired`);
+      store[key] = { status: 'processing' };
+      addLog('info', `Status → PROCESSING`);
+      addLog('info', `Calling payment service...`);
+      await delay(800);
+      addLog('error', `✗ TIMEOUT — no response from payment service after 5s`);
+      addLog('warning', `Lock released. Status remains PROCESSING (will expire)`);
+      store[key] = { status: 'failed' };
+      await delay(600);
+
+      addLog('info', `━━━ Client Retry (same key) ━━━`);
+      addLog('key', `Idempotency-Key: ${key}`);
+      await delay(300);
+      addLog('info', `Checking idempotency store...`);
+      await delay(300);
+      addLog('warning', `Key found with status: FAILED — allowing retry`);
+      await delay(200);
+      addLog('info', `Acquiring lock... ✓`);
+      addLog('info', `Calling payment service (retry)...`);
+      await delay(600);
+      const txnId = 'txn_' + uuid().slice(0, 8);
+      store[key] = { status: 'completed', txnId, amount };
+      addLog('success', `✓ Payment processed: { txn_id: "${txnId}" }`);
+      addLog('success', `Status → COMPLETED (cached for future retries)`);
+      sendBtn.disabled = false;
+      return;
+    }
+
+    // Normal flow
+    addLog('info', `Checking idempotency store...`);
+    await delay(300);
+    addLog('info', `Key not found. Acquiring lock...`);
+    await delay(200);
+    addLog('success', `✓ Lock acquired`);
+    store[key] = { status: 'processing' };
+    addLog('info', `Status → PROCESSING`);
+    addLog('info', `Calling payment service...`);
+    await delay(700);
+    const txnId = 'txn_' + uuid().slice(0, 8);
+    store[key] = { status: 'completed', txnId, amount };
+    addLog('success', `✓ Payment processed: { txn_id: "${txnId}" }`);
+    addLog('success', `Status → COMPLETED`);
+    addLog('success', `Response cached with TTL: 86400s`);
+    addLog('success', `→ 200 OK: { txn_id: "${txnId}", amount: $${amount} }`);
+    sendBtn.disabled = false;
+  });
+})();
+</script>
+</body>
+</html>

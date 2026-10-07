@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>K-Sum Subsets — Visualizer</title>
+  <style>
+    :root {
+      --bg: #0c0c14;
+      --surface: #14141f;
+      --surface-2: #1c1c2e;
+      --surface-3: #252540;
+      --border: #2a2a45;
+      --text: #e8e8f0;
+      --text-dim: #8888aa;
+      --text-muted: #555570;
+      --accent: #6c63ff;
+      --accent-glow: rgba(108, 99, 255, 0.3);
+      --success: #4ecdc4;
+      --success-glow: rgba(78, 205, 196, 0.3);
+      --warning: #ffd93d;
+      --danger: #ff6b6b;
+      --danger-glow: rgba(255, 107, 107, 0.2);
+      --current: #ff9f43;
+      --current-glow: rgba(255, 159, 67, 0.3);
+      --pruned: #636e72;
+      --mono: 'Courier New', 'Consolas', monospace;
+      --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --radius: 10px;
+      --radius-sm: 6px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    header h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--success));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      color: var(--text-dim);
+      font-size: 1.05rem;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .section-title .icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: var(--mono);
+    }
+
+    .badge-time {
+      background: rgba(108, 99, 255, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(108, 99, 255, 0.3);
+    }
+
+    .badge-space {
+      background: rgba(78, 205, 196, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(78, 205, 196, 0.3);
+    }
+
+    .complexity-row {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .insight-box {
+      background: linear-gradient(135deg, rgba(108, 99, 255, 0.08), rgba(78, 205, 196, 0.08));
+      border: 1px solid rgba(108, 99, 255, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 1.2rem 1.5rem;
+      margin: 1.2rem 0;
+    }
+
+    .insight-box strong {
+      color: var(--accent);
+      display: block;
+      margin-bottom: 0.3rem;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .example-visual {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+      flex-wrap: wrap;
+    }
+
+    .array-display {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .array-cell {
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: var(--mono);
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.3s;
+    }
+
+    .array-cell.highlighted {
+      background: rgba(78, 205, 196, 0.15);
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    .arrow-label {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    .result-subsets {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .subset-pill {
+      background: rgba(78, 205, 196, 0.1);
+      border: 1px solid rgba(78, 205, 196, 0.3);
+      border-radius: 20px;
+      padding: 0.3rem 0.8rem;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--success);
+    }
+
+    /* Animation Section */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 0.5rem 1.2rem;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--sans);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5a52e0;
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+
+    .btn-secondary {
+      background: var(--surface-3);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: auto;
+    }
+
+    .speed-control label {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    .speed-control input[type="range"] {
+      width: 100px;
+      accent-color: var(--accent);
+    }
+
+    .step-info {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.2rem;
+      margin-bottom: 1.5rem;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .step-counter {
+      background: var(--accent);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+
+    .step-narration {
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .animation-area {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      min-height: 400px;
+    }
+
+    @media (max-width: 900px) {
+      .animation-area {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .tree-panel {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      overflow: auto;
+      position: relative;
+      min-height: 380px;
+    }
+
+    .tree-panel h3 {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.8rem;
+    }
+
+    .tree-svg {
+      width: 100%;
+      height: 340px;
+    }
+
+    .code-panel {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      overflow: auto;
+    }
+
+    .code-panel h3 {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.8rem;
+    }
+
+    .code-block {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      line-height: 1.8;
+    }
+
+    .code-line {
+      padding: 0.1rem 0.6rem;
+      border-radius: 3px;
+      transition: background 0.3s;
+      white-space: pre;
+      display: block;
+    }
+
+    .code-line.active {
+      background: rgba(108, 99, 255, 0.2);
+      border-left: 3px solid var(--accent);
+    }
+
+    .code-line .keyword { color: #c792ea; }
+    .code-line .func { color: #82aaff; }
+    .code-line .param { color: #f78c6c; }
+    .code-line .comment { color: var(--text-muted); font-style: italic; }
+    .code-line .string { color: #c3e88d; }
+
+    /* State display */
+    .state-display {
+      margin-top: 1rem;
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .state-item {
+      font-size: 0.8rem;
+    }
+
+    .state-item .label {
+      color: var(--text-dim);
+      margin-bottom: 0.2rem;
+    }
+
+    .state-item .value {
+      font-family: var(--mono);
+      font-weight: 600;
+      color: var(--success);
+    }
+
+    .found-subsets {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      background: rgba(78, 205, 196, 0.05);
+      border: 1px solid rgba(78, 205, 196, 0.2);
+      border-radius: var(--radius-sm);
+    }
+
+    .found-subsets h4 {
+      font-size: 0.75rem;
+      color: var(--success);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.4rem;
+    }
+
+    /* Tree node styles */
+    .tree-node circle {
+      transition: all 0.3s;
+    }
+
+    .tree-node text {
+      font-family: var(--mono);
+      font-size: 10px;
+      fill: var(--text);
+    }
+
+    .tree-edge {
+      stroke: var(--border);
+      stroke-width: 1.5;
+      fill: none;
+      transition: stroke 0.3s;
+    }
+
+    .tree-edge.active {
+      stroke: var(--current);
+      stroke-width: 2;
+    }
+
+    .tree-edge.success {
+      stroke: var(--success);
+      stroke-width: 2;
+    }
+
+    .tree-edge.pruned {
+      stroke: var(--pruned);
+      stroke-dasharray: 4 3;
+    }
+
+    /* Playground Section */
+    .playground-inputs {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .input-group label {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .input-group input {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.8rem;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      width: 200px;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .presets {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+
+    .preset-btn {
+      padding: 0.4rem 0.8rem;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--mono);
+    }
+
+    .preset-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .playground-result {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1.2rem;
+      min-height: 80px;
+    }
+
+    .playground-result h4 {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .playground-result .subsets-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .no-result {
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 0.9rem;
+    }
+
+    .approach-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1.2rem 0;
+    }
+
+    .approach-step {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+    }
+
+    .approach-step .step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.4rem;
+    }
+
+    .approach-step .step-text {
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 1.2rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.unexplored { background: var(--surface-3); border: 2px solid var(--border); }
+    .legend-dot.current { background: var(--current); box-shadow: 0 0 8px var(--current-glow); }
+    .legend-dot.success { background: var(--success); box-shadow: 0 0 8px var(--success-glow); }
+    .legend-dot.pruned { background: var(--pruned); }
+    .legend-dot.explored { background: var(--surface-3); border: 2px solid var(--text-dim); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>K-Sum Subsets</h1>
+      <p>Find all subsets of distinct positive integers whose elements sum to a target value k using backtracking.</p>
+    </header>
+
+    <!-- Section 1: Visual Explanation -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(108,99,255,0.15); color: var(--accent);">&#9672;</div>
+        Problem & Approach
+      </div>
+
+      <p style="margin-bottom: 1rem; color: var(--text-dim);">Given an array of <strong style="color:var(--text)">n distinct positive integers</strong>, find all possible subsets that sum to a target <strong style="color:var(--text)">k</strong>. Return a 2D array of all valid subsets.</p>
+
+      <div class="example-visual">
+        <div>
+          <div style="font-size:0.75rem; color:var(--text-dim); margin-bottom:0.3rem;">INPUT ARRAY</div>
+          <div class="array-display" id="example-array"></div>
+        </div>
+        <div class="arrow-label">target k = <strong style="color:var(--accent)">9</strong> &rarr;</div>
+        <div>
+          <div style="font-size:0.75rem; color:var(--text-dim); margin-bottom:0.3rem;">VALID SUBSETS</div>
+          <div class="result-subsets">
+            <span class="subset-pill">[2, 3, 4]</span>
+            <span class="subset-pill">[1, 4, 4]</span>
+            <span class="subset-pill">[1, 3, 5]</span>
+            <span class="subset-pill">[4, 5]</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="insight-box">
+        <strong>&#x1f4a1; Key Insight</strong>
+        Use <em>backtracking</em> to explore all possible include/exclude decisions for each element. At each index, either include the current number in the subset or skip it. Prune branches early when the running sum exceeds k.
+      </div>
+
+      <div class="approach-steps">
+        <div class="approach-step">
+          <div class="step-num">Step 1</div>
+          <div class="step-text">Sort the array (enables early pruning when sum exceeds target)</div>
+        </div>
+        <div class="approach-step">
+          <div class="step-num">Step 2</div>
+          <div class="step-text">Recurse: at each index, choose to include or skip the element</div>
+        </div>
+        <div class="approach-step">
+          <div class="step-num">Step 3</div>
+          <div class="step-text">If sum == k, record the current subset as a valid solution</div>
+        </div>
+        <div class="approach-step">
+          <div class="step-num">Step 4</div>
+          <div class="step-text">If sum > k or index out of bounds, backtrack (prune)</div>
+        </div>
+      </div>
+
+      <div class="complexity-row">
+        <span class="badge badge-time">Time: O(2^n)</span>
+        <span class="badge badge-space">Space: O(n) recursion depth</span>
+      </div>
+    </div>
+
+    <!-- Section 2: Animation -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(255,159,67,0.15); color: var(--current);">&#9654;</div>
+        Step-by-Step Animation
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="btn-play">&#9654; Play</button>
+        <button class="btn btn-secondary" id="btn-step">Step &rarr;</button>
+        <button class="btn btn-secondary" id="btn-reset">&#8634; Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speed-slider" min="1" max="10" value="5">
+          <span id="speed-label" style="font-size:0.75rem; color:var(--text-dim); width:30px;">5x</span>
+        </div>
+      </div>
+
+      <div class="step-info">
+        <span class="step-counter" id="step-counter">0 / 0</span>
+        <span class="step-narration" id="step-narration">Press Play or Step to begin the animation.</span>
+      </div>
+
+      <div class="animation-area">
+        <div class="tree-panel">
+          <h3>Decision Tree</h3>
+          <svg class="tree-svg" id="tree-svg"></svg>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot unexplored"></div> Unexplored</div>
+            <div class="legend-item"><div class="legend-dot current"></div> Current</div>
+            <div class="legend-item"><div class="legend-dot success"></div> Valid Subset</div>
+            <div class="legend-item"><div class="legend-dot pruned"></div> Pruned</div>
+            <div class="legend-item"><div class="legend-dot explored"></div> Explored</div>
+          </div>
+        </div>
+
+        <div class="code-panel">
+          <h3>Algorithm</h3>
+          <div class="code-block" id="code-block"></div>
+          <div class="state-display" id="state-display"></div>
+          <div class="found-subsets" id="found-subsets" style="display:none;">
+            <h4>Found Subsets</h4>
+            <div id="found-list" class="result-subsets"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Playground -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(78,205,196,0.15); color: var(--success);">&#9881;</div>
+        Interactive Playground
+      </div>
+
+      <div class="presets">
+        <button class="preset-btn" data-arr="1,2,3,4,5" data-k="9">arr=[1,2,3,4,5] k=9</button>
+        <button class="preset-btn" data-arr="2,4,6,8" data-k="10">arr=[2,4,6,8] k=10</button>
+        <button class="preset-btn" data-arr="1,2,3" data-k="3">arr=[1,2,3] k=3</button>
+        <button class="preset-btn" data-arr="3,5,7,9,11" data-k="15">arr=[3,5,7,9,11] k=15</button>
+        <button class="preset-btn" data-arr="1,2,3,4,5,6,7" data-k="10">arr=[1..7] k=10</button>
+      </div>
+
+      <div class="playground-inputs">
+        <div class="input-group">
+          <label>Array (comma-separated)</label>
+          <input type="text" id="input-array" value="1,2,3,4,5" placeholder="e.g. 1,2,3,4,5">
+        </div>
+        <div class="input-group">
+          <label>Target k</label>
+          <input type="text" id="input-k" value="9" placeholder="e.g. 9" style="width:80px;">
+        </div>
+        <button class="btn btn-primary" id="btn-run">Run</button>
+        <button class="btn btn-secondary" id="btn-animate-playground">Animate</button>
+      </div>
+
+      <div class="playground-result" id="playground-result">
+        <h4>Result</h4>
+        <div class="no-result">Enter values and click Run to see results.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Algorithm code lines for display
+    const codeLines = [
+      { text: 'function findKSumSubsets(arr, k) {', cls: '' },
+      { text: '  arr.sort((a, b) => a - b);', cls: '' },
+      { text: '  const result = [];', cls: '' },
+      { text: '', cls: '' },
+      { text: '  function backtrack(index, current, sum) {', cls: '' },
+      { text: '    if (sum === k) {', cls: '' },
+      { text: '      result.push([...current]);', cls: '' },
+      { text: '      return;', cls: '' },
+      { text: '    }', cls: '' },
+      { text: '    if (sum > k || index >= arr.length) {', cls: '' },
+      { text: '      return; // prune', cls: '' },
+      { text: '    }', cls: '' },
+      { text: '', cls: '' },
+      { text: '    // Include arr[index]', cls: 'comment' },
+      { text: '    current.push(arr[index]);', cls: '' },
+      { text: '    backtrack(index + 1, current, sum + arr[index]);', cls: '' },
+      { text: '', cls: '' },
+      { text: '    // Exclude arr[index] (backtrack)', cls: 'comment' },
+      { text: '    current.pop();', cls: '' },
+      { text: '    backtrack(index + 1, current, sum);', cls: '' },
+      { text: '  }', cls: '' },
+      { text: '', cls: '' },
+      { text: '  backtrack(0, [], 0);', cls: '' },
+      { text: '  return result;', cls: '' },
+      { text: '}', cls: '' },
+    ];
+
+    // Render code block
+    const codeBlock = document.getElementById('code-block');
+    codeLines.forEach((line, i) => {
+      const el = document.createElement('span');
+      el.className = 'code-line';
+      el.dataset.line = i;
+      el.textContent = line.text || ' ';
+      codeBlock.appendChild(el);
+    });
+
+    // Render example array
+    const exArr = [1, 2, 3, 4, 5];
+    const exArrayEl = document.getElementById('example-array');
+    exArr.forEach(v => {
+      const cell = document.createElement('div');
+      cell.className = 'array-cell';
+      cell.textContent = v;
+      exArrayEl.appendChild(cell);
+    });
+
+    // ---- Animation Engine ----
+    let animArr = [1, 2, 3, 4, 5];
+    let animK = 9;
+    let steps = [];
+    let currentStepIdx = -1;
+    let isPlaying = false;
+    let playInterval = null;
+    let treeNodes = [];
+    let treeEdges = [];
+
+    // Tree node structure for visualization
+    let nodeId = 0;
+    function buildTree(arr, k) {
+      nodeId = 0;
+      treeNodes = [];
+      treeEdges = [];
+      steps = [];
+
+      function recurse(index, current, sum, parentId, depth, decision) {
+        const myId = nodeId++;
+        const label = current.length === 0 ? '[]' : '[' + current.join(',') + ']';
+        treeNodes.push({
+          id: myId,
+          label: label,
+          sum: sum,
+          depth: depth,
+          index: index,
+          state: 'unexplored',
+          decision: decision
+        });
+
+        if (parentId !== null) {
+          treeEdges.push({ from: parentId, to: myId, state: 'unexplored' });
+        }
+
+        if (sum === k) {
+          steps.push({
+            type: 'found',
+            nodeId: myId,
+            codeLine: 6,
+            narration: `Sum = ${sum} equals target k = ${k}. Found valid subset: [${current.join(', ')}]`,
+            current: [...current],
+            sum: sum,
+            index: index
+          });
+          return;
+        }
+
+        if (sum > k) {
+          steps.push({
+            type: 'prune_sum',
+            nodeId: myId,
+            codeLine: 10,
+            narration: `Sum = ${sum} exceeds target k = ${k}. Pruning this branch.`,
+            current: [...current],
+            sum: sum,
+            index: index
+          });
+          return;
+        }
+
+        if (index >= arr.length) {
+          steps.push({
+            type: 'prune_end',
+            nodeId: myId,
+            codeLine: 10,
+            narration: `Reached end of array (index ${index}). Sum = ${sum} ≠ ${k}. Backtracking.`,
+            current: [...current],
+            sum: sum,
+            index: index
+          });
+          return;
+        }
+
+        // Visit this node
+        steps.push({
+          type: 'visit',
+          nodeId: myId,
+          codeLine: 5,
+          narration: `At index ${index}, current subset = [${current.join(', ') || '∅'}], sum = ${sum}. Deciding: include ${arr[index]} or skip?`,
+          current: [...current],
+          sum: sum,
+          index: index
+        });
+
+        // Include
+        const newCurrent = [...current, arr[index]];
+        steps.push({
+          type: 'include',
+          nodeId: myId,
+          codeLine: 14,
+          narration: `Include arr[${index}] = ${arr[index]}. New subset = [${newCurrent.join(', ')}], sum = ${sum + arr[index]}.`,
+          current: newCurrent,
+          sum: sum + arr[index],
+          index: index + 1
+        });
+        recurse(index + 1, newCurrent, sum + arr[index], myId, depth + 1, 'include');
+
+        // Exclude (backtrack)
+        steps.push({
+          type: 'exclude',
+          nodeId: myId,
+          codeLine: 18,
+          narration: `Backtrack: remove ${arr[index]}. Now trying to skip arr[${index}] = ${arr[index]}. Subset = [${current.join(', ') || '∅'}], sum = ${sum}.`,
+          current: [...current],
+          sum: sum,
+          index: index + 1
+        });
+        recurse(index + 1, [...current], sum, myId, depth + 1, 'exclude');
+      }
+
+      steps.push({
+        type: 'start',
+        nodeId: 0,
+        codeLine: 22,
+        narration: `Starting backtracking with sorted array [${arr.join(', ')}] and target k = ${k}.`,
+        current: [],
+        sum: 0,
+        index: 0
+      });
+
+      recurse(0, [], 0, null, 0, 'root');
+
+      steps.push({
+        type: 'done',
+        nodeId: -1,
+        codeLine: 23,
+        narration: `Algorithm complete. All branches explored.`,
+        current: [],
+        sum: 0,
+        index: arr.length
+      });
+    }
+
+    // Layout tree nodes
+    function layoutTree() {
+      const svg = document.getElementById('tree-svg');
+      const width = svg.clientWidth || 500;
+      const height = 340;
+
+      // Group by depth
+      const depths = {};
+      treeNodes.forEach(n => {
+        if (!depths[n.depth]) depths[n.depth] = [];
+        depths[n.depth].push(n);
+      });
+
+      const maxDepth = Math.max(...Object.keys(depths).map(Number));
+      const vertGap = Math.min(70, (height - 40) / (maxDepth + 1));
+
+      Object.entries(depths).forEach(([d, nodes]) => {
+        const dep = Number(d);
+        const count = nodes.length;
+        const hGap = width / (count + 1);
+        nodes.forEach((n, i) => {
+          n.x = hGap * (i + 1);
+          n.y = 30 + dep * vertGap;
+        });
+      });
+    }
+
+    function renderTree() {
+      const svg = document.getElementById('tree-svg');
+      const width = svg.clientWidth || 500;
+      const height = 340;
+
+      let html = '';
+
+      // Draw edges
+      treeEdges.forEach(e => {
+        const from = treeNodes.find(n => n.id === e.from);
+        const to = treeNodes.find(n => n.id === e.to);
+        if (from && to) {
+          const cls = 'tree-edge ' + (e.state === 'active' ? 'active' : e.state === 'success' ? 'success' : e.state === 'pruned' ? 'pruned' : '');
+          html += `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" class="${cls}"/>`;
+          // Edge label
+          const toNode = treeNodes.find(n => n.id === e.to);
+          if (toNode && e.state !== 'unexplored') {
+            const mx = (from.x + to.x) / 2;
+            const my = (from.y + to.y) / 2 - 6;
+            const lbl = toNode.decision === 'include' ? '+' : '−';
+            const col = toNode.decision === 'include' ? 'var(--success)' : 'var(--danger)';
+            html += `<text x="${mx}" y="${my}" text-anchor="middle" fill="${col}" font-size="10" font-weight="700" font-family="var(--mono)">${lbl}</text>`;
+          }
+        }
+      });
+
+      // Draw nodes
+      treeNodes.forEach(n => {
+        let fill = 'var(--surface-3)';
+        let stroke = 'var(--border)';
+        let strokeWidth = 1.5;
+        let glow = '';
+
+        switch (n.state) {
+          case 'current':
+            fill = 'var(--current)';
+            stroke = 'var(--current)';
+            glow = `<circle cx="${n.x}" cy="${n.y}" r="16" fill="none" stroke="var(--current)" stroke-width="1" opacity="0.4"/>`;
+            break;
+          case 'success':
+            fill = 'var(--success)';
+            stroke = 'var(--success)';
+            glow = `<circle cx="${n.x}" cy="${n.y}" r="16" fill="none" stroke="var(--success)" stroke-width="1" opacity="0.4"/>`;
+            break;
+          case 'pruned':
+            fill = 'var(--pruned)';
+            stroke = 'var(--pruned)';
+            break;
+          case 'explored':
+            fill = 'var(--surface-3)';
+            stroke = 'var(--text-dim)';
+            break;
+        }
+
+        html += glow;
+        html += `<circle cx="${n.x}" cy="${n.y}" r="12" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`;
+        html += `<text x="${n.x}" y="${n.y + 3.5}" text-anchor="middle" fill="var(--text)" font-size="8" font-family="var(--mono)">${n.sum}</text>`;
+      });
+
+      svg.innerHTML = html;
+    }
+
+    function highlightCodeLine(lineIdx) {
+      document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+      if (lineIdx >= 0 && lineIdx < codeLines.length) {
+        document.querySelector(`.code-line[data-line="${lineIdx}"]`).classList.add('active');
+      }
+    }
+
+    function updateStateDisplay(step) {
+      const el = document.getElementById('state-display');
+      el.innerHTML = `
+        <div class="state-item"><div class="label">Index</div><div class="value">${step.index}</div></div>
+        <div class="state-item"><div class="label">Current</div><div class="value">[${step.current.join(', ')}]</div></div>
+        <div class="state-item"><div class="label">Sum</div><div class="value">${step.sum}</div></div>
+        <div class="state-item"><div class="label">Target</div><div class="value">${animK}</div></div>
+      `;
+    }
+
+    let foundSubsets = [];
+    function updateFoundSubsets() {
+      const container = document.getElementById('found-subsets');
+      const list = document.getElementById('found-list');
+      if (foundSubsets.length > 0) {
+        container.style.display = 'block';
+        list.innerHTML = foundSubsets.map(s => `<span class="subset-pill">[${s.join(', ')}]</span>`).join('');
+      } else {
+        container.style.display = 'none';
+      }
+    }
+
+    function applyStep(idx) {
+      if (idx < 0 || idx >= steps.length) return;
+      const step = steps[idx];
+
+      // Reset previous current node
+      treeNodes.forEach(n => {
+        if (n.state === 'current') n.state = 'explored';
+      });
+
+      // Apply step
+      if (step.type === 'start') {
+        // nothing special
+      } else if (step.type === 'visit') {
+        const node = treeNodes.find(n => n.id === step.nodeId);
+        if (node) node.state = 'current';
+        // Mark edges to this node as active
+        treeEdges.forEach(e => {
+          if (e.to === step.nodeId && e.state === 'unexplored') e.state = 'active';
+        });
+      } else if (step.type === 'include') {
+        const node = treeNodes.find(n => n.id === step.nodeId);
+        if (node) node.state = 'current';
+        // Mark the include child edge
+        const childEdge = treeEdges.find(e => e.from === step.nodeId && e.state === 'unexplored');
+        if (childEdge) childEdge.state = 'active';
+      } else if (step.type === 'exclude') {
+        const node = treeNodes.find(n => n.id === step.nodeId);
+        if (node) node.state = 'current';
+        const childEdges = treeEdges.filter(e => e.from === step.nodeId);
+        const excludeEdge = childEdges.find(e => e.state === 'unexplored');
+        if (excludeEdge) excludeEdge.state = 'active';
+      } else if (step.type === 'found') {
+        const node = treeNodes.find(n => n.id === step.nodeId);
+        if (node) node.state = 'success';
+        treeEdges.forEach(e => {
+          if (e.to === step.nodeId) e.state = 'success';
+        });
+        foundSubsets.push([...step.current]);
+        updateFoundSubsets();
+      } else if (step.type === 'prune_sum' || step.type === 'prune_end') {
+        const node = treeNodes.find(n => n.id === step.nodeId);
+        if (node) node.state = 'pruned';
+        treeEdges.forEach(e => {
+          if (e.to === step.nodeId) e.state = 'pruned';
+        });
+      }
+
+      // Update UI
+      highlightCodeLine(step.codeLine);
+      document.getElementById('step-counter').textContent = `${idx + 1} / ${steps.length}`;
+      document.getElementById('step-narration').textContent = step.narration;
+      updateStateDisplay(step);
+      renderTree();
+    }
+
+    function reset() {
+      stopPlaying();
+      currentStepIdx = -1;
+      foundSubsets = [];
+      updateFoundSubsets();
+      buildTree(animArr, animK);
+
+      // Limit tree depth for visualization if too many nodes
+      if (treeNodes.length > 100) {
+        // For very large trees, we'll just show it but it'll be dense
+      }
+
+      layoutTree();
+      renderTree();
+      highlightCodeLine(-1);
+      document.getElementById('step-counter').textContent = `0 / ${steps.length}`;
+      document.getElementById('step-narration').textContent = 'Press Play or Step to begin the animation.';
+      document.getElementById('state-display').innerHTML = '';
+      document.getElementById('found-subsets').style.display = 'none';
+    }
+
+    function stepForward() {
+      if (currentStepIdx < steps.length - 1) {
+        currentStepIdx++;
+        applyStep(currentStepIdx);
+      } else {
+        stopPlaying();
+      }
+    }
+
+    function getSpeed() {
+      return document.getElementById('speed-slider').value;
+    }
+
+    function getInterval() {
+      const speed = getSpeed();
+      return 1500 / speed;
+    }
+
+    function startPlaying() {
+      if (isPlaying) return;
+      if (currentStepIdx >= steps.length - 1) reset();
+      isPlaying = true;
+      document.getElementById('btn-play').textContent = '⏸ Pause';
+      playInterval = setInterval(() => {
+        stepForward();
+        if (currentStepIdx >= steps.length - 1) stopPlaying();
+      }, getInterval());
+    }
+
+    function stopPlaying() {
+      isPlaying = false;
+      document.getElementById('btn-play').textContent = '▶ Play';
+      if (playInterval) {
+        clearInterval(playInterval);
+        playInterval = null;
+      }
+    }
+
+    // Event listeners
+    document.getElementById('btn-play').addEventListener('click', () => {
+      if (isPlaying) stopPlaying();
+      else startPlaying();
+    });
+
+    document.getElementById('btn-step').addEventListener('click', stepForward);
+    document.getElementById('btn-reset').addEventListener('click', reset);
+
+    document.getElementById('speed-slider').addEventListener('input', (e) => {
+      document.getElementById('speed-label').textContent = e.target.value + 'x';
+      if (isPlaying) {
+        clearInterval(playInterval);
+        playInterval = setInterval(() => {
+          stepForward();
+          if (currentStepIdx >= steps.length - 1) stopPlaying();
+        }, getInterval());
+      }
+    });
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.code === 'Space') { e.preventDefault(); if (isPlaying) stopPlaying(); else startPlaying(); }
+      if (e.code === 'ArrowRight') { e.preventDefault(); stepForward(); }
+      if (e.code === 'KeyR') { e.preventDefault(); reset(); }
+    });
+
+    // Playground
+    function findKSumSubsets(arr, k) {
+      arr.sort((a, b) => a - b);
+      const result = [];
+      function backtrack(index, current, sum) {
+        if (sum === k) { result.push([...current]); return; }
+        if (sum > k || index >= arr.length) return;
+        current.push(arr[index]);
+        backtrack(index + 1, current, sum + arr[index]);
+        current.pop();
+        backtrack(index + 1, current, sum);
+      }
+      backtrack(0, [], 0);
+      return result;
+    }
+
+    document.getElementById('btn-run').addEventListener('click', () => {
+      const arrStr = document.getElementById('input-array').value;
+      const kVal = parseInt(document.getElementById('input-k').value);
+      const arr = arrStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+
+      if (arr.length === 0 || isNaN(kVal)) {
+        document.getElementById('playground-result').innerHTML = '<h4>Result</h4><div class="no-result">Invalid input. Enter comma-separated numbers and a target.</div>';
+        return;
+      }
+
+      const result = findKSumSubsets(arr, kVal);
+      const container = document.getElementById('playground-result');
+      if (result.length === 0) {
+        container.innerHTML = '<h4>Result</h4><div class="no-result">No subsets found that sum to ' + kVal + '.</div>';
+      } else {
+        container.innerHTML = '<h4>Result (' + result.length + ' subset' + (result.length > 1 ? 's' : '') + ')</h4><div class="subsets-grid">' +
+          result.map(s => `<span class="subset-pill">[${s.join(', ')}]</span>`).join('') + '</div>';
+      }
+    });
+
+    document.getElementById('btn-animate-playground').addEventListener('click', () => {
+      const arrStr = document.getElementById('input-array').value;
+      const kVal = parseInt(document.getElementById('input-k').value);
+      const arr = arrStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+
+      if (arr.length === 0 || isNaN(kVal)) return;
+
+      // Limit array size to prevent huge trees
+      if (arr.length > 6) {
+        document.getElementById('playground-result').innerHTML = '<h4>Result</h4><div class="no-result">Animation limited to arrays of 6 or fewer elements for clarity. Use "Run" for larger inputs.</div>';
+        return;
+      }
+
+      animArr = arr.sort((a, b) => a - b);
+      animK = kVal;
+      reset();
+      // Scroll to animation section
+      document.querySelector('.animation-area').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    // Presets
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('input-array').value = btn.dataset.arr;
+        document.getElementById('input-k').value = btn.dataset.k;
+      });
+    });
+
+    // Initialize
+    animArr = [1, 2, 3, 4, 5];
+    animK = 9;
+
+    // Use a smaller default for the animation tree to be readable
+    animArr = [1, 2, 3, 4];
+    animK = 5;
+
+    // Wait for DOM
+    requestAnimationFrame(() => {
+      reset();
+      // Set playground defaults to the example
+      document.getElementById('input-array').value = '1,2,3,4,5';
+      document.getElementById('input-k').value = '9';
+    });
+
+    // Handle resize
+    window.addEventListener('resize', () => {
+      layoutTree();
+      renderTree();
+    });
+  </script>
+</body>
+</html>

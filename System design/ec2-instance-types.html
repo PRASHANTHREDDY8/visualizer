@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS EC2 Instance Types — Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f4f6f9;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --accent: #ff9900;
+      --accent-dark: #ec7211;
+      --general: #3b82f6;
+      --compute: #ef4444;
+      --memory: #8b5cf6;
+      --storage: #10b981;
+      --accelerated: #f59e0b;
+      --network: #06b6d4;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-lg: 0 10px 25px rgba(0,0,0,0.1), 0 4px 10px rgba(0,0,0,0.05);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Navigation */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+
+    .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      height: 56px;
+      overflow-x: auto;
+    }
+
+    .nav-brand {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--accent-dark);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-brand svg { width: 20px; height: 20px; }
+
+    .nav-links {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--text);
+      background: var(--surface-alt);
+    }
+
+    /* Hero */
+    .hero {
+      padding: 4rem 2rem 3rem;
+      text-align: center;
+      background: linear-gradient(180deg, #fff 0%, var(--bg) 100%);
+    }
+
+    .hero h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #232f3e, var(--accent-dark));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Sections */
+    section {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+
+    .section-header {
+      margin-bottom: 2rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* Instance Family Overview Diagram */
+    .family-diagram {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1.5rem;
+    }
+
+    .family-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .family-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+
+    .family-card[data-family="general"]::before { background: var(--general); }
+    .family-card[data-family="compute"]::before { background: var(--compute); }
+    .family-card[data-family="memory"]::before { background: var(--memory); }
+    .family-card[data-family="storage"]::before { background: var(--storage); }
+    .family-card[data-family="accelerated"]::before { background: var(--accelerated); }
+    .family-card[data-family="network"]::before { background: var(--network); }
+
+    .family-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-lg);
+      border-color: transparent;
+    }
+
+    .family-card.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255,153,0,0.15);
+    }
+
+    .family-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      font-size: 1.4rem;
+    }
+
+    .family-card[data-family="general"] .family-icon { background: #eff6ff; color: var(--general); }
+    .family-card[data-family="compute"] .family-icon { background: #fef2f2; color: var(--compute); }
+    .family-card[data-family="memory"] .family-icon { background: #f5f3ff; color: var(--memory); }
+    .family-card[data-family="storage"] .family-icon { background: #ecfdf5; color: var(--storage); }
+    .family-card[data-family="accelerated"] .family-icon { background: #fffbeb; color: var(--accelerated); }
+    .family-card[data-family="network"] .family-icon { background: #ecfeff; color: var(--network); }
+
+    .family-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .family-card .subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 0.75rem;
+    }
+
+    .family-card p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .family-card .instances-list {
+      margin-top: 0.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .instance-pill {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      background: var(--surface-alt);
+      color: var(--text-muted);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    /* Detail Panel */
+    .detail-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-top: 2rem;
+      overflow: hidden;
+      display: none;
+      animation: slideDown 0.3s ease;
+    }
+
+    .detail-panel.visible { display: block; }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .detail-header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .detail-header h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    .detail-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: var(--surface-alt);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .detail-close:hover { background: var(--border); color: var(--text); }
+
+    .detail-body {
+      padding: 2rem;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .detail-section h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .use-case-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      margin-bottom: 0.6rem;
+      font-size: 0.9rem;
+    }
+
+    .use-case-item::before {
+      content: '→';
+      color: var(--accent);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* Comparison Table */
+    .comparison-wrapper {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    .comparison-table th {
+      text-align: left;
+      padding: 1rem 1.25rem;
+      background: var(--surface-alt);
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .comparison-table td {
+      padding: 0.9rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr:last-child td { border-bottom: none; }
+
+    .comparison-table tr:hover td { background: var(--surface-alt); }
+
+    .table-family-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 600;
+    }
+
+    .table-family-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Interactive Selector */
+    .selector-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-top: 1.5rem;
+    }
+
+    .selector-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group select, .form-group input {
+      width: 100%;
+      padding: 0.6rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      background: var(--bg);
+      color: var(--text);
+      transition: border-color 0.2s;
+    }
+
+    .form-group select:focus, .form-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255,153,0,0.1);
+    }
+
+    .recommendation-result {
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #fffbeb, #fef3c7);
+      border-radius: var(--radius-sm);
+      border: 1px solid #fbbf24;
+    }
+
+    .recommendation-result h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #92400e;
+    }
+
+    .recommendation-result p {
+      font-size: 0.9rem;
+      color: #78350f;
+    }
+
+    .rec-instances {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .rec-pill {
+      background: #fff;
+      border: 1px solid #fbbf24;
+      border-radius: 6px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #92400e;
+    }
+
+    /* Pricing Tiers */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1.5rem;
+    }
+
+    .pricing-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .pricing-card:hover {
+      box-shadow: var(--shadow);
+    }
+
+    .pricing-card h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    .pricing-card .price {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .pricing-card .desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .pricing-card .savings {
+      display: inline-block;
+      margin-top: 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #ecfdf5;
+      color: #065f46;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+    }
+
+    /* Pitfalls */
+    .pitfall-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+
+    .pitfall-card:hover { box-shadow: var(--shadow); }
+
+    .pitfall-header {
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-left: 4px solid #f59e0b;
+    }
+
+    .pitfall-header .icon {
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .pitfall-header h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .pitfall-header .chevron {
+      transition: transform 0.2s;
+      color: var(--text-muted);
+    }
+
+    .pitfall-card.open .pitfall-header .chevron { transform: rotate(180deg); }
+
+    .pitfall-body {
+      padding: 0 1.5rem 1.25rem 3rem;
+      display: none;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .pitfall-card.open .pitfall-body { display: block; }
+
+    .pitfall-body strong { color: var(--text); }
+
+    /* Best Practices */
+    .practice-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      border-left: 4px solid var(--general);
+    }
+
+    .practice-card h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .practice-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .practice-card li {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      padding: 0.35rem 0;
+      padding-left: 1.2rem;
+      position: relative;
+    }
+
+    .practice-card li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--general);
+      font-weight: 700;
+    }
+
+    /* SVG Architecture */
+    .arch-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-top: 1.5rem;
+      overflow-x: auto;
+    }
+
+    .arch-container svg {
+      width: 100%;
+      min-width: 800px;
+      height: 400px;
+    }
+
+    .arch-node {
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .arch-node:hover { filter: brightness(0.95); transform: scale(1.02); }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .hero h1 { font-size: 2rem; }
+      .family-diagram { grid-template-columns: 1fr; }
+      .nav-inner { gap: 1rem; }
+      .detail-grid { grid-template-columns: 1fr; }
+      section { padding: 2rem 1rem; }
+    }
+
+    /* Scroll animations */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="3"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
+        EC2 Instance Types
+      </div>
+      <div class="nav-links">
+        <a href="#overview" class="active">Overview</a>
+        <a href="#families">Families</a>
+        <a href="#comparison">Comparison</a>
+        <a href="#selector">Selector</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#pitfalls">Pitfalls</a>
+        <a href="#best-practices">Best Practices</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <h1>AWS EC2 Instance Types</h1>
+    <p>A comprehensive interactive guide to choosing the right EC2 instance for your workload — from general-purpose to GPU-accelerated compute.</p>
+  </header>
+
+  <!-- Section 1: Overview -->
+  <section id="overview">
+    <div class="section-header">
+      <h2>Instance Family Overview</h2>
+      <p>EC2 offers six primary instance families, each optimized for different workload characteristics. Click any card to explore details.</p>
+    </div>
+
+    <div class="family-diagram">
+      <div class="family-card" data-family="general" onclick="showDetail('general')">
+        <div class="family-icon">⚖</div>
+        <h3>General Purpose</h3>
+        <div class="subtitle">Balanced compute, memory & networking</div>
+        <p>Ideal for diverse workloads requiring a balance of resources. Web servers, code repos, dev environments.</p>
+        <div class="instances-list">
+          <span class="instance-pill">M7g</span>
+          <span class="instance-pill">M7i</span>
+          <span class="instance-pill">M6i</span>
+          <span class="instance-pill">T3</span>
+          <span class="instance-pill">T4g</span>
+          <span class="instance-pill">Mac</span>
+        </div>
+      </div>
+
+      <div class="family-card" data-family="compute" onclick="showDetail('compute')">
+        <div class="family-icon">⚡</div>
+        <h3>Compute Optimized</h3>
+        <div class="subtitle">Highest per-core performance</div>
+        <p>Best for compute-bound applications that benefit from high-performance processors. Batch processing, gaming, scientific modeling.</p>
+        <div class="instances-list">
+          <span class="instance-pill">C7g</span>
+          <span class="instance-pill">C7i</span>
+          <span class="instance-pill">C6i</span>
+          <span class="instance-pill">C7gn</span>
+          <span class="instance-pill">Hpc7g</span>
+        </div>
+      </div>
+
+      <div class="family-card" data-family="memory" onclick="showDetail('memory')">
+        <div class="family-icon">🧠</div>
+        <h3>Memory Optimized</h3>
+        <div class="subtitle">Large memory-to-CPU ratio</div>
+        <p>Designed for workloads that process large data sets in memory. In-memory databases, real-time analytics, caching layers.</p>
+        <div class="instances-list">
+          <span class="instance-pill">R7g</span>
+          <span class="instance-pill">R7i</span>
+          <span class="instance-pill">X2idn</span>
+          <span class="instance-pill">X2gd</span>
+          <span class="instance-pill">z1d</span>
+          <span class="instance-pill">U-*</span>
+        </div>
+      </div>
+
+      <div class="family-card" data-family="storage" onclick="showDetail('storage')">
+        <div class="family-icon">💾</div>
+        <h3>Storage Optimized</h3>
+        <div class="subtitle">High sequential read/write to local storage</div>
+        <p>For workloads requiring high IOPS or throughput to local instance storage. Data warehouses, distributed file systems.</p>
+        <div class="instances-list">
+          <span class="instance-pill">I4i</span>
+          <span class="instance-pill">I3</span>
+          <span class="instance-pill">Im4gn</span>
+          <span class="instance-pill">D3</span>
+          <span class="instance-pill">H1</span>
+        </div>
+      </div>
+
+      <div class="family-card" data-family="accelerated" onclick="showDetail('accelerated')">
+        <div class="family-icon">🎮</div>
+        <h3>Accelerated Computing</h3>
+        <div class="subtitle">GPU & custom hardware accelerators</div>
+        <p>Hardware accelerators for floating point, graphics, or pattern matching. ML training, inference, video encoding.</p>
+        <div class="instances-list">
+          <span class="instance-pill">P5</span>
+          <span class="instance-pill">P4d</span>
+          <span class="instance-pill">G5</span>
+          <span class="instance-pill">G6</span>
+          <span class="instance-pill">Inf2</span>
+          <span class="instance-pill">Trn1</span>
+        </div>
+      </div>
+
+      <div class="family-card" data-family="network" onclick="showDetail('network')">
+        <div class="family-icon">🌐</div>
+        <h3>Network Optimized</h3>
+        <div class="subtitle">High bandwidth & low latency networking</div>
+        <p>Optimized for workloads that require high network throughput. Network appliances, real-time streaming, inter-node communication.</p>
+        <div class="instances-list">
+          <span class="instance-pill">C7gn</span>
+          <span class="instance-pill">Hpc7g</span>
+          <span class="instance-pill">P5</span>
+          <span class="instance-pill">Trn1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail Panel -->
+    <div class="detail-panel" id="detail-panel">
+      <div class="detail-header">
+        <h3 id="detail-title"></h3>
+        <button class="detail-close" onclick="hideDetail()">×</button>
+      </div>
+      <div class="detail-body">
+        <div class="detail-grid" id="detail-content"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Families Deep Dive -->
+  <section id="families">
+    <div class="section-header">
+      <h2>Instance Families Deep Dive</h2>
+      <p>Understanding the naming convention and specific instance types within each family.</p>
+    </div>
+
+    <div class="arch-container">
+      <svg id="naming-svg" viewBox="0 0 900 320">
+        <!-- Instance naming breakdown -->
+        <defs>
+          <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#ff9900;stop-opacity:0.15"/>
+            <stop offset="100%" style="stop-color:#ff9900;stop-opacity:0.05"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Title -->
+        <text x="450" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#1a202c">EC2 Instance Naming Convention</text>
+
+        <!-- Example: m7g.2xlarge -->
+        <rect x="250" y="55" width="400" height="60" rx="12" fill="url(#grad1)" stroke="#ff9900" stroke-width="1.5"/>
+        <text x="450" y="92" text-anchor="middle" font-size="32" font-weight="700" font-family="monospace" fill="#1a202c">m7g.2xlarge</text>
+
+        <!-- Arrows and labels -->
+        <!-- m -->
+        <line x1="295" y1="120" x2="295" y2="155" stroke="#3b82f6" stroke-width="2"/>
+        <rect x="240" y="158" width="110" height="44" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="1"/>
+        <text x="295" y="176" text-anchor="middle" font-size="11" font-weight="600" fill="#3b82f6">Family</text>
+        <text x="295" y="192" text-anchor="middle" font-size="10" fill="#64748b">M = General</text>
+
+        <!-- 7 -->
+        <line x1="340" y1="120" x2="340" y2="155" stroke="#ef4444" stroke-width="2"/>
+        <rect x="285" y="210" width="110" height="44" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="1"/>
+        <text x="340" y="228" text-anchor="middle" font-size="11" font-weight="600" fill="#ef4444">Generation</text>
+        <text x="340" y="244" text-anchor="middle" font-size="10" fill="#64748b">7 = 7th gen</text>
+
+        <!-- g -->
+        <line x1="380" y1="120" x2="380" y2="155" stroke="#8b5cf6" stroke-width="2"/>
+        <rect x="325" y="158" width="110" height="44" rx="8" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1"/>
+        <text x="380" y="176" text-anchor="middle" font-size="11" font-weight="600" fill="#8b5cf6">Processor</text>
+        <text x="380" y="192" text-anchor="middle" font-size="10" fill="#64748b">g = Graviton</text>
+
+        <!-- . -->
+        <line x1="420" y1="120" x2="420" y2="155" stroke="#64748b" stroke-width="1" stroke-dasharray="3"/>
+
+        <!-- 2xlarge -->
+        <line x1="500" y1="120" x2="500" y2="155" stroke="#10b981" stroke-width="2"/>
+        <rect x="435" y="158" width="130" height="44" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="1"/>
+        <text x="500" y="176" text-anchor="middle" font-size="11" font-weight="600" fill="#10b981">Size</text>
+        <text x="500" y="192" text-anchor="middle" font-size="10" fill="#64748b">2xlarge = 8 vCPUs</text>
+
+        <!-- Legend -->
+        <text x="50" y="275" font-size="12" font-weight="600" fill="#1a202c">Processor Suffixes:</text>
+        <text x="50" y="295" font-size="11" fill="#64748b">g = Graviton (ARM) | i = Intel | a = AMD | (none) = varies by generation</text>
+        <text x="50" y="312" font-size="11" fill="#64748b">Additional: n = network optimized | d = local NVMe storage | e = extra memory | z = high frequency</text>
+
+        <!-- Size scale -->
+        <text x="650" y="215" font-size="11" font-weight="600" fill="#1a202c">Sizes (small → large):</text>
+        <text x="650" y="235" font-size="10" fill="#64748b">nano → micro → small → medium</text>
+        <text x="650" y="252" font-size="10" fill="#64748b">→ large → xlarge → 2xlarge</text>
+        <text x="650" y="269" font-size="10" fill="#64748b">→ 4xl → 8xl → 12xl → 16xl → 24xl</text>
+        <text x="650" y="286" font-size="10" fill="#64748b">→ 32xl → 48xl → metal</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Section 3: Comparison -->
+  <section id="comparison">
+    <div class="section-header">
+      <h2>Instance Type Comparison</h2>
+      <p>Side-by-side comparison of popular instances across families — specs, pricing, and ideal workloads.</p>
+    </div>
+
+    <div class="comparison-wrapper">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Instance</th>
+            <th>Family</th>
+            <th>vCPUs</th>
+            <th>Memory</th>
+            <th>Network</th>
+            <th>Storage</th>
+            <th>Best For</th>
+            <th>Price/hr*</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>t3.medium</strong></td>
+            <td><span class="table-family-badge"><span class="table-family-dot" style="background:var(--general)"></span>General</span></td>
+            <td>2</td>
+            <td>4 GiB</td>
+            <td>Up to 5 Gbps</td>
+            <td>EBS Only</td>
+            <td>Dev/test, low-traffic web</td>
+            <td>$0.042</td>
+          </tr>
+          <tr>
+            <td><strong>m7g.xlarge</strong></td>
+            <td><span class="table-family-badge"><span class="table-family-dot" style="background:var(--general)"></span>General</span></td>
+            <td>4</td>
+            <td>16 GiB</td>
+            <td>Up to 12.5 Gbps</td>
+            <td>EBS Only</td>
+            <td>Web apps, app servers, microservices</td>
+            <td>$0.163</td>
+          </tr>
+          <tr>
+            <td><strong>c7g.2xlarge</strong></td>
+            <td><span class="table-family-badge"><span class="table-family-dot" style="background:var(--compute)"></span>Compute</span></td>
+            <td>8</td>
+            <td>16 GiB</td>
+            <td>Up to 15 Gbps</td>
+            <td>EBS Only</td>
+            <td>Batch processing, gaming servers</td>
+            <td>$0.290</td>
+          </tr>
+          <tr>
+            <td><strong>r7g.2xlarge</strong></td>
+            <td><span class="table-family-badge"><span class="table-family-dot" style="background:var(--memory)"></span>Memory</span></td>
+            <td>8</td>
+            <td>64 GiB</td>
+            <td>Up to 15 Gbps</td>
+            <td>EBS Only</td>
+            <td>In-memory caches, real-time analytics</td>
+            <td>$0.427</td>
+          </tr>
+          <tr>
+            <td><strong>i4i.2xlarge</strong></td>
+            <td><span class="table-family-badge"><span class="table-family-dot" style="background:var(--storage)"></span>Storage</span></td>
+            <td>8</td>
+            <td>64 GiB</td>
+            <td>Up to 12.5 Gbps</td>
+            <td>1x 1,875 GB NVMe</td>
+            <td>NoSQL DBs, data warehousing</td>
+            <td>$0.624</td>
+          </tr>
+          <tr>
+            <td><strong>g5.xlarge</strong></td>
+            <td><span class="table-family-badge"><span class="table-family-dot" style="background:var(--accelerated)"></span>Accelerated</span></td>
+            <td>4</td>
+            <td>16 GiB</td>
+            <td>Up to 10 Gbps</td>
+            <td>1x 250 GB NVMe</td>
+            <td>ML inference, graphics rendering</td>
+            <td>$1.006</td>
+          </tr>
+          <tr>
+            <td><strong>p5.48xlarge</strong></td>
+            <td><span class="table-family-badge"><span class="table-family-dot" style="background:var(--accelerated)"></span>Accelerated</span></td>
+            <td>192</td>
+            <td>2,048 GiB</td>
+            <td>3,200 Gbps EFA</td>
+            <td>8x 3,840 GB NVMe</td>
+            <td>LLM training, HPC simulations</td>
+            <td>$98.32</td>
+          </tr>
+          <tr>
+            <td><strong>x2idn.24xlarge</strong></td>
+            <td><span class="table-family-badge"><span class="table-family-dot" style="background:var(--memory)"></span>Memory</span></td>
+            <td>96</td>
+            <td>1,536 GiB</td>
+            <td>50 Gbps</td>
+            <td>2x 1,900 GB NVMe</td>
+            <td>SAP HANA, large in-memory DBs</td>
+            <td>$10.01</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem;">*Approximate On-Demand pricing in US East (N. Virginia). Actual pricing varies by region and changes over time.</p>
+  </section>
+
+  <!-- Section 4: Interactive Selector -->
+  <section id="selector">
+    <div class="section-header">
+      <h2>Instance Type Selector</h2>
+      <p>Answer a few questions about your workload and get a recommendation.</p>
+    </div>
+
+    <div class="selector-section">
+      <div class="selector-form">
+        <div class="form-group">
+          <label>Primary Workload</label>
+          <select id="sel-workload" onchange="updateRecommendation()">
+            <option value="">— Select —</option>
+            <option value="web">Web Application / API Server</option>
+            <option value="batch">Batch Processing / ETL</option>
+            <option value="database">Database (relational)</option>
+            <option value="cache">In-Memory Cache / Redis</option>
+            <option value="ml-training">ML Model Training</option>
+            <option value="ml-inference">ML Inference / Serving</option>
+            <option value="analytics">Data Analytics / Warehouse</option>
+            <option value="gaming">Game Server</option>
+            <option value="video">Video Encoding / Streaming</option>
+            <option value="dev">Development / Testing</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Traffic Pattern</label>
+          <select id="sel-traffic" onchange="updateRecommendation()">
+            <option value="">— Select —</option>
+            <option value="steady">Steady / Predictable</option>
+            <option value="bursty">Bursty / Spiky</option>
+            <option value="batch">Batch (scheduled jobs)</option>
+            <option value="always-on">Always On (24/7 full load)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Budget Priority</label>
+          <select id="sel-budget" onchange="updateRecommendation()">
+            <option value="">— Select —</option>
+            <option value="cost">Minimize cost</option>
+            <option value="balanced">Balanced cost/performance</option>
+            <option value="performance">Maximize performance</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>CPU Architecture Preference</label>
+          <select id="sel-arch" onchange="updateRecommendation()">
+            <option value="">— Select —</option>
+            <option value="any">No preference</option>
+            <option value="arm">ARM (Graviton) — best price/perf</option>
+            <option value="intel">Intel</option>
+            <option value="amd">AMD</option>
+          </select>
+        </div>
+      </div>
+      <div id="recommendation" class="recommendation-result" style="display:none;"></div>
+    </div>
+  </section>
+
+  <!-- Section 5: Architecture Decision Diagram -->
+  <section id="architecture">
+    <div class="section-header">
+      <h2>Decision Architecture</h2>
+      <p>How to think about choosing instances in the context of a full system.</p>
+    </div>
+
+    <div class="arch-container">
+      <svg viewBox="0 0 900 380">
+        <!-- Flow chart for instance selection -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+          </marker>
+        </defs>
+
+        <!-- Start -->
+        <rect x="350" y="15" width="200" height="45" rx="22" fill="#232f3e" stroke="none"/>
+        <text x="450" y="43" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">What's your bottleneck?</text>
+
+        <!-- Branches -->
+        <!-- CPU -->
+        <line x1="380" y1="60" x2="130" y2="110" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <rect x="50" y="110" width="160" height="40" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5"/>
+        <text x="130" y="135" text-anchor="middle" font-size="12" font-weight="600" fill="#ef4444">CPU-bound</text>
+
+        <!-- Memory -->
+        <line x1="420" y1="60" x2="330" y2="110" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <rect x="260" y="110" width="160" height="40" rx="8" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+        <text x="340" y="135" text-anchor="middle" font-size="12" font-weight="600" fill="#8b5cf6">Memory-bound</text>
+
+        <!-- IO -->
+        <line x1="480" y1="60" x2="560" y2="110" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <rect x="480" y="110" width="160" height="40" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
+        <text x="560" y="135" text-anchor="middle" font-size="12" font-weight="600" fill="#10b981">I/O-bound</text>
+
+        <!-- GPU -->
+        <line x1="520" y1="60" x2="770" y2="110" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <rect x="690" y="110" width="160" height="40" rx="8" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="770" y="135" text-anchor="middle" font-size="12" font-weight="600" fill="#f59e0b">GPU-bound</text>
+
+        <!-- CPU sub-choices -->
+        <line x1="130" y1="150" x2="80" y2="190" stroke="#64748b" stroke-width="1" marker-end="url(#arrowhead)"/>
+        <line x1="130" y1="150" x2="180" y2="190" stroke="#64748b" stroke-width="1" marker-end="url(#arrowhead)"/>
+
+        <rect x="20" y="190" width="120" height="55" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="80" y="212" text-anchor="middle" font-size="10" font-weight="600" fill="#1a202c">Sustained load</text>
+        <text x="80" y="230" text-anchor="middle" font-size="11" font-weight="700" fill="#ef4444">C7g / C7i</text>
+
+        <rect x="150" y="190" width="120" height="55" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="210" y="212" text-anchor="middle" font-size="10" font-weight="600" fill="#1a202c">Bursty load</text>
+        <text x="210" y="230" text-anchor="middle" font-size="11" font-weight="700" fill="#3b82f6">T3 / T4g</text>
+
+        <!-- Memory sub-choices -->
+        <line x1="340" y1="150" x2="290" y2="190" stroke="#64748b" stroke-width="1" marker-end="url(#arrowhead)"/>
+        <line x1="340" y1="150" x2="390" y2="190" stroke="#64748b" stroke-width="1" marker-end="url(#arrowhead)"/>
+
+        <rect x="230" y="190" width="120" height="55" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="290" y="212" text-anchor="middle" font-size="10" font-weight="600" fill="#1a202c">Up to 512 GiB</text>
+        <text x="290" y="230" text-anchor="middle" font-size="11" font-weight="700" fill="#8b5cf6">R7g / R7i</text>
+
+        <rect x="360" y="190" width="120" height="55" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="420" y="212" text-anchor="middle" font-size="10" font-weight="600" fill="#1a202c">TBs of RAM</text>
+        <text x="420" y="230" text-anchor="middle" font-size="11" font-weight="700" fill="#8b5cf6">X2 / U-*</text>
+
+        <!-- IO sub-choices -->
+        <line x1="560" y1="150" x2="520" y2="190" stroke="#64748b" stroke-width="1" marker-end="url(#arrowhead)"/>
+        <line x1="560" y1="150" x2="610" y2="190" stroke="#64748b" stroke-width="1" marker-end="url(#arrowhead)"/>
+
+        <rect x="460" y="190" width="120" height="55" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="520" y="212" text-anchor="middle" font-size="10" font-weight="600" fill="#1a202c">High IOPS</text>
+        <text x="520" y="230" text-anchor="middle" font-size="11" font-weight="700" fill="#10b981">I4i / Is4gen</text>
+
+        <rect x="590" y="190" width="120" height="55" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="650" y="212" text-anchor="middle" font-size="10" font-weight="600" fill="#1a202c">High throughput</text>
+        <text x="650" y="230" text-anchor="middle" font-size="11" font-weight="700" fill="#10b981">D3 / H1</text>
+
+        <!-- GPU sub-choices -->
+        <line x1="770" y1="150" x2="720" y2="190" stroke="#64748b" stroke-width="1" marker-end="url(#arrowhead)"/>
+        <line x1="770" y1="150" x2="820" y2="190" stroke="#64748b" stroke-width="1" marker-end="url(#arrowhead)"/>
+
+        <rect x="660" y="190" width="120" height="55" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="720" y="212" text-anchor="middle" font-size="10" font-weight="600" fill="#1a202c">Training</text>
+        <text x="720" y="230" text-anchor="middle" font-size="11" font-weight="700" fill="#f59e0b">P5 / Trn1</text>
+
+        <rect x="790" y="190" width="120" height="55" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="850" y="212" text-anchor="middle" font-size="10" font-weight="600" fill="#1a202c">Inference</text>
+        <text x="850" y="230" text-anchor="middle" font-size="11" font-weight="700" fill="#f59e0b">G5 / Inf2</text>
+
+        <!-- Bottom advice -->
+        <rect x="200" y="290" width="500" height="70" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="450" y="315" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">Pro Tip: Start with Graviton (ARM) instances</text>
+        <text x="450" y="335" text-anchor="middle" font-size="11" fill="#64748b">Up to 40% better price-performance vs. x86 equivalents.</text>
+        <text x="450" y="352" text-anchor="middle" font-size="11" fill="#64748b">Most modern workloads (Java, Python, Node, Go, .NET 6+) run unmodified on ARM.</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Section 6: Pricing Models -->
+  <section id="pricing">
+    <div class="section-header">
+      <h2>Pricing Models</h2>
+      <p>EC2 offers multiple purchasing options — the right choice can reduce costs by up to 90%.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h4>On-Demand</h4>
+        <div class="price">Pay by the second, no commitment</div>
+        <div class="desc">Full flexibility. No upfront cost. Use for unpredictable workloads, dev/test, or short-term spikes.</div>
+      </div>
+      <div class="pricing-card">
+        <h4>Reserved Instances</h4>
+        <div class="price">1 or 3 year commitment</div>
+        <div class="desc">Predictable, steady-state workloads. Commit to a specific instance type in a region.</div>
+        <div class="savings">Up to 72% savings</div>
+      </div>
+      <div class="pricing-card">
+        <h4>Savings Plans</h4>
+        <div class="price">$/hr commitment, flexible type</div>
+        <div class="desc">Like Reserved but flexible across instance families, sizes, OS, and regions within a family.</div>
+        <div class="savings">Up to 72% savings</div>
+      </div>
+      <div class="pricing-card">
+        <h4>Spot Instances</h4>
+        <div class="price">Bid on spare capacity</div>
+        <div class="desc">Fault-tolerant, flexible workloads. Can be interrupted with 2-min notice. Great for batch, CI/CD, ML training.</div>
+        <div class="savings">Up to 90% savings</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 7: Pitfalls -->
+  <section id="pitfalls">
+    <div class="section-header">
+      <h2>Common Pitfalls</h2>
+      <p>Mistakes teams frequently make when selecting and managing EC2 instances.</p>
+    </div>
+
+    <div class="pitfall-card" onclick="togglePitfall(this)">
+      <div class="pitfall-header">
+        <span class="icon">⚠</span>
+        <h4>Choosing instance type based on name familiarity alone</h4>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="pitfall-body">
+        <p><strong>The mistake:</strong> Defaulting to m5.xlarge because "it's what we always use" without evaluating newer generations or Graviton.</p>
+        <p><strong>Why it happens:</strong> Teams copy-paste infrastructure configs without re-evaluating. Newer generations aren't always well-publicized.</p>
+        <p><strong>The consequence:</strong> Paying 20-40% more for equivalent or worse performance. M7g offers ~25% better perf than M5 at ~20% lower cost.</p>
+        <p><strong>The fix:</strong> Regularly audit instance generations. Default to the latest Graviton variant (e.g., m7g over m5) unless you have a specific x86 dependency.</p>
+      </div>
+    </div>
+
+    <div class="pitfall-card" onclick="togglePitfall(this)">
+      <div class="pitfall-header">
+        <span class="icon">⚠</span>
+        <h4>Over-provisioning "just in case"</h4>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="pitfall-body">
+        <p><strong>The mistake:</strong> Running c5.4xlarge instances at 15% average CPU utilization because "we might need the headroom."</p>
+        <p><strong>Why it happens:</strong> Fear of performance issues. No autoscaling configured. One-time spikes that never recurred.</p>
+        <p><strong>The consequence:</strong> Wasting 60-80% of compute spend. Over a year, this can be tens of thousands of dollars per instance.</p>
+        <p><strong>The fix:</strong> Use CloudWatch + Compute Optimizer. Right-size based on P95 utilization. Implement autoscaling for variable workloads. Use T3/T4g burstable instances for low-average, occasional-spike patterns.</p>
+      </div>
+    </div>
+
+    <div class="pitfall-card" onclick="togglePitfall(this)">
+      <div class="pitfall-header">
+        <span class="icon">⚠</span>
+        <h4>Using compute-optimized instances for memory-bound workloads</h4>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="pitfall-body">
+        <p><strong>The mistake:</strong> Running Redis or Elasticsearch on C-family instances because "they're fast," then running out of memory.</p>
+        <p><strong>Why it happens:</strong> Conflating "fast CPU" with "fast overall." Not profiling actual resource consumption.</p>
+        <p><strong>The consequence:</strong> OOM kills, swap thrashing, forced vertical scaling to absurdly large C instances when an R instance at half the cost would suffice.</p>
+        <p><strong>The fix:</strong> Profile your workload first. If memory utilization is >60% while CPU is <30%, switch to R-family. The 8:1 memory-to-vCPU ratio of R instances is purpose-built for this.</p>
+      </div>
+    </div>
+
+    <div class="pitfall-card" onclick="togglePitfall(this)">
+      <div class="pitfall-header">
+        <span class="icon">⚠</span>
+        <h4>Ignoring network bandwidth limits on smaller instances</h4>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="pitfall-body">
+        <p><strong>The mistake:</strong> Running high-throughput services on t3.large and experiencing mysterious latency spikes.</p>
+        <p><strong>Why it happens:</strong> Smaller instances have "Up to X Gbps" network — the "up to" means burst, not sustained. Baseline can be much lower.</p>
+        <p><strong>The consequence:</strong> Intermittent network throttling that doesn't show up in CPU/memory metrics. Looks like application bugs.</p>
+        <p><strong>The fix:</strong> Check the "Baseline bandwidth" column in AWS docs, not just the "Up to" value. For sustained high-throughput, use instances with dedicated (not burst) network bandwidth. Monitor NetworkIn/Out and NetworkPacketsIn/Out CloudWatch metrics.</p>
+      </div>
+    </div>
+
+    <div class="pitfall-card" onclick="togglePitfall(this)">
+      <div class="pitfall-header">
+        <span class="icon">⚠</span>
+        <h4>Not using Spot for fault-tolerant workloads</h4>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="pitfall-body">
+        <p><strong>The mistake:</strong> Running all CI/CD, batch processing, and stateless workers on On-Demand because "Spot is unreliable."</p>
+        <p><strong>Why it happens:</strong> Early Spot experiences with aggressive bidding and frequent interruptions. Lack of diversification across instance types.</p>
+        <p><strong>The consequence:</strong> Paying 3-10x more than necessary for workloads that can tolerate interruption.</p>
+        <p><strong>The fix:</strong> Use Spot Fleet with capacity-optimized allocation across multiple instance types. Implement graceful shutdown handlers (2-min warning). For batch: use AWS Batch with Spot. For containers: use Spot with ECS/EKS + Karpenter.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 8: Best Practices -->
+  <section id="best-practices">
+    <div class="section-header">
+      <h2>Best Practices</h2>
+      <p>Proven strategies for optimal EC2 usage across selection, operation, and cost management.</p>
+    </div>
+
+    <div class="practice-card" style="border-left-color: var(--general)">
+      <h4>Instance Selection</h4>
+      <ul>
+        <li>Start with Graviton (ARM) unless you have a specific x86 requirement — best price/performance ratio</li>
+        <li>Always use latest generation (7th gen in 2024/2025) — better perf at same or lower cost</li>
+        <li>Profile your workload before choosing: is it CPU, memory, I/O, or GPU bound?</li>
+        <li>Use AWS Compute Optimizer for data-driven right-sizing recommendations</li>
+        <li>Consider T3/T4g burstable for workloads with <40% average CPU utilization</li>
+      </ul>
+    </div>
+
+    <div class="practice-card" style="border-left-color: var(--compute)">
+      <h4>Cost Optimization</h4>
+      <ul>
+        <li>Layer purchasing: Reserved/Savings Plans for baseline + On-Demand for peaks + Spot for fault-tolerant</li>
+        <li>Use Spot for: CI/CD runners, batch jobs, dev environments, stateless workers, ML training</li>
+        <li>Implement aggressive autoscaling — scale to zero when possible (ECS Fargate, Lambda for sporadic loads)</li>
+        <li>Schedule non-production instances to stop nights/weekends (saves ~65% on dev/staging)</li>
+        <li>Monitor with Cost Explorer; set budgets and alerts before bills surprise you</li>
+      </ul>
+    </div>
+
+    <div class="practice-card" style="border-left-color: var(--memory)">
+      <h4>Operational Excellence</h4>
+      <ul>
+        <li>Use Instance Metadata Service v2 (IMDSv2) — enforce hop limit of 1 to prevent SSRF attacks</li>
+        <li>Never embed credentials in instances — use IAM roles and instance profiles</li>
+        <li>Enable detailed CloudWatch monitoring for production (1-min intervals vs default 5-min)</li>
+        <li>Use placement groups: cluster for low-latency HPC, spread for high availability</li>
+        <li>Implement health checks and auto-recovery — instances can be replaced automatically on hardware failure</li>
+      </ul>
+    </div>
+
+    <div class="practice-card" style="border-left-color: var(--storage)">
+      <h4>Storage & Performance</h4>
+      <ul>
+        <li>EBS-optimized is default on current gen — but verify your IOPS/throughput aren't hitting EBS limits</li>
+        <li>Use gp3 over gp2 for EBS — independently configure IOPS and throughput at lower cost</li>
+        <li>Instance store (NVMe) is ephemeral — perfect for caches, temp data, buffers. Never for durable data.</li>
+        <li>For high IOPS workloads, match your instance size to your EBS volume capability — small instances throttle EBS</li>
+        <li>Enable EBS encryption by default in your account settings — zero performance impact on modern instances</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer style="text-align:center;padding:3rem 2rem;color:var(--text-muted);font-size:0.82rem;border-top:1px solid var(--border);margin-top:2rem;">
+    AWS EC2 Instance Types Visualizer — Built for learning. Pricing and specs are approximate and subject to change.
+  </footer>
+
+  <script>
+    // Instance family detail data
+    const familyData = {
+      general: {
+        title: 'General Purpose Instances',
+        description: 'Balanced compute, memory, and networking resources. The "default choice" when your workload doesn\'t have an extreme requirement in one dimension.',
+        types: [
+          { name: 'M7g / M7i / M7a', desc: 'Latest generation general purpose. M7g (Graviton3) offers best price/performance. 4:1 memory-to-vCPU ratio.', sizes: 'medium to metal (1-192 vCPUs)' },
+          { name: 'T3 / T4g', desc: 'Burstable performance. Accumulate CPU credits when idle, spend them under load. Ideal for variable workloads.', sizes: 'nano to 2xlarge (2-8 vCPUs)' },
+          { name: 'Mac1 / Mac2', desc: 'Apple Mac mini (Intel/M1) for macOS development. Build iOS/macOS apps, run Xcode, CI/CD for Apple ecosystem.', sizes: 'metal only' },
+          { name: 'A1', desc: 'First-gen Graviton. Arm-based for scale-out workloads. Superseded by M7g for most uses.', sizes: 'medium to metal' }
+        ],
+        useCases: ['Web & application servers', 'Microservices & containers', 'Small-to-medium databases', 'Development & test environments', 'Code repositories (e.g., GitLab runners)', 'Enterprise applications (SAP, Oracle)'],
+        keyMetrics: ['vCPU-to-memory: 1:4 ratio', 'Network: Up to 30 Gbps (larger sizes)', 'EBS bandwidth: Up to 20 Gbps', 'Pricing: ~$0.04–$5.00/hr depending on size']
+      },
+      compute: {
+        title: 'Compute Optimized Instances',
+        description: 'Ideal for compute-bound applications that benefit from high-performance processors. Higher vCPU-to-memory ratio (1:2) compared to general purpose.',
+        types: [
+          { name: 'C7g / C7gn', desc: 'Graviton3/3E processors. C7gn adds enhanced networking (up to 200 Gbps). Best compute value.', sizes: 'medium to metal' },
+          { name: 'C7i / C7i-flex', desc: 'Intel Sapphire Rapids. C7i-flex offers most common sizes at lower cost. Up to 3.5 GHz turbo.', sizes: 'large to metal' },
+          { name: 'C7a', desc: 'AMD EPYC (Genoa). Good alternative to Intel for specific workloads.', sizes: 'medium to metal' },
+          { name: 'Hpc7g / Hpc7a', desc: 'Purpose-built for HPC: tightly-coupled, low-latency clusters with EFA networking.', sizes: 'Fixed large sizes' }
+        ],
+        useCases: ['Batch processing & ETL jobs', 'High-performance web servers', 'Scientific modeling & simulations', 'Gaming servers (dedicated)', 'Video encoding & transcoding', 'Ad serving & real-time bidding', 'Machine learning inference (CPU)'],
+        keyMetrics: ['vCPU-to-memory: 1:2 ratio', 'Highest per-core performance', 'Network: Up to 200 Gbps (C7gn)', 'All Nitro-based (enhanced networking)']
+      },
+      memory: {
+        title: 'Memory Optimized Instances',
+        description: 'Designed for workloads that process large data sets in memory. High memory-to-vCPU ratio (up to 1:32 for High Memory instances).',
+        types: [
+          { name: 'R7g / R7i / R7a', desc: 'Latest gen memory optimized. 8:1 memory-to-vCPU ratio. Up to 1,536 GiB RAM.', sizes: 'medium to metal' },
+          { name: 'X2idn / X2gd', desc: 'Extra-large memory. Up to 4 TiB RAM. For SAP HANA, large in-memory databases.', sizes: 'xlarge to metal' },
+          { name: 'z1d', desc: 'High frequency (up to 4.0 GHz sustained). For EDA, financial simulations requiring both high clock speed and large memory.', sizes: 'large to metal' },
+          { name: 'U-* (High Memory)', desc: '3, 6, 9, 12, or 24 TiB RAM. Purpose-built for SAP HANA production deployments at scale.', sizes: 'Fixed (metal)' }
+        ],
+        useCases: ['In-memory databases (Redis, Memcached)', 'Real-time big data analytics (Spark, Presto)', 'SAP HANA & enterprise in-memory apps', 'High-performance relational databases', 'Distributed caches (ElastiCache, Hazelcast)', 'Genomics & bioinformatics pipelines'],
+        keyMetrics: ['vCPU-to-memory: 1:8 (R), 1:16 (X), up to 1:32 (U)', 'RAM: up to 24 TiB on U-series', 'Network: Up to 100 Gbps', 'EBS: Up to 40 Gbps bandwidth']
+      },
+      storage: {
+        title: 'Storage Optimized Instances',
+        description: 'High sequential read/write access to large data sets on local storage. Tens of thousands of low-latency IOPS or high throughput.',
+        types: [
+          { name: 'I4i / I4g', desc: 'Highest IOPS NVMe storage. Up to 30 TB local NVMe with millions of IOPS. For I/O-intensive transactional databases.', sizes: 'large to metal' },
+          { name: 'Im4gn / Is4gen', desc: 'Graviton2-based storage instances. Balance of storage density and cost on ARM.', sizes: 'large to 8xlarge' },
+          { name: 'D3 / D3en', desc: 'Dense HDD storage (up to 336 TB). For MapReduce, HDFS, distributed file systems. Cost-effective bulk storage.', sizes: 'xlarge to 8xlarge' },
+          { name: 'H1', desc: 'High-throughput HDD. 16 TB per instance. For MapReduce, data warehouse ETL.', sizes: '2xlarge to 16xlarge' }
+        ],
+        useCases: ['NoSQL databases (Cassandra, MongoDB, DynamoDB Local)', 'Relational databases (MySQL, PostgreSQL) with high IOPS', 'Data warehousing & analytics (ClickHouse, Druid)', 'Distributed file systems (HDFS, Lustre, GlusterFS)', 'Log/event processing pipelines (Kafka, Elasticsearch)', 'Search engines (Solr, OpenSearch)'],
+        keyMetrics: ['NVMe IOPS: up to 2.4M random read (I4i)', 'HDD throughput: up to 6.2 GBps (D3en)', 'Local storage: 1.9 TB to 336 TB per instance', 'WARNING: Instance store is ephemeral!']
+      },
+      accelerated: {
+        title: 'Accelerated Computing Instances',
+        description: 'Hardware accelerators (GPUs, custom chips) for floating-point math, graphics processing, data pattern matching, and ML workloads.',
+        types: [
+          { name: 'P5 / P5e', desc: '8x NVIDIA H100 GPUs (80 GB each). 3,200 Gbps EFA networking. For large-scale model training & generative AI.', sizes: '48xlarge' },
+          { name: 'P4d / P4de', desc: '8x NVIDIA A100 GPUs. Previous gen training instances. Still excellent for most ML training.', sizes: '24xlarge' },
+          { name: 'G5 / G6 / G6e', desc: 'NVIDIA A10G / L4 GPUs. For ML inference, graphics-intensive apps, video transcoding, game streaming.', sizes: 'xlarge to 48xlarge' },
+          { name: 'Trn1 / Trn1n', desc: 'AWS Trainium chips. Purpose-built for ML training. Up to 50% cost savings vs GPU for supported frameworks.', sizes: '2xlarge to 32xlarge' },
+          { name: 'Inf2', desc: 'AWS Inferentia2 chips. Purpose-built for ML inference. 4x throughput, 10x lower latency vs Inf1.', sizes: 'xlarge to 48xlarge' }
+        ],
+        useCases: ['LLM training (GPT, LLaMA, etc.)', 'ML model inference at scale', 'Computer vision (object detection, segmentation)', 'Natural language processing', 'Drug discovery & molecular simulation', 'Autonomous vehicle simulation', 'Video transcoding & real-time graphics', 'Financial risk modeling (Monte Carlo)'],
+        keyMetrics: ['GPU memory: Up to 640 GB (P5, 8x80GB)', 'GPU interconnect: NVSwitch, NVLink 4.0', 'Network: Up to 3,200 Gbps EFA (P5)', 'Pricing: $1–$98/hr depending on config']
+      },
+      network: {
+        title: 'Network Optimized',
+        description: 'Instances optimized for high network bandwidth, low latency, and high packet-per-second performance. Often overlaps with other families.',
+        types: [
+          { name: 'C7gn', desc: 'Graviton3E with enhanced networking. Up to 200 Gbps bandwidth. Highest packets-per-second.', sizes: 'medium to metal' },
+          { name: 'Hpc7g', desc: 'HPC instances with EFA (Elastic Fabric Adapter). Sub-microsecond inter-node latency.', sizes: 'Fixed sizes' },
+          { name: 'P5 / Trn1n', desc: 'ML instances with 3,200 Gbps / 1,600 Gbps EFA for distributed training across nodes.', sizes: 'Fixed large' },
+          { name: 'Any "n" suffix instance', desc: 'The "n" suffix generally indicates enhanced networking capability within its family.', sizes: 'Varies' }
+        ],
+        useCases: ['Network virtual appliances (firewalls, NAT)', 'Real-time streaming & media delivery', 'High-frequency trading (low latency)', 'Distributed ML training (multi-node)', 'Tightly-coupled HPC clusters', 'Content delivery & caching layers', 'Telco & 5G workloads'],
+        keyMetrics: ['Bandwidth: Up to 200 Gbps (C7gn)', 'EFA: Up to 3,200 Gbps (P5)', 'Packet rate: Millions of PPS', 'Latency: Sub-microsecond with EFA']
+      }
+    };
+
+    function showDetail(family) {
+      const panel = document.getElementById('detail-panel');
+      const title = document.getElementById('detail-title');
+      const content = document.getElementById('detail-content');
+      const data = familyData[family];
+
+      document.querySelectorAll('.family-card').forEach(c => c.classList.remove('active'));
+      document.querySelector(`[data-family="${family}"]`).classList.add('active');
+
+      title.textContent = data.title;
+
+      let typesHtml = data.types.map(t => `
+        <div style="margin-bottom:0.75rem;">
+          <strong style="font-size:0.9rem;">${t.name}</strong>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.15rem;">${t.desc}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.1rem;font-style:italic;">Sizes: ${t.sizes}</div>
+        </div>
+      `).join('');
+
+      let useCasesHtml = data.useCases.map(u => `<div class="use-case-item">${u}</div>`).join('');
+      let metricsHtml = data.keyMetrics.map(m => `<div class="use-case-item">${m}</div>`).join('');
+
+      content.innerHTML = `
+        <div class="detail-section">
+          <h4>Instance Types</h4>
+          ${typesHtml}
+        </div>
+        <div class="detail-section">
+          <h4>Use Cases</h4>
+          ${useCasesHtml}
+        </div>
+        <div class="detail-section">
+          <h4>Key Metrics</h4>
+          ${metricsHtml}
+          <p style="margin-top:1rem;font-size:0.82rem;color:var(--text-muted);line-height:1.5;">${data.description}</p>
+        </div>
+      `;
+
+      panel.classList.add('visible');
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideDetail() {
+      document.getElementById('detail-panel').classList.remove('visible');
+      document.querySelectorAll('.family-card').forEach(c => c.classList.remove('active'));
+    }
+
+    // Recommendation engine
+    const recommendations = {
+      'web|steady|cost|arm': { family: 'General Purpose', instances: ['t4g.medium', 't4g.large'], reason: 'Graviton burstable instances offer the best cost for steady web traffic with moderate CPU needs.' },
+      'web|steady|cost|any': { family: 'General Purpose', instances: ['t4g.medium', 't4g.large'], reason: 'Graviton burstable instances offer the best cost for steady web traffic with moderate CPU needs.' },
+      'web|steady|balanced|arm': { family: 'General Purpose', instances: ['m7g.large', 'm7g.xlarge'], reason: 'M7g provides excellent balanced performance on Graviton3 for production web workloads.' },
+      'web|steady|balanced|any': { family: 'General Purpose', instances: ['m7g.large', 'm7g.xlarge'], reason: 'M7g provides excellent balanced performance on Graviton3 for production web workloads.' },
+      'web|steady|performance|intel': { family: 'General Purpose', instances: ['m7i.xlarge', 'm7i.2xlarge'], reason: 'Latest Intel Sapphire Rapids with high single-thread performance for demanding web apps.' },
+      'web|bursty|cost|any': { family: 'General Purpose', instances: ['t4g.large', 't4g.xlarge'], reason: 'T4g burstable instances are perfect for spiky workloads — accumulate credits during quiet periods.' },
+      'web|bursty|balanced|any': { family: 'General Purpose', instances: ['t4g.xlarge', 'm7g.large'], reason: 'T4g xlarge for moderate bursts, or M7g if you regularly exceed burst credits.' },
+      'batch|batch|cost|arm': { family: 'Compute Optimized', instances: ['c7g.xlarge', 'c7g.2xlarge'], reason: 'C7g on Spot instances gives you the best compute-per-dollar for batch processing.' },
+      'batch|batch|cost|any': { family: 'Compute Optimized', instances: ['c7g.xlarge', 'c7g.2xlarge'], reason: 'C7g on Spot instances gives you the best compute-per-dollar for batch processing.' },
+      'batch|batch|performance|any': { family: 'Compute Optimized', instances: ['c7i.4xlarge', 'c7i.8xlarge'], reason: 'C7i Intel instances for maximum single-thread batch processing speed.' },
+      'database|always-on|balanced|any': { family: 'Memory Optimized', instances: ['r7g.xlarge', 'r7g.2xlarge'], reason: 'R7g provides the memory headroom databases need with excellent I/O performance. Use Reserved pricing.' },
+      'database|always-on|performance|intel': { family: 'Memory Optimized', instances: ['r7i.2xlarge', 'r7i.4xlarge'], reason: 'R7i Intel with high memory for demanding database workloads. Consider RDS for managed option.' },
+      'cache|always-on|cost|arm': { family: 'Memory Optimized', instances: ['r7g.large', 'r7g.xlarge'], reason: 'R7g offers the high memory-to-CPU ratio caches need at the best price point.' },
+      'cache|always-on|balanced|any': { family: 'Memory Optimized', instances: ['r7g.xlarge', 'r7g.2xlarge'], reason: 'R7g balances memory capacity and network bandwidth for caching layers.' },
+      'ml-training|batch|performance|any': { family: 'Accelerated Computing', instances: ['p5.48xlarge', 'trn1.32xlarge'], reason: 'P5 (H100) for maximum training performance, Trn1 for up to 50% cost savings on supported frameworks.' },
+      'ml-training|always-on|cost|any': { family: 'Accelerated Computing', instances: ['trn1.2xlarge', 'trn1.32xlarge'], reason: 'Trainium offers the best training cost efficiency. Use with Reserved Instances for always-on training.' },
+      'ml-inference|steady|cost|any': { family: 'Accelerated Computing', instances: ['inf2.xlarge', 'inf2.8xlarge'], reason: 'Inferentia2 chips deliver lowest cost-per-inference for most model architectures.' },
+      'ml-inference|steady|performance|any': { family: 'Accelerated Computing', instances: ['g5.xlarge', 'g5.2xlarge'], reason: 'G5 (A10G) for inference workloads needing GPU flexibility and broad framework support.' },
+      'analytics|batch|cost|arm': { family: 'Storage Optimized', instances: ['im4gn.large', 'im4gn.xlarge'], reason: 'Graviton-based storage instances for cost-effective analytics with high local storage throughput.' },
+      'analytics|batch|balanced|any': { family: 'Storage Optimized', instances: ['i4i.xlarge', 'i4i.2xlarge'], reason: 'I4i provides extreme NVMe IOPS for analytics workloads that scan large local datasets.' },
+      'gaming|always-on|performance|intel': { family: 'Compute Optimized', instances: ['c7i.2xlarge', 'c7i.4xlarge'], reason: 'C7i offers highest single-core performance crucial for game server tick rates.' },
+      'gaming|always-on|balanced|any': { family: 'Compute Optimized', instances: ['c7g.2xlarge', 'c7g.4xlarge'], reason: 'C7g provides excellent per-core performance at better price for game servers on ARM-compatible engines.' },
+      'video|batch|cost|any': { family: 'Compute Optimized', instances: ['c7g.4xlarge', 'c7g.8xlarge'], reason: 'Compute-optimized for CPU-based encoding. Consider G5 if using GPU-accelerated encoding (NVENC).' },
+      'video|batch|performance|any': { family: 'Accelerated Computing', instances: ['g5.xlarge', 'g5.2xlarge'], reason: 'G5 with NVIDIA A10G for hardware-accelerated video encoding — 5-10x faster than CPU.' },
+      'dev|bursty|cost|any': { family: 'General Purpose', instances: ['t4g.small', 't4g.medium'], reason: 'T4g burstable instances are the most cost-effective for dev/test. Stop instances outside work hours.' },
+      'dev|bursty|cost|arm': { family: 'General Purpose', instances: ['t4g.small', 't4g.medium'], reason: 'T4g burstable instances are the most cost-effective for dev/test. Stop instances outside work hours.' }
+    };
+
+    function updateRecommendation() {
+      const workload = document.getElementById('sel-workload').value;
+      const traffic = document.getElementById('sel-traffic').value;
+      const budget = document.getElementById('sel-budget').value;
+      const arch = document.getElementById('sel-arch').value;
+
+      const resultDiv = document.getElementById('recommendation');
+
+      if (!workload || !traffic || !budget || !arch) {
+        resultDiv.style.display = 'none';
+        return;
+      }
+
+      const key = `${workload}|${traffic}|${budget}|${arch}`;
+      let rec = recommendations[key];
+
+      if (!rec) {
+        const fallbackKey = `${workload}|${traffic}|${budget}|any`;
+        rec = recommendations[fallbackKey];
+      }
+      if (!rec) {
+        const fallbackKey2 = `${workload}|${traffic}|balanced|any`;
+        rec = recommendations[fallbackKey2];
+      }
+      if (!rec) {
+        rec = { family: 'General Purpose', instances: ['m7g.large', 'm7g.xlarge'], reason: 'M7g is a solid default — evaluate your specific workload profile for further optimization.' };
+      }
+
+      resultDiv.innerHTML = `
+        <h4>Recommended: ${rec.family}</h4>
+        <p>${rec.reason}</p>
+        <div class="rec-instances">
+          ${rec.instances.map(i => `<span class="rec-pill">${i}</span>`).join('')}
+        </div>
+      `;
+      resultDiv.style.display = 'block';
+    }
+
+    // Pitfall toggle
+    function togglePitfall(card) {
+      card.classList.toggle('open');
+    }
+
+    // Navigation active state
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 100;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `#${current}`) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Fade-in on scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.family-card, .pricing-card, .pitfall-card, .practice-card').forEach(el => {
+      el.classList.add('fade-in');
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>

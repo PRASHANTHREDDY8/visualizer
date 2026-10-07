@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uber System Design — Visualizer</title>
+    <style>
+        :root {
+            --bg: #fafbfc;
+            --surface: #ffffff;
+            --surface-alt: #f1f5f9;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --primary: #000000;
+            --accent: #2563eb;
+            --accent-light: #dbeafe;
+            --success: #059669;
+            --success-light: #d1fae5;
+            --warning: #d97706;
+            --warning-light: #fef3c7;
+            --danger: #dc2626;
+            --danger-light: #fee2e2;
+            --purple: #7c3aed;
+            --purple-light: #ede9fe;
+            --teal: #0891b2;
+            --teal-light: #cffafe;
+            --nav-height: 56px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            height: var(--nav-height);
+            display: flex;
+            align-items: center;
+            padding: 0 2rem;
+            gap: 0.5rem;
+            overflow-x: auto;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        nav .logo {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-right: 1.5rem;
+            white-space: nowrap;
+            color: var(--primary);
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            font-weight: 500;
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        nav a:hover, nav a.active {
+            background: var(--accent-light);
+            color: var(--accent);
+        }
+
+        .page { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+
+        section {
+            margin-bottom: 4rem;
+            scroll-margin-top: calc(var(--nav-height) + 1rem);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h2 .badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 99px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.6rem;
+            border-radius: 99px;
+            background: var(--surface-alt);
+            color: var(--text-muted);
+        }
+
+        .pill.blue { background: var(--accent-light); color: var(--accent); }
+        .pill.green { background: var(--success-light); color: var(--success); }
+        .pill.purple { background: var(--purple-light); color: var(--purple); }
+        .pill.teal { background: var(--teal-light); color: var(--teal); }
+        .pill.warning { background: var(--warning-light); color: var(--warning); }
+        .pill.danger { background: var(--danger-light); color: var(--danger); }
+
+        /* Architecture Diagram */
+        .arch-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            overflow-x: auto;
+        }
+
+        .arch-svg {
+            width: 100%;
+            min-width: 900px;
+            height: 620px;
+        }
+
+        .arch-svg text {
+            font-family: inherit;
+            font-size: 11px;
+            fill: var(--text);
+        }
+
+        .arch-svg .component {
+            cursor: pointer;
+            transition: filter 0.2s;
+        }
+
+        .arch-svg .component:hover {
+            filter: brightness(0.95);
+        }
+
+        .arch-svg .component rect,
+        .arch-svg .component ellipse,
+        .arch-svg .component polygon,
+        .arch-svg .component path {
+            stroke-width: 1.5;
+            transition: stroke-width 0.2s;
+        }
+
+        .arch-svg .component:hover rect,
+        .arch-svg .component:hover ellipse,
+        .arch-svg .component:hover polygon,
+        .arch-svg .component:hover path {
+            stroke-width: 2.5;
+        }
+
+        .arch-svg .label-group { font-weight: 600; font-size: 10px; fill: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+        .tooltip {
+            position: absolute;
+            background: var(--primary);
+            color: #fff;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            max-width: 250px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 200;
+        }
+
+        .tooltip.show { opacity: 1; }
+
+        /* Sequence Diagram */
+        .sequence-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .seq-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .seq-controls button {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .seq-controls button:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+        .seq-controls button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+        .seq-controls .flow-btns { display: flex; gap: 0.25rem; margin-left: auto; }
+        .seq-controls .flow-btns button { font-size: 0.75rem; padding: 0.4rem 0.7rem; }
+
+        .seq-svg {
+            width: 100%;
+            min-width: 800px;
+            height: 500px;
+            overflow: visible;
+        }
+
+        .seq-narration {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--surface-alt);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            min-height: 2.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .comparison-table th, .comparison-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .comparison-table th {
+            background: var(--surface-alt);
+            font-weight: 600;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--text-muted);
+        }
+
+        .comparison-table tr.chosen { background: var(--accent-light); }
+
+        /* Pitfalls */
+        .pitfall {
+            border: 1px solid var(--warning-light);
+            border-left: 4px solid var(--warning);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+
+        .pitfall summary {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background: var(--warning-light);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pitfall summary::before { content: "\26A0"; }
+        .pitfall summary::after { content: "+"; margin-left: auto; font-size: 1.2rem; color: var(--warning); }
+        .pitfall[open] summary::after { content: "\2212"; }
+
+        .pitfall .content { padding: 1rem; font-size: 0.85rem; }
+        .pitfall .content p { margin-bottom: 0.5rem; }
+        .pitfall .content strong { color: var(--text); }
+
+        /* Best Practices */
+        .practice {
+            border: 1px solid var(--success-light);
+            border-left: 4px solid var(--success);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+
+        .practice summary {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background: var(--success-light);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .practice summary::before { content: "\2713"; color: var(--success); }
+        .practice summary::after { content: "+"; margin-left: auto; font-size: 1.2rem; color: var(--success); }
+        .practice[open] summary::after { content: "\2212"; }
+        .practice .content { padding: 1rem; font-size: 0.85rem; }
+        .practice .content p { margin-bottom: 0.5rem; }
+
+        /* Scaling */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 1.25rem;
+            background: var(--surface-alt);
+            border-radius: 10px;
+        }
+
+        .metric-card .value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .metric-card .label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Playground */
+        .playground {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .playground label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.3rem;
+        }
+
+        .playground input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+        }
+
+        .playground .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .playground .output-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .playground .output-card {
+            padding: 1rem;
+            background: var(--surface-alt);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .playground .output-card .val {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .playground .output-card .lbl {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        .presets { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .presets button {
+            padding: 0.35rem 0.7rem;
+            font-size: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .presets button:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* Simulation Canvas */
+        .sim-canvas {
+            width: 100%;
+            height: 300px;
+            background: var(--surface-alt);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .sim-dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .sim-dot.rider { background: var(--accent); }
+        .sim-dot.driver { background: var(--success); }
+        .sim-dot.matched { background: var(--purple); }
+
+        .legend { display: flex; gap: 1rem; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .legend span { display: flex; align-items: center; gap: 0.3rem; }
+        .legend .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .page { padding: 1rem; }
+            h1 { font-size: 1.8rem; }
+            nav { padding: 0 1rem; }
+            .arch-svg { height: 500px; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <span class="logo">Uber</span>
+        <a href="#architecture">Architecture</a>
+        <a href="#components">Components</a>
+        <a href="#request-flow">Request Flow</a>
+        <a href="#comparisons">Comparisons</a>
+        <a href="#use-cases">Use Cases</a>
+        <a href="#best-practices">Best Practices</a>
+        <a href="#scaling">Scaling</a>
+        <a href="#playground">Playground</a>
+    </nav>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <div class="page">
+        <header style="margin-bottom: 3rem;">
+            <h1>Uber System Design</h1>
+            <p class="subtitle">Real-time ride matching, location tracking, and dispatch at global scale — handling millions of rides per day across 10,000+ cities.</p>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <span class="pill blue">Real-time Matching</span>
+                <span class="pill green">Geo-spatial Indexing</span>
+                <span class="pill purple">Event-Driven</span>
+                <span class="pill teal">~14M rides/day</span>
+            </div>
+        </header>
+
+        <!-- Section 1: Architecture Diagram -->
+        <section id="architecture">
+            <h2>Architecture Diagram <span class="badge" style="background:var(--accent-light);color:var(--accent);">Interactive</span></h2>
+            <div class="arch-container">
+                <svg class="arch-svg" viewBox="0 0 1000 620">
+                    <!-- Groups / Layers -->
+                    <!-- Client Layer -->
+                    <rect x="20" y="15" width="960" height="100" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-dasharray="4"/>
+                    <text x="40" y="35" class="label-group">Client Layer</text>
+
+                    <g class="component" data-tip="Rider App: iOS/Android app for requesting rides, tracking drivers, and making payments">
+                        <rect x="80" y="45" width="120" height="55" rx="8" fill="#dbeafe" stroke="#2563eb"/>
+                        <text x="140" y="72" text-anchor="middle" font-weight="600">Rider App</text>
+                        <text x="140" y="88" text-anchor="middle" font-size="9" fill="#64748b">iOS / Android</text>
+                    </g>
+
+                    <g class="component" data-tip="Driver App: Real-time location reporting every 4 seconds, trip management, and earnings tracking">
+                        <rect x="260" y="45" width="120" height="55" rx="8" fill="#d1fae5" stroke="#059669"/>
+                        <text x="320" y="72" text-anchor="middle" font-weight="600">Driver App</text>
+                        <text x="320" y="88" text-anchor="middle" font-size="9" fill="#64748b">iOS / Android</text>
+                    </g>
+
+                    <g class="component" data-tip="Web Dashboard: Admin panel, analytics, and partner management interface">
+                        <rect x="440" y="45" width="120" height="55" rx="8" fill="#ede9fe" stroke="#7c3aed"/>
+                        <text x="500" y="72" text-anchor="middle" font-weight="600">Web Dashboard</text>
+                        <text x="500" y="88" text-anchor="middle" font-size="9" fill="#64748b">React SPA</text>
+                    </g>
+
+                    <!-- API Gateway Layer -->
+                    <rect x="20" y="135" width="960" height="80" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-dasharray="4"/>
+                    <text x="40" y="155" class="label-group">API Gateway & Load Balancing</text>
+
+                    <g class="component" data-tip="API Gateway: Rate limiting, auth, routing. Handles 100K+ requests/sec per region">
+                        <polygon points="250,170 380,170 400,195 380,220 250,220 230,195" fill="#fef3c7" stroke="#d97706"/>
+                        <text x="315" y="199" text-anchor="middle" font-weight="600">API Gateway</text>
+                    </g>
+
+                    <g class="component" data-tip="WebSocket Gateway: Persistent connections for real-time location updates from millions of drivers">
+                        <polygon points="500,170 650,170 670,195 650,220 500,220 480,195" fill="#cffafe" stroke="#0891b2"/>
+                        <text x="575" y="195" text-anchor="middle" font-weight="600">WebSocket</text>
+                        <text x="575" y="208" text-anchor="middle" font-size="9">Gateway</text>
+                    </g>
+
+                    <!-- Core Services Layer -->
+                    <rect x="20" y="235" width="960" height="160" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-dasharray="4"/>
+                    <text x="40" y="255" class="label-group">Core Services (Microservices)</text>
+
+                    <g class="component" data-tip="Trip Service: Manages trip lifecycle — request, match, in-progress, completed. Orchestrates the ride workflow">
+                        <rect x="50" y="270" width="130" height="55" rx="8" fill="#dbeafe" stroke="#2563eb"/>
+                        <text x="115" y="297" text-anchor="middle" font-weight="600">Trip Service</text>
+                        <text x="115" y="313" text-anchor="middle" font-size="9" fill="#64748b">Orchestrator</text>
+                    </g>
+
+                    <g class="component" data-tip="Matching Service (DISCO): Core dispatch system using supply-demand optimization to match riders with nearest drivers">
+                        <rect x="210" y="270" width="140" height="55" rx="8" fill="#fce7f3" stroke="#db2777"/>
+                        <text x="280" y="293" text-anchor="middle" font-weight="600">Matching / DISCO</text>
+                        <text x="280" y="313" text-anchor="middle" font-size="9" fill="#64748b">Supply-Demand</text>
+                    </g>
+
+                    <g class="component" data-tip="Location Service: Processes millions of GPS pings/sec, maintains driver positions using geospatial indexing (Google S2)">
+                        <rect x="380" y="270" width="130" height="55" rx="8" fill="#d1fae5" stroke="#059669"/>
+                        <text x="445" y="297" text-anchor="middle" font-weight="600">Location Service</text>
+                        <text x="445" y="313" text-anchor="middle" font-size="9" fill="#64748b">Google S2 Cells</text>
+                    </g>
+
+                    <g class="component" data-tip="ETA Service: Machine learning model predicting arrival times using real-time traffic, historical data, and road graphs">
+                        <rect x="540" y="270" width="130" height="55" rx="8" fill="#ede9fe" stroke="#7c3aed"/>
+                        <text x="605" y="297" text-anchor="middle" font-weight="600">ETA Service</text>
+                        <text x="605" y="313" text-anchor="middle" font-size="9" fill="#64748b">ML Predictions</text>
+                    </g>
+
+                    <g class="component" data-tip="Pricing Service (Surge): Dynamic pricing based on supply/demand ratio, with geofenced surge multipliers">
+                        <rect x="700" y="270" width="130" height="55" rx="8" fill="#fef3c7" stroke="#d97706"/>
+                        <text x="765" y="297" text-anchor="middle" font-weight="600">Pricing / Surge</text>
+                        <text x="765" y="313" text-anchor="middle" font-size="9" fill="#64748b">Dynamic</text>
+                    </g>
+
+                    <g class="component" data-tip="Payment Service: Handles fare calculation, payment processing, driver payouts, and fraud detection">
+                        <rect x="860" y="270" width="110" height="55" rx="8" fill="#fee2e2" stroke="#dc2626"/>
+                        <text x="915" y="297" text-anchor="middle" font-weight="600">Payments</text>
+                        <text x="915" y="313" text-anchor="middle" font-size="9" fill="#64748b">Billing</text>
+                    </g>
+
+                    <g class="component" data-tip="Maps / Routing Service: Road network graph, shortest path computation, and real-time navigation">
+                        <rect x="130" y="340" width="130" height="45" rx="8" fill="#cffafe" stroke="#0891b2"/>
+                        <text x="195" y="367" text-anchor="middle" font-weight="600">Maps / Routing</text>
+                    </g>
+
+                    <g class="component" data-tip="Notification Service: Push notifications, SMS, and email for trip updates, promotions, and receipts">
+                        <rect x="290" y="340" width="140" height="45" rx="8" fill="#f3e8ff" stroke="#9333ea"/>
+                        <text x="360" y="367" text-anchor="middle" font-weight="600">Notifications</text>
+                    </g>
+
+                    <g class="component" data-tip="User Service: Authentication, profiles, ratings, and preferences for riders and drivers">
+                        <rect x="460" y="340" width="120" height="45" rx="8" fill="#e0f2fe" stroke="#0284c7"/>
+                        <text x="520" y="367" text-anchor="middle" font-weight="600">User Service</text>
+                    </g>
+
+                    <g class="component" data-tip="Fraud Detection: Real-time ML models detecting fraudulent rides, fake GPS locations, and payment fraud">
+                        <rect x="610" y="340" width="130" height="45" rx="8" fill="#fef9c3" stroke="#ca8a04"/>
+                        <text x="675" y="367" text-anchor="middle" font-weight="600">Fraud Detection</text>
+                    </g>
+
+                    <!-- Data Layer -->
+                    <rect x="20" y="410" width="960" height="100" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-dasharray="4"/>
+                    <text x="40" y="430" class="label-group">Data Layer</text>
+
+                    <g class="component" data-tip="PostgreSQL / MySQL: Persistent storage for trips, users, payments — sharded by city/region">
+                        <ellipse cx="120" cy="465" rx="60" ry="30" fill="#dbeafe" stroke="#2563eb"/>
+                        <text x="120" y="462" text-anchor="middle" font-weight="600" font-size="10">PostgreSQL</text>
+                        <text x="120" y="476" text-anchor="middle" font-size="9" fill="#64748b">Sharded</text>
+                    </g>
+
+                    <g class="component" data-tip="Redis: In-memory cache and real-time driver location store with geospatial commands (GEOADD/GEORADIUS)">
+                        <ellipse cx="280" cy="465" rx="55" ry="30" fill="#fee2e2" stroke="#dc2626"/>
+                        <text x="280" y="462" text-anchor="middle" font-weight="600" font-size="10">Redis</text>
+                        <text x="280" y="476" text-anchor="middle" font-size="9" fill="#64748b">Geo + Cache</text>
+                    </g>
+
+                    <g class="component" data-tip="Apache Kafka: Event streaming backbone — trip events, location updates, analytics events. Millions of events/sec">
+                        <rect x="370" y="440" width="110" height="50" rx="6" fill="#d1fae5" stroke="#059669"/>
+                        <text x="425" y="462" text-anchor="middle" font-weight="600" font-size="10">Kafka</text>
+                        <text x="425" y="478" text-anchor="middle" font-size="9" fill="#64748b">Event Bus</text>
+                    </g>
+
+                    <g class="component" data-tip="Cassandra: High-write-throughput store for GPS location history, trip logs, and driver telemetry">
+                        <ellipse cx="560" cy="465" rx="55" ry="30" fill="#ede9fe" stroke="#7c3aed"/>
+                        <text x="560" y="462" text-anchor="middle" font-weight="600" font-size="10">Cassandra</text>
+                        <text x="560" y="476" text-anchor="middle" font-size="9" fill="#64748b">Time-series</text>
+                    </g>
+
+                    <g class="component" data-tip="Elasticsearch: Full-text search for places, addresses, and points of interest. Powers autocomplete">
+                        <ellipse cx="710" cy="465" rx="60" ry="30" fill="#cffafe" stroke="#0891b2"/>
+                        <text x="710" y="462" text-anchor="middle" font-weight="600" font-size="10">Elasticsearch</text>
+                        <text x="710" y="476" text-anchor="middle" font-size="9" fill="#64748b">Search</text>
+                    </g>
+
+                    <g class="component" data-tip="S3 / HDFS: Data lake for historical analytics, ML training data, and compliance archives">
+                        <ellipse cx="880" cy="465" rx="55" ry="30" fill="#fef3c7" stroke="#d97706"/>
+                        <text x="880" y="462" text-anchor="middle" font-weight="600" font-size="10">S3 / HDFS</text>
+                        <text x="880" y="476" text-anchor="middle" font-size="9" fill="#64748b">Data Lake</text>
+                    </g>
+
+                    <!-- Infrastructure Layer -->
+                    <rect x="20" y="530" width="960" height="75" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-dasharray="4"/>
+                    <text x="40" y="550" class="label-group">Infrastructure & Observability</text>
+
+                    <g class="component" data-tip="Kubernetes: Container orchestration for all microservices, auto-scaling based on demand">
+                        <rect x="100" y="560" width="110" height="35" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+                        <text x="155" y="582" text-anchor="middle" font-size="10" font-weight="500">Kubernetes</text>
+                    </g>
+
+                    <g class="component" data-tip="Jaeger: Distributed tracing for debugging cross-service request paths and latency">
+                        <rect x="240" y="560" width="100" height="35" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+                        <text x="290" y="582" text-anchor="middle" font-size="10" font-weight="500">Jaeger</text>
+                    </g>
+
+                    <g class="component" data-tip="Prometheus + Grafana: Metrics collection, alerting, and dashboards for system health monitoring">
+                        <rect x="370" y="560" width="140" height="35" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+                        <text x="440" y="582" text-anchor="middle" font-size="10" font-weight="500">Prometheus/Grafana</text>
+                    </g>
+
+                    <g class="component" data-tip="Service Mesh (Envoy): mTLS between services, traffic management, circuit breaking, and load balancing">
+                        <rect x="540" y="560" width="130" height="35" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+                        <text x="605" y="582" text-anchor="middle" font-size="10" font-weight="500">Service Mesh</text>
+                    </g>
+
+                    <g class="component" data-tip="Multi-region deployment across AWS/GCP data centers for low-latency global coverage">
+                        <rect x="700" y="560" width="130" height="35" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+                        <text x="765" y="582" text-anchor="middle" font-size="10" font-weight="500">Multi-Region</text>
+                    </g>
+
+                    <!-- Connections -->
+                    <defs>
+                        <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                            <path d="M0,0 L8,3 L0,6" fill="#94a3b8"/>
+                        </marker>
+                    </defs>
+
+                    <!-- Client to Gateway -->
+                    <line x1="140" y1="100" x2="290" y2="170" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrow)"/>
+                    <line x1="320" y1="100" x2="330" y2="170" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrow)"/>
+                    <line x1="320" y1="100" x2="540" y2="170" stroke="#0891b2" stroke-width="1" stroke-dasharray="3" marker-end="url(#arrow)"/>
+                    <line x1="500" y1="100" x2="340" y2="170" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrow)"/>
+
+                    <!-- Gateway to Services -->
+                    <line x1="315" y1="220" x2="115" y2="270" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrow)"/>
+                    <line x1="315" y1="220" x2="280" y2="270" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrow)"/>
+                    <line x1="315" y1="220" x2="765" y2="270" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrow)"/>
+                    <line x1="575" y1="220" x2="445" y2="270" stroke="#0891b2" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+                    <!-- Service to Service -->
+                    <line x1="180" y1="297" x2="210" y2="297" stroke="#64748b" stroke-width="1" marker-end="url(#arrow)"/>
+                    <line x1="350" y1="297" x2="380" y2="297" stroke="#64748b" stroke-width="1" marker-end="url(#arrow)"/>
+                    <line x1="210" y1="310" x2="210" y2="310" stroke="#64748b" stroke-width="1"/>
+                    <line x1="280" y1="325" x2="605" y2="270" stroke="#64748b" stroke-width="0.8" stroke-dasharray="3" marker-end="url(#arrow)"/>
+                    <line x1="115" y1="325" x2="765" y2="270" stroke="#64748b" stroke-width="0.8" stroke-dasharray="3" marker-end="url(#arrow)"/>
+                    <line x1="115" y1="325" x2="915" y2="270" stroke="#64748b" stroke-width="0.8" stroke-dasharray="3" marker-end="url(#arrow)"/>
+
+                    <!-- Services to Data -->
+                    <line x1="445" y1="325" x2="280" y2="435" stroke="#64748b" stroke-width="0.8" marker-end="url(#arrow)"/>
+                    <line x1="445" y1="325" x2="560" y2="435" stroke="#64748b" stroke-width="0.8" marker-end="url(#arrow)"/>
+                    <line x1="115" y1="325" x2="120" y2="435" stroke="#64748b" stroke-width="0.8" marker-end="url(#arrow)"/>
+                    <line x1="280" y1="325" x2="280" y2="435" stroke="#64748b" stroke-width="0.8" marker-end="url(#arrow)"/>
+                    <line x1="500" y1="385" x2="425" y2="440" stroke="#059669" stroke-width="1" marker-end="url(#arrow)"/>
+                </svg>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">Hover over components for details. Dashed lines = WebSocket/async connections.</p>
+        </section>
+
+        <!-- Section 2: Component Breakdown -->
+        <section id="components">
+            <h2>Component Breakdown</h2>
+            <div class="card-grid">
+                <div class="card">
+                    <h3>Matching Service (DISCO)</h3>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Core dispatch optimization engine that matches riders with the best available driver.</p>
+                    <div style="margin-bottom:0.5rem;"><span class="pill green">Go / Java</span> <span class="pill blue">Ringpop</span></div>
+                    <p style="font-size:0.82rem;"><strong>Key decisions:</strong> Uses supply positioning to pre-position drivers; batch matching every 2 seconds; considers ETA, driver rating, vehicle type, and surge zone.</p>
+                    <p style="font-size:0.82rem;margin-top:0.5rem;"><strong>Scaling:</strong> Sharded by geographic cell. Each cell handled by a dedicated worker. Consistent hashing for cell-to-worker assignment.</p>
+                </div>
+                <div class="card">
+                    <h3>Location Service</h3>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Ingests and indexes millions of GPS location updates per second from active drivers.</p>
+                    <div style="margin-bottom:0.5rem;"><span class="pill purple">Google S2</span> <span class="pill danger">Redis Geo</span></div>
+                    <p style="font-size:0.82rem;"><strong>Key decisions:</strong> Google S2 geometry library for hierarchical spatial indexing. Drivers report location every 4s. S2 cell level 12 (~3.3km2) for coarse queries, level 16 for fine-grained.</p>
+                    <p style="font-size:0.82rem;margin-top:0.5rem;"><strong>Scaling:</strong> Horizontally scaled with geo-sharding. Redis cluster per region with GEOADD/GEORADIUS for nearest-driver queries.</p>
+                </div>
+                <div class="card">
+                    <h3>Trip Service</h3>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">State machine orchestrating the entire trip lifecycle from request to completion.</p>
+                    <div style="margin-bottom:0.5rem;"><span class="pill blue">State Machine</span> <span class="pill teal">Saga Pattern</span></div>
+                    <p style="font-size:0.82rem;"><strong>States:</strong> REQUESTED → MATCHING → DRIVER_ASSIGNED → EN_ROUTE → ARRIVED → IN_TRIP → COMPLETED → BILLED</p>
+                    <p style="font-size:0.82rem;margin-top:0.5rem;"><strong>Scaling:</strong> Stateless service with trip state persisted in PostgreSQL. Events published to Kafka for downstream consumers.</p>
+                </div>
+                <div class="card">
+                    <h3>ETA Service</h3>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">ML-powered arrival time predictions using road graph, real-time traffic, and historical patterns.</p>
+                    <div style="margin-bottom:0.5rem;"><span class="pill purple">ML Model</span> <span class="pill green">Road Graph</span></div>
+                    <p style="font-size:0.82rem;"><strong>Key decisions:</strong> Gradient-boosted trees trained on historical trips. Features include: time of day, weather, events, road segment speeds, traffic signals. Updates road speed estimates in real-time from driver GPS traces.</p>
+                    <p style="font-size:0.82rem;margin-top:0.5rem;"><strong>Scaling:</strong> Pre-computed ETA matrices for popular routes; on-demand computation for long-tail. Cached aggressively with 30s TTL.</p>
+                </div>
+                <div class="card">
+                    <h3>Pricing / Surge Service</h3>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Dynamic pricing engine using real-time supply/demand signals to set fare multipliers.</p>
+                    <div style="margin-bottom:0.5rem;"><span class="pill warning">Dynamic</span> <span class="pill blue">Geofenced</span></div>
+                    <p style="font-size:0.82rem;"><strong>Key decisions:</strong> City divided into surge hexagons (H3 cells). Supply/demand ratio computed per cell every 30s. Surge multiplier = f(demand/supply, time, events). Upfront pricing locks fare at request time.</p>
+                    <p style="font-size:0.82rem;margin-top:0.5rem;"><strong>Scaling:</strong> Stateless computation; reads supply/demand from Redis counters. Cached surge maps per city.</p>
+                </div>
+                <div class="card">
+                    <h3>Payment Service</h3>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Handles fare calculation, payment authorization, charge capture, and driver payouts.</p>
+                    <div style="margin-bottom:0.5rem;"><span class="pill danger">PCI-DSS</span> <span class="pill teal">Idempotent</span></div>
+                    <p style="font-size:0.82rem;"><strong>Key decisions:</strong> Pre-authorization at trip start; capture at completion. Idempotency keys prevent double charges. Supports 15+ payment methods per country. Fraud scoring on every transaction.</p>
+                    <p style="font-size:0.82rem;margin-top:0.5rem;"><strong>Scaling:</strong> Async settlement via Kafka. Weekly driver payouts batched by region. Separate write-ahead log for financial consistency.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Request Flow -->
+        <section id="request-flow">
+            <h2>Request Flow <span class="badge" style="background:var(--accent-light);color:var(--accent);">Animated</span></h2>
+            <div class="sequence-container">
+                <div class="seq-controls">
+                    <button id="seq-play" class="active">&#9654; Play</button>
+                    <button id="seq-pause">&#10074;&#10074; Pause</button>
+                    <button id="seq-step">Step &#9654;|</button>
+                    <button id="seq-reset">&#8634; Reset</button>
+                    <div class="flow-btns">
+                        <button class="flow-btn active" data-flow="ride-request">Ride Request</button>
+                        <button class="flow-btn" data-flow="driver-match">Driver Match</button>
+                        <button class="flow-btn" data-flow="trip-complete">Trip Complete</button>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;">
+                    <svg class="seq-svg" id="seq-svg" viewBox="0 0 900 500"></svg>
+                </div>
+                <div class="seq-narration" id="seq-narration">Click Play to see the ride request flow animated step by step.</div>
+            </div>
+        </section>
+
+        <!-- Section 4: Comparisons -->
+        <section id="comparisons">
+            <h2>Comparisons with Alternatives</h2>
+            <div class="card">
+                <h3>Matching Algorithms</h3>
+                <div style="overflow-x:auto;">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr><th>Approach</th><th>Key Idea</th><th>Pros</th><th>Cons</th><th>Used By</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr class="chosen"><td><strong>Batch Matching (Uber DISCO)</strong></td><td>Collect requests in 2s window, optimize globally</td><td>Better global optimum, reduces empty miles</td><td>Adds 2s latency to every match</td><td>Uber</td></tr>
+                            <tr><td>Nearest-First Greedy</td><td>Assign closest available driver immediately</td><td>Minimal latency, simple</td><td>Suboptimal globally, more empty miles</td><td>Early Uber, Ola</td></tr>
+                            <tr><td>Auction-Based</td><td>Drivers bid on rides, lowest ETA wins</td><td>Market-efficient, driver agency</td><td>Slow, unpredictable rider experience</td><td>Some logistics platforms</td></tr>
+                            <tr><td>Zone-Based Queuing</td><td>FIFO queue per geo-zone</td><td>Fair for drivers, predictable</td><td>No optimization, poor rider ETA</td><td>Traditional taxi dispatch</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card" style="margin-top:1rem;">
+                <h3>Location Indexing</h3>
+                <div style="overflow-x:auto;">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr><th>Approach</th><th>Key Idea</th><th>Pros</th><th>Cons</th><th>Used By</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr class="chosen"><td><strong>Google S2 Cells</strong></td><td>Hierarchical spherical cell decomposition</td><td>Uniform coverage globally, multi-level precision</td><td>Complex implementation</td><td>Uber, Google Maps</td></tr>
+                            <tr><td>H3 (Uber's Hexagonal)</td><td>Hexagonal hierarchical grid</td><td>Equal-area cells, good for analytics</td><td>Not as efficient for point queries</td><td>Uber (analytics), Lyft</td></tr>
+                            <tr><td>Geohash</td><td>Base-32 encoded lat/lng rectangles</td><td>Simple, prefix-based range queries</td><td>Edge effects at boundaries, non-uniform cell sizes</td><td>Redis, Elasticsearch</td></tr>
+                            <tr><td>R-Tree / QuadTree</td><td>Spatial tree partitioning</td><td>Good for static datasets</td><td>Expensive updates, rebalancing</td><td>PostGIS, MongoDB</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card" style="margin-top:1rem;">
+                <h3>When to Pick Each Architecture Style</h3>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin-top:0.75rem;">
+                    <div style="padding:1rem;background:var(--accent-light);border-radius:8px;">
+                        <strong style="font-size:0.9rem;">Batch Matching</strong>
+                        <p style="font-size:0.82rem;margin-top:0.3rem;">When you need to optimize fleet utilization across many concurrent requests in dense urban areas.</p>
+                    </div>
+                    <div style="padding:1rem;background:var(--success-light);border-radius:8px;">
+                        <strong style="font-size:0.9rem;">Greedy Nearest</strong>
+                        <p style="font-size:0.82rem;margin-top:0.3rem;">When demand is sparse (rural/suburban) or when sub-second match latency is critical.</p>
+                    </div>
+                    <div style="padding:1rem;background:var(--purple-light);border-radius:8px;">
+                        <strong style="font-size:0.9rem;">Auction/Bidding</strong>
+                        <p style="font-size:0.82rem;margin-top:0.3rem;">For freight/logistics where jobs are heterogeneous and driver preferences matter more than speed.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Use Cases & Pitfalls -->
+        <section id="use-cases">
+            <h2>Use Cases & Common Pitfalls</h2>
+
+            <h3 style="margin-top:1.5rem;">Primary Use Cases</h3>
+            <div class="card-grid">
+                <div class="card">
+                    <div style="display:flex;justify-content:space-between;align-items:start;"><strong>Ride-Hailing</strong><span class="pill blue">Core</span></div>
+                    <p style="font-size:0.82rem;margin-top:0.5rem;">On-demand rides: UberX, Pool, Black, XL. ~14M rides/day, sub-5s match time target in metros.</p>
+                </div>
+                <div class="card">
+                    <div style="display:flex;justify-content:space-between;align-items:start;"><strong>Food Delivery (Eats)</strong><span class="pill green">Adjacent</span></div>
+                    <p style="font-size:0.82rem;margin-top:0.5rem;">Three-sided marketplace (customer, restaurant, driver). Adds prep-time prediction and batched delivery routing.</p>
+                </div>
+                <div class="card">
+                    <div style="display:flex;justify-content:space-between;align-items:start;"><strong>Freight / Logistics</strong><span class="pill purple">Extended</span></div>
+                    <p style="font-size:0.82rem;margin-top:0.5rem;">Long-haul trucking matching. Different constraints: hours-of-service, cargo type, multi-stop routing.</p>
+                </div>
+                <div class="card">
+                    <div style="display:flex;justify-content:space-between;align-items:start;"><strong>Micro-mobility</strong><span class="pill teal">Adjacent</span></div>
+                    <p style="font-size:0.82rem;margin-top:0.5rem;">Scooters/bikes with fixed pickup zones. Simpler matching but adds battery management and rebalancing.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top:2rem;">Common Pitfalls</h3>
+            <details class="pitfall">
+                <summary>Ignoring GPS Drift and Noise</summary>
+                <div class="content">
+                    <p><strong>The mistake:</strong> Trusting raw GPS coordinates without filtering or snapping to road network.</p>
+                    <p><strong>Why it happens:</strong> GPS seems precise enough (5m accuracy), so teams skip map-matching.</p>
+                    <p><strong>The consequence:</strong> Drivers appear in buildings, wrong sides of highways, or off-road. ETA estimates become wildly inaccurate. Riders see drivers "teleporting."</p>
+                    <p><strong>The fix:</strong> Apply Kalman filtering on raw GPS, then snap to road network using Hidden Markov Model map-matching. Discard locations with speed > 200 km/h or accuracy > 50m.</p>
+                </div>
+            </details>
+            <details class="pitfall">
+                <summary>Single-Region Matching Without Cell Boundaries</summary>
+                <div class="content">
+                    <p><strong>The mistake:</strong> Searching for drivers only within a single geospatial cell without checking adjacent cells.</p>
+                    <p><strong>Why it happens:</strong> Simplicity — one cell lookup is faster than multi-cell queries.</p>
+                    <p><strong>The consequence:</strong> A driver 100m away but in an adjacent cell is invisible. Riders near cell boundaries get much worse match quality.</p>
+                    <p><strong>The fix:</strong> Always query the target cell AND its 8 neighbors (or use S2 region covering). The slight overhead is negligible vs. match quality improvement.</p>
+                </div>
+            </details>
+            <details class="pitfall">
+                <summary>Surge Pricing Without Smoothing</summary>
+                <div class="content">
+                    <p><strong>The mistake:</strong> Applying surge multipliers instantaneously based on momentary supply/demand spikes.</p>
+                    <p><strong>Why it happens:</strong> Direct ratio calculation seems correct and responsive.</p>
+                    <p><strong>The consequence:</strong> Surge oscillates wildly (spikes to 5x then crashes). Riders see different prices seconds apart. Drivers "chase surge" creating feedback loops.</p>
+                    <p><strong>The fix:</strong> Exponential moving average on surge multiplier. Ramp up quickly (30s) but decay slowly (5min). Cap maximum surge. Show riders the surge direction trend.</p>
+                </div>
+            </details>
+            <details class="pitfall">
+                <summary>Not Handling Driver App Disconnections Gracefully</summary>
+                <div class="content">
+                    <p><strong>The mistake:</strong> Immediately removing a driver from the available pool when WebSocket disconnects.</p>
+                    <p><strong>Why it happens:</strong> "Disconnected = offline" seems logical.</p>
+                    <p><strong>The consequence:</strong> Tunnel passages, brief connectivity blips, or app backgrounding removes drivers mid-trip. Riders get "driver cancelled" for no reason.</p>
+                    <p><strong>The fix:</strong> Grace period of 30-60s before marking offline. If mid-trip, never remove. Use last-known location + heading for ETA. Require explicit "go offline" action for true offline.</p>
+                </div>
+            </details>
+            <details class="pitfall">
+                <summary>Monolithic Trip State Without Event Sourcing</summary>
+                <div class="content">
+                    <p><strong>The mistake:</strong> Storing only current trip state in a single row, updating in place.</p>
+                    <p><strong>Why it happens:</strong> Simpler schema, fewer writes.</p>
+                    <p><strong>The consequence:</strong> Cannot audit state transitions. Race conditions on concurrent updates (rider cancels while driver accepts). Debugging disputes becomes impossible.</p>
+                    <p><strong>The fix:</strong> Event source the trip: append state transitions as immutable events. Derive current state from event log. Use optimistic concurrency (version field) on the materialized view.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- Section 6: Best Practices -->
+        <section id="best-practices">
+            <h2>Best Practices</h2>
+
+            <h3>Design Phase</h3>
+            <details class="practice">
+                <summary>Start with the Matching Problem, Not the CRUD</summary>
+                <div class="content">
+                    <p>The core challenge in ride-hailing is real-time spatial matching under constraints. Design the matching algorithm and data flow first, then build supporting services around it. Too many teams start with user/trip CRUD and bolt on matching later.</p>
+                </div>
+            </details>
+            <details class="practice">
+                <summary>Design for the Unhappy Path First</summary>
+                <div class="content">
+                    <p>What happens when: driver doesn't accept (timeout + cascade to next)? Rider cancels mid-match? Payment fails post-trip? Network drops mid-ride? Design explicit state machine transitions for every failure mode before building the happy path.</p>
+                </div>
+            </details>
+
+            <h3 style="margin-top:1.5rem;">Implementation</h3>
+            <details class="practice">
+                <summary>Use S2/H3 Cell Levels Strategically</summary>
+                <div class="content">
+                    <p>Level 12 (3.3km2) for initial nearby-driver queries. Level 14 for fine-grained matching. Level 8 for city-wide analytics and surge computation. Don't use a single level — different operations need different precision.</p>
+                </div>
+            </details>
+            <details class="practice">
+                <summary>Separate Read and Write Paths for Location</summary>
+                <div class="content">
+                    <p>Write path: driver location updates → Kafka → Redis (hot store) + Cassandra (cold store). Read path: matching queries Redis only. Never let high-write location ingestion compete with latency-sensitive matching reads.</p>
+                </div>
+            </details>
+            <details class="practice">
+                <summary>Implement Circuit Breakers Between Services</summary>
+                <div class="content">
+                    <p>If ETA service is down, matching should still work with cached/estimated ETAs. If payment is slow, trip should still complete (charge async). Define graceful degradation for every dependency. Hystrix/resilience4j patterns are essential.</p>
+                </div>
+            </details>
+
+            <h3 style="margin-top:1.5rem;">Operational</h3>
+            <details class="practice">
+                <summary>Monitor Supply-Demand Balance Per Cell, Not Globally</summary>
+                <div class="content">
+                    <p>Global metrics hide localized problems. Airport might have excess drivers while downtown is starved. Alert on per-cell imbalance. Trigger incentives (heat maps, quest bonuses) automatically when cells are undersupplied for > 5 minutes.</p>
+                </div>
+            </details>
+            <details class="practice">
+                <summary>Canary Deploys by City, Not by Instance Percentage</summary>
+                <div class="content">
+                    <p>A matching algorithm change that works in NYC might break in Mumbai (different road patterns, traffic). Canary to a single smaller city first, observe for 24h (covering all demand patterns), then roll out to larger cities progressively.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- Section 7: Scaling & Trade-offs -->
+        <section id="scaling">
+            <h2>Scaling & Capacity Estimation</h2>
+
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="value">14M</div>
+                    <div class="label">Rides per Day</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">5M+</div>
+                    <div class="label">Active Drivers</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">~160</div>
+                    <div class="label">Rides per Second (avg)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">~1M</div>
+                    <div class="label">Location Updates/sec</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">&lt;3s</div>
+                    <div class="label">Match Latency (p95)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">10K+</div>
+                    <div class="label">Cities Worldwide</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Back-of-Envelope Calculations</h3>
+                <div style="font-size:0.85rem;">
+                    <p><strong>Location data storage:</strong></p>
+                    <p style="margin-left:1rem;">5M drivers x 1 update/4s = 1.25M writes/sec<br>
+                    Each update: ~100 bytes (lat, lng, timestamp, driver_id, heading, speed)<br>
+                    Daily location data: 1.25M x 86,400s x 100B = ~10.8 TB/day (cold storage)</p>
+
+                    <p style="margin-top:1rem;"><strong>Matching throughput:</strong></p>
+                    <p style="margin-left:1rem;">Peak: 3x average = ~480 ride requests/sec<br>
+                    Each match: query ~50 nearby drivers, compute ETA for top 10 = ~500 ETA calls/sec per ride<br>
+                    Peak ETA service load: 480 x 500 = 240K ETA computations/sec</p>
+
+                    <p style="margin-top:1rem;"><strong>WebSocket connections:</strong></p>
+                    <p style="margin-left:1rem;">5M active drivers + ~2M active riders = 7M concurrent connections<br>
+                    At 50K connections/server = ~140 WebSocket gateway servers</p>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top:1rem;">
+                <h3>Trade-off Analysis</h3>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-top:0.75rem;">
+                    <div style="padding:1rem;background:var(--surface-alt);border-radius:8px;">
+                        <strong>Match Quality vs. Latency</strong>
+                        <p style="font-size:0.82rem;margin-top:0.3rem;">Larger batch windows → better global optimum but slower match. Uber chose 2s as the sweet spot: measurably better utilization with acceptable wait.</p>
+                    </div>
+                    <div style="padding:1rem;background:var(--surface-alt);border-radius:8px;">
+                        <strong>Consistency vs. Availability</strong>
+                        <p style="font-size:0.82rem;margin-top:0.3rem;">Location data is AP (eventual consistency acceptable). Trip state is CP (can't double-assign a driver). Payment is CP with saga compensation.</p>
+                    </div>
+                    <div style="padding:1rem;background:var(--surface-alt);border-radius:8px;">
+                        <strong>Accuracy vs. Computation Cost</strong>
+                        <p style="font-size:0.82rem;margin-top:0.3rem;">More ETA candidates → better match but exponential compute. Uber uses tiered approach: coarse filter (S2 radius) → fine rank (top-10 ETA).</p>
+                    </div>
+                    <div style="padding:1rem;background:var(--surface-alt);border-radius:8px;">
+                        <strong>Driver Fairness vs. Rider Experience</strong>
+                        <p style="font-size:0.82rem;margin-top:0.3rem;">Pure nearest-driver is unfair (hotspot drivers get all rides). Pure queue is slow for riders. Uber blends: proximity-weighted with fairness adjustments for idle time.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 8: Interactive Playground -->
+        <section id="playground">
+            <h2>Interactive Playground <span class="badge" style="background:var(--success-light);color:var(--success);">Live Sim</span></h2>
+
+            <div class="playground">
+                <h3>Ride Matching Simulator</h3>
+                <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">Adjust parameters to see how matching behavior changes. Dots represent riders (blue) and drivers (green). Matched pairs turn purple.</p>
+
+                <div class="presets">
+                    <button onclick="applyPreset('normal')">Normal Traffic</button>
+                    <button onclick="applyPreset('surge')">Surge / Peak</button>
+                    <button onclick="applyPreset('sparse')">Sparse (Suburban)</button>
+                    <button onclick="applyPreset('oversupply')">Driver Oversupply</button>
+                </div>
+
+                <div class="controls-grid">
+                    <div>
+                        <label>Riders in Area: <span id="rider-count-val">20</span></label>
+                        <input type="range" id="rider-count" min="1" max="80" value="20" oninput="updateSim()">
+                    </div>
+                    <div>
+                        <label>Available Drivers: <span id="driver-count-val">15</span></label>
+                        <input type="range" id="driver-count" min="1" max="80" value="15" oninput="updateSim()">
+                    </div>
+                    <div>
+                        <label>Match Radius (km): <span id="radius-val">3.0</span></label>
+                        <input type="range" id="radius" min="0.5" max="10" step="0.5" value="3" oninput="updateSim()">
+                    </div>
+                    <div>
+                        <label>Batch Window (s): <span id="batch-val">2.0</span></label>
+                        <input type="range" id="batch" min="0" max="5" step="0.5" value="2" oninput="updateSim()">
+                    </div>
+                </div>
+
+                <div class="legend">
+                    <span><span class="dot" style="background:var(--accent)"></span> Rider (waiting)</span>
+                    <span><span class="dot" style="background:var(--success)"></span> Driver (available)</span>
+                    <span><span class="dot" style="background:var(--purple)"></span> Matched pair</span>
+                    <span><span class="dot" style="background:#94a3b8"></span> Unmatched</span>
+                </div>
+
+                <div class="sim-canvas" id="sim-canvas"></div>
+
+                <div class="output-panel" id="sim-output">
+                    <div class="output-card"><div class="val" id="out-matched">0</div><div class="lbl">Matched</div></div>
+                    <div class="output-card"><div class="val" id="out-unmatched-r">0</div><div class="lbl">Unmatched Riders</div></div>
+                    <div class="output-card"><div class="val" id="out-unmatched-d">0</div><div class="lbl">Idle Drivers</div></div>
+                    <div class="output-card"><div class="val" id="out-avg-eta">0</div><div class="lbl">Avg ETA (min)</div></div>
+                    <div class="output-card"><div class="val" id="out-surge">1.0x</div><div class="lbl">Surge Multiplier</div></div>
+                    <div class="output-card"><div class="val" id="out-utilization">0%</div><div class="lbl">Fleet Utilization</div></div>
+                </div>
+            </div>
+
+            <div class="playground" style="margin-top:1.5rem;">
+                <h3>Capacity Estimator</h3>
+                <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">Estimate infrastructure requirements for your ride-hailing platform.</p>
+
+                <div class="presets">
+                    <button onclick="applyCapPreset('startup')">Small Startup (1 city)</button>
+                    <button onclick="applyCapPreset('mid')">Mid-Scale (50 cities)</button>
+                    <button onclick="applyCapPreset('uber')">Uber-Scale (10K cities)</button>
+                </div>
+
+                <div class="controls-grid">
+                    <div>
+                        <label>Daily Rides: <span id="cap-rides-val">100,000</span></label>
+                        <input type="range" id="cap-rides" min="1000" max="20000000" step="1000" value="100000" oninput="updateCapacity()">
+                    </div>
+                    <div>
+                        <label>Active Drivers: <span id="cap-drivers-val">10,000</span></label>
+                        <input type="range" id="cap-drivers" min="100" max="5000000" step="100" value="10000" oninput="updateCapacity()">
+                    </div>
+                    <div>
+                        <label>Avg Trip Duration (min): <span id="cap-duration-val">15</span></label>
+                        <input type="range" id="cap-duration" min="5" max="60" value="15" oninput="updateCapacity()">
+                    </div>
+                    <div>
+                        <label>Location Update Freq (sec): <span id="cap-freq-val">4</span></label>
+                        <input type="range" id="cap-freq" min="1" max="30" value="4" oninput="updateCapacity()">
+                    </div>
+                </div>
+
+                <div class="output-panel" id="cap-output">
+                    <div class="output-card"><div class="val" id="cap-rps">0</div><div class="lbl">Ride Requests/sec (avg)</div></div>
+                    <div class="output-card"><div class="val" id="cap-loc">0</div><div class="lbl">Location writes/sec</div></div>
+                    <div class="output-card"><div class="val" id="cap-ws">0</div><div class="lbl">WS Servers Needed</div></div>
+                    <div class="output-card"><div class="val" id="cap-storage">0</div><div class="lbl">Daily Location Data</div></div>
+                    <div class="output-card"><div class="val" id="cap-eta">0</div><div class="lbl">ETA Calls/sec (peak)</div></div>
+                    <div class="output-card"><div class="val" id="cap-kafka">0</div><div class="lbl">Kafka Partitions</div></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    // Tooltip
+    const tooltip = document.getElementById('tooltip');
+    document.querySelectorAll('.component[data-tip]').forEach(el => {
+        el.addEventListener('mouseenter', e => {
+            tooltip.textContent = el.dataset.tip;
+            tooltip.classList.add('show');
+        });
+        el.addEventListener('mousemove', e => {
+            tooltip.style.left = e.pageX + 12 + 'px';
+            tooltip.style.top = e.pageY - 40 + 'px';
+        });
+        el.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+    });
+
+    // Nav active state
+    const navLinks = document.querySelectorAll('nav a');
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                navLinks.forEach(l => l.classList.remove('active'));
+                const link = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+                if (link) link.classList.add('active');
+            }
+        });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    document.querySelectorAll('section').forEach(s => observer.observe(s));
+
+    // === SEQUENCE DIAGRAM ===
+    const flows = {
+        'ride-request': {
+            actors: ['Rider App', 'API Gateway', 'Trip Service', 'Pricing', 'Matching', 'Location', 'Driver App'],
+            steps: [
+                { from: 0, to: 1, label: 'POST /ride-request', desc: '1. Rider opens app, enters destination, and taps "Request Ride"' },
+                { from: 1, to: 2, label: 'Create trip', desc: '2. API Gateway authenticates, rate-limits, and forwards to Trip Service' },
+                { from: 2, to: 3, label: 'Get fare estimate', desc: '3. Trip Service asks Pricing for upfront fare (including surge multiplier)' },
+                { from: 3, to: 2, label: 'Fare: $24.50 (1.2x)', desc: '4. Pricing returns fare based on distance, ETA, current demand, and surge' },
+                { from: 2, to: 4, label: 'Find drivers', desc: '5. Trip Service asks Matching to find best available driver' },
+                { from: 4, to: 5, label: 'Query nearby S2 cells', desc: '6. Matching queries Location Service for drivers within radius using S2 cells' },
+                { from: 5, to: 4, label: '12 drivers found', desc: '7. Location returns list of nearby available drivers with positions' },
+                { from: 4, to: 2, label: 'Best match: Driver #847', desc: '8. Matching ranks by ETA + rating + fairness, returns best driver' },
+                { from: 2, to: 6, label: 'Push: ride offer', desc: '9. Trip Service sends ride offer to selected driver via push notification' },
+                { from: 6, to: 2, label: 'ACCEPT', desc: '10. Driver accepts within 15s timeout. Trip state → DRIVER_ASSIGNED' },
+                { from: 2, to: 0, label: 'Driver assigned, ETA 4min', desc: '11. Rider gets confirmation with driver details and live ETA' }
+            ]
+        },
+        'driver-match': {
+            actors: ['Driver App', 'WS Gateway', 'Location Svc', 'Redis Geo', 'Matching', 'Trip Svc'],
+            steps: [
+                { from: 0, to: 1, label: 'GPS: 40.7128,-74.0060', desc: '1. Driver app sends GPS coordinates every 4 seconds via WebSocket' },
+                { from: 1, to: 2, label: 'Location update', desc: '2. WebSocket Gateway forwards location update to Location Service' },
+                { from: 2, to: 3, label: 'GEOADD driver:847', desc: '3. Location Service updates driver position in Redis using GEOADD command' },
+                { from: 4, to: 3, label: 'GEORADIUS 3km', desc: '4. When a ride request comes in, Matching queries Redis with GEORADIUS' },
+                { from: 3, to: 4, label: '[847, 231, 109, ...]', desc: '5. Redis returns all driver IDs within radius, sorted by distance' },
+                { from: 4, to: 4, label: 'Rank: ETA + rating', desc: '6. Matching computes ETA for top candidates and ranks by composite score' },
+                { from: 4, to: 5, label: 'Assign driver 847', desc: '7. Matching tells Trip Service the optimal driver for this request' },
+                { from: 5, to: 0, label: 'Ride offer push', desc: '8. Trip Service pushes ride offer to driver with pickup details and fare' }
+            ]
+        },
+        'trip-complete': {
+            actors: ['Driver App', 'Trip Service', 'Payment', 'Rider App', 'Kafka', 'Analytics'],
+            steps: [
+                { from: 0, to: 1, label: 'Trip ended', desc: '1. Driver taps "End Trip" — GPS confirms arrival at destination' },
+                { from: 1, to: 2, label: 'Charge $24.50', desc: '2. Trip Service calculates final fare (adjusted for route taken) and initiates charge' },
+                { from: 2, to: 2, label: 'Process payment', desc: '3. Payment service captures pre-authorized amount, applies promo codes, splits fare (Pool)' },
+                { from: 2, to: 1, label: 'Payment OK', desc: '4. Payment confirms successful charge and generates receipt' },
+                { from: 1, to: 3, label: 'Receipt + rate driver', desc: '5. Rider receives receipt push and prompt to rate driver' },
+                { from: 1, to: 0, label: 'Earnings: $18.60', desc: '6. Driver sees earnings for this trip (fare minus Uber commission)' },
+                { from: 1, to: 4, label: 'TripCompleted event', desc: '7. Trip Service publishes completion event to Kafka for downstream consumers' },
+                { from: 4, to: 5, label: 'Consume event', desc: '8. Analytics, fraud detection, ML training, and incentive systems consume the event' }
+            ]
+        }
+    };
+
+    let currentFlow = 'ride-request';
+    let currentStep = -1;
+    let isPlaying = false;
+    let animTimer = null;
+
+    function drawSequenceDiagram(flowKey) {
+        const flow = flows[flowKey];
+        const svg = document.getElementById('seq-svg');
+        const n = flow.actors.length;
+        const xGap = 850 / (n + 1);
+        let html = '';
+
+        // Actor lifelines
+        flow.actors.forEach((actor, i) => {
+            const x = 50 + (i + 0.5) * xGap;
+            html += `<rect x="${x - 40}" y="10" width="80" height="30" rx="4" fill="${i === 0 ? '#dbeafe' : i === n-1 ? '#d1fae5' : '#f1f5f9'}" stroke="${i === 0 ? '#2563eb' : i === n-1 ? '#059669' : '#94a3b8'}"/>`;
+            html += `<text x="${x}" y="30" text-anchor="middle" font-size="10" font-weight="600">${actor}</text>`;
+            html += `<line x1="${x}" y1="40" x2="${x}" y2="480" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4"/>`;
+        });
+
+        // Steps
+        flow.steps.forEach((step, i) => {
+            const fromX = 50 + (step.from + 0.5) * xGap;
+            const toX = 50 + (step.to + 0.5) * xGap;
+            const y = 70 + i * 38;
+            const isReturn = step.from > step.to;
+            const isSelf = step.from === step.to;
+
+            const opacity = currentStep >= i ? 1 : 0.15;
+            const strokeColor = currentStep === i ? '#2563eb' : '#64748b';
+            const strokeWidth = currentStep === i ? 2 : 1;
+
+            if (isSelf) {
+                html += `<path d="M${fromX},${y} C${fromX+40},${y} ${fromX+40},${y+20} ${fromX},${y+20}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" opacity="${opacity}" marker-end="url(#arrow)"/>`;
+                html += `<text x="${fromX + 45}" y="${y + 12}" font-size="9" fill="${strokeColor}" opacity="${opacity}">${step.label}</text>`;
+            } else {
+                html += `<line x1="${fromX}" y1="${y}" x2="${toX}" y2="${y}" stroke="${strokeColor}" stroke-width="${strokeWidth}" opacity="${opacity}" ${isReturn ? 'stroke-dasharray="4"' : ''} marker-end="url(#arrow)"/>`;
+                const midX = (fromX + toX) / 2;
+                html += `<text x="${midX}" y="${y - 5}" text-anchor="middle" font-size="9" fill="${strokeColor}" opacity="${opacity}">${step.label}</text>`;
+            }
+        });
+
+        svg.innerHTML = html;
+    }
+
+    function updateNarration() {
+        const flow = flows[currentFlow];
+        const el = document.getElementById('seq-narration');
+        if (currentStep < 0) {
+            el.textContent = 'Click Play to see the flow animated step by step.';
+        } else if (currentStep < flow.steps.length) {
+            el.textContent = flow.steps[currentStep].desc;
+        } else {
+            el.textContent = 'Flow complete. Click Reset to replay or select another flow.';
+        }
+    }
+
+    function stepForward() {
+        const flow = flows[currentFlow];
+        if (currentStep < flow.steps.length - 1) {
+            currentStep++;
+            drawSequenceDiagram(currentFlow);
+            updateNarration();
+        } else {
+            pauseAnim();
+        }
+    }
+
+    function playAnim() {
+        isPlaying = true;
+        document.getElementById('seq-play').classList.add('active');
+        document.getElementById('seq-pause').classList.remove('active');
+        animTimer = setInterval(stepForward, 1200);
+    }
+
+    function pauseAnim() {
+        isPlaying = false;
+        clearInterval(animTimer);
+        document.getElementById('seq-pause').classList.add('active');
+        document.getElementById('seq-play').classList.remove('active');
+    }
+
+    function resetAnim() {
+        pauseAnim();
+        currentStep = -1;
+        drawSequenceDiagram(currentFlow);
+        updateNarration();
+    }
+
+    document.getElementById('seq-play').onclick = () => { if (!isPlaying) playAnim(); };
+    document.getElementById('seq-pause').onclick = pauseAnim;
+    document.getElementById('seq-step').onclick = () => { pauseAnim(); stepForward(); };
+    document.getElementById('seq-reset').onclick = resetAnim;
+
+    document.querySelectorAll('.flow-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.flow-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFlow = btn.dataset.flow;
+            resetAnim();
+        };
+    });
+
+    drawSequenceDiagram(currentFlow);
+
+    // === MATCHING SIMULATOR ===
+    let riders = [];
+    let drivers = [];
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+
+    function distance(a, b) {
+        return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+    }
+
+    function updateSim() {
+        const riderCount = +document.getElementById('rider-count').value;
+        const driverCount = +document.getElementById('driver-count').value;
+        const radius = +document.getElementById('radius').value;
+        const batch = +document.getElementById('batch').value;
+
+        document.getElementById('rider-count-val').textContent = riderCount;
+        document.getElementById('driver-count-val').textContent = driverCount;
+        document.getElementById('radius-val').textContent = radius.toFixed(1);
+        document.getElementById('batch-val').textContent = batch.toFixed(1);
+
+        const canvas = document.getElementById('sim-canvas');
+        const W = canvas.offsetWidth;
+        const H = canvas.offsetHeight;
+
+        // Generate positions
+        riders = Array.from({length: riderCount}, () => ({x: rand(20, W-20), y: rand(20, H-20)}));
+        drivers = Array.from({length: driverCount}, () => ({x: rand(20, W-20), y: rand(20, H-20)}));
+
+        // Matching: for each rider find nearest available driver within radius
+        const radiusPx = (radius / 10) * Math.min(W, H);
+        const matched = [];
+        const usedDrivers = new Set();
+
+        // Sort riders by batch window simulation (random order simulates batch)
+        const shuffledRiders = [...riders.keys()].sort(() => Math.random() - 0.5);
+
+        for (const ri of shuffledRiders) {
+            let bestDi = -1;
+            let bestDist = Infinity;
+            for (let di = 0; di < drivers.length; di++) {
+                if (usedDrivers.has(di)) continue;
+                const d = distance(riders[ri], drivers[di]);
+                if (d < radiusPx && d < bestDist) {
+                    bestDist = d;
+                    bestDi = di;
+                }
+            }
+            if (bestDi >= 0) {
+                matched.push({rider: ri, driver: bestDi, dist: bestDist});
+                usedDrivers.add(bestDi);
+            }
+        }
+
+        // Render
+        let html = '';
+        // Draw match lines
+        matched.forEach(m => {
+            const r = riders[m.rider];
+            const d = drivers[m.driver];
+            html += `<svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"><line x1="${r.x}" y1="${r.y}" x2="${d.x}" y2="${d.y}" stroke="var(--purple)" stroke-width="1" opacity="0.4"/></svg>`;
+        });
+
+        const matchedRiders = new Set(matched.map(m => m.rider));
+        const matchedDrivers = new Set(matched.map(m => m.driver));
+
+        riders.forEach((r, i) => {
+            const cls = matchedRiders.has(i) ? 'matched' : 'rider';
+            html += `<div class="sim-dot ${cls}" style="left:${r.x-4}px;top:${r.y-4}px;"></div>`;
+        });
+        drivers.forEach((d, i) => {
+            if (!matchedDrivers.has(i)) {
+                html += `<div class="sim-dot driver" style="left:${d.x-4}px;top:${d.y-4}px;"></div>`;
+            }
+        });
+
+        canvas.innerHTML = html;
+
+        // Metrics
+        const totalETA = matched.reduce((s, m) => s + (m.dist / Math.min(W, H)) * 15, 0);
+        const avgETA = matched.length > 0 ? (totalETA / matched.length).toFixed(1) : '—';
+        const surge = riderCount > driverCount ? Math.min(3.0, (riderCount / Math.max(1, driverCount)).toFixed(1)) : 1.0;
+        const utilization = driverCount > 0 ? Math.round((matched.length / driverCount) * 100) : 0;
+
+        document.getElementById('out-matched').textContent = matched.length;
+        document.getElementById('out-unmatched-r').textContent = riderCount - matched.length;
+        document.getElementById('out-unmatched-d').textContent = driverCount - matched.length;
+        document.getElementById('out-avg-eta').textContent = avgETA;
+        document.getElementById('out-surge').textContent = surge + 'x';
+        document.getElementById('out-utilization').textContent = utilization + '%';
+    }
+
+    function applyPreset(name) {
+        const presets = {
+            normal: {riders: 20, drivers: 15, radius: 3, batch: 2},
+            surge: {riders: 60, drivers: 12, radius: 5, batch: 2},
+            sparse: {riders: 5, drivers: 8, radius: 8, batch: 1},
+            oversupply: {riders: 10, drivers: 50, radius: 3, batch: 2}
+        };
+        const p = presets[name];
+        document.getElementById('rider-count').value = p.riders;
+        document.getElementById('driver-count').value = p.drivers;
+        document.getElementById('radius').value = p.radius;
+        document.getElementById('batch').value = p.batch;
+        updateSim();
+    }
+
+    // === CAPACITY ESTIMATOR ===
+    function formatNum(n) {
+        if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+        if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+        if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+        return Math.round(n).toString();
+    }
+
+    function formatBytes(bytes) {
+        if (bytes >= 1e12) return (bytes/1e12).toFixed(1) + ' TB';
+        if (bytes >= 1e9) return (bytes/1e9).toFixed(1) + ' GB';
+        if (bytes >= 1e6) return (bytes/1e6).toFixed(0) + ' MB';
+        return (bytes/1e3).toFixed(0) + ' KB';
+    }
+
+    function updateCapacity() {
+        const rides = +document.getElementById('cap-rides').value;
+        const drivers = +document.getElementById('cap-drivers').value;
+        const duration = +document.getElementById('cap-duration').value;
+        const freq = +document.getElementById('cap-freq').value;
+
+        document.getElementById('cap-rides-val').textContent = formatNum(rides);
+        document.getElementById('cap-drivers-val').textContent = formatNum(drivers);
+        document.getElementById('cap-duration-val').textContent = duration;
+        document.getElementById('cap-freq-val').textContent = freq;
+
+        const rps = rides / 86400;
+        const peakRps = rps * 3;
+        const locWrites = drivers / freq;
+        const wsServers = Math.ceil((drivers * 1.4) / 50000); // drivers + ~40% riders online
+        const dailyLocBytes = locWrites * 86400 * 100; // 100 bytes per update
+        const etaCalls = peakRps * 500; // 500 ETA computations per ride
+        const kafkaPartitions = Math.max(6, Math.ceil(locWrites / 10000) * 3); // 10K msgs/partition, 3 topics
+
+        document.getElementById('cap-rps').textContent = formatNum(peakRps);
+        document.getElementById('cap-loc').textContent = formatNum(locWrites);
+        document.getElementById('cap-ws').textContent = wsServers;
+        document.getElementById('cap-storage').textContent = formatBytes(dailyLocBytes);
+        document.getElementById('cap-eta').textContent = formatNum(etaCalls);
+        document.getElementById('cap-kafka').textContent = kafkaPartitions;
+    }
+
+    function applyCapPreset(name) {
+        const presets = {
+            startup: {rides: 5000, drivers: 500, duration: 12, freq: 4},
+            mid: {rides: 500000, drivers: 50000, duration: 15, freq: 4},
+            uber: {rides: 14000000, drivers: 5000000, duration: 15, freq: 4}
+        };
+        const p = presets[name];
+        document.getElementById('cap-rides').value = p.rides;
+        document.getElementById('cap-drivers').value = p.drivers;
+        document.getElementById('cap-duration').value = p.duration;
+        document.getElementById('cap-freq').value = p.freq;
+        updateCapacity();
+    }
+
+    // Init
+    updateSim();
+    updateCapacity();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>658. Find K Closest Elements — Visualizer</title>
+  <style>
+    :root {
+      --bg: #0c0c14;
+      --surface: #14141f;
+      --surface2: #1c1c2e;
+      --surface3: #24243a;
+      --border: #2a2a44;
+      --text: #e2e2f0;
+      --text-dim: #8888a8;
+      --text-muted: #5a5a78;
+      --accent: #6c5ce7;
+      --accent-glow: #6c5ce740;
+      --accent2: #00cec9;
+      --accent2-glow: #00cec940;
+      --orange: #e17055;
+      --orange-glow: #e1705540;
+      --green: #00b894;
+      --green-glow: #00b89440;
+      --yellow: #fdcb6e;
+      --yellow-glow: #fdcb6e40;
+      --red: #ff6b6b;
+      --red-glow: #ff6b6b40;
+      --pink: #fd79a8;
+      --radius: 10px;
+      --radius-sm: 6px;
+      --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 2rem 4rem;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding-top: 1rem;
+    }
+
+    header .problem-number {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    header h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    header .subtitle {
+      color: var(--text-dim);
+      font-size: 1.05rem;
+    }
+
+    /* Section titles */
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .section-title .icon {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      gap: 0.35rem;
+    }
+
+    .badge-time {
+      background: var(--accent-glow);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    .badge-space {
+      background: var(--accent2-glow);
+      color: var(--accent2);
+      border: 1px solid var(--accent2);
+    }
+
+    .badge-medium {
+      background: var(--yellow-glow);
+      color: var(--yellow);
+      border: 1px solid var(--yellow);
+    }
+
+    .badges {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    /* ====== SECTION 1: Explanation ====== */
+    .explanation-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .problem-box {
+      grid-column: 1 / -1;
+    }
+
+    .problem-box p {
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    .example-io {
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      margin-top: 0.75rem;
+      border-left: 3px solid var(--accent);
+    }
+
+    .example-io .label {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .example-io .val {
+      color: var(--accent2);
+    }
+
+    .insight-box {
+      background: linear-gradient(135deg, var(--accent-glow), transparent);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .insight-box h3 {
+      color: var(--accent);
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .insight-box p {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    .approach-box {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+    }
+
+    .approach-box h3 {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      color: var(--accent2);
+    }
+
+    .approach-box p, .approach-box li {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    .approach-box ol {
+      padding-left: 1.25rem;
+      margin-top: 0.4rem;
+    }
+
+    .approach-box li {
+      margin-bottom: 0.25rem;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      background: var(--surface3);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.85em;
+      color: var(--yellow);
+    }
+
+    /* Window diagram */
+    .window-diagram {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .window-diagram .arr-row {
+      display: flex;
+      gap: 2px;
+    }
+
+    .window-diagram .cell {
+      width: 38px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      border-radius: 4px;
+      background: var(--surface3);
+      color: var(--text-dim);
+      transition: all 0.3s;
+    }
+
+    .window-diagram .cell.in-window {
+      background: var(--green);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .window-diagram .bracket {
+      display: flex;
+      gap: 2px;
+      margin-top: 4px;
+    }
+
+    .window-diagram .bracket-label {
+      font-size: 0.7rem;
+      color: var(--orange);
+      font-family: var(--font-mono);
+      text-align: center;
+    }
+
+    /* ====== SECTION 2: Animation ====== */
+    .animation-section {
+      margin-top: 1rem;
+    }
+
+    .anim-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .anim-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 0.5rem 1rem;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #7d6ff0;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    .btn-secondary {
+      background: var(--surface3);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: auto;
+    }
+
+    .speed-control label {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    .speed-control input[type="range"] {
+      width: 90px;
+      accent-color: var(--accent);
+    }
+
+    .step-counter {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      min-width: 80px;
+    }
+
+    /* Array visualization */
+    .array-viz {
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 1.5rem 0.5rem;
+    }
+
+    .arr-cells {
+      display: flex;
+      gap: 3px;
+      position: relative;
+    }
+
+    .arr-cell {
+      width: 46px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 6px;
+      background: var(--surface3);
+      color: var(--text-dim);
+      transition: all 0.35s ease;
+      position: relative;
+      border: 2px solid transparent;
+    }
+
+    .arr-cell.active-left {
+      border-color: var(--orange);
+      box-shadow: 0 0 12px var(--orange-glow);
+    }
+
+    .arr-cell.active-right {
+      border-color: var(--pink);
+      box-shadow: 0 0 12px var(--red-glow);
+    }
+
+    .arr-cell.in-window {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 0 12px var(--green-glow);
+    }
+
+    .arr-cell.candidate {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .arr-cell.result {
+      background: linear-gradient(135deg, var(--green), var(--accent2));
+      color: #fff;
+      box-shadow: 0 0 16px var(--green-glow);
+      transform: scale(1.05);
+    }
+
+    .arr-cell.compared {
+      border-color: var(--yellow);
+      box-shadow: 0 0 10px var(--yellow-glow);
+    }
+
+    .arr-indices {
+      display: flex;
+      gap: 3px;
+    }
+
+    .arr-idx {
+      width: 46px;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    /* Pointers */
+    .pointer-row {
+      display: flex;
+      gap: 3px;
+      height: 30px;
+    }
+
+    .ptr-cell {
+      width: 46px;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .ptr-cell .arrow {
+      font-size: 0.9rem;
+      line-height: 1;
+    }
+
+    .ptr-lo { color: var(--orange); }
+    .ptr-hi { color: var(--pink); }
+    .ptr-mid { color: var(--yellow); }
+
+    /* Window bracket */
+    .window-bracket-row {
+      position: relative;
+      height: 24px;
+      width: 100%;
+    }
+
+    .window-bracket {
+      position: absolute;
+      height: 16px;
+      border: 2px solid var(--accent2);
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      transition: all 0.35s ease;
+    }
+
+    .window-bracket-label {
+      position: absolute;
+      top: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--accent2);
+      white-space: nowrap;
+      transition: all 0.35s ease;
+    }
+
+    /* Narration */
+    .narration {
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+      margin-top: 0.75rem;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      border-left: 3px solid var(--accent);
+      transition: all 0.3s;
+    }
+
+    .narration.highlight {
+      border-left-color: var(--green);
+    }
+
+    /* Code panel */
+    .code-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .code-panel-header {
+      padding: 0.6rem 1rem;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .code-panel-header .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .code-lines {
+      padding: 0.75rem 0;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+
+    .code-line {
+      padding: 0 1rem 0 0.5rem;
+      display: flex;
+      transition: background 0.25s;
+      white-space: pre;
+    }
+
+    .code-line.active {
+      background: var(--accent-glow);
+      border-left: 3px solid var(--accent);
+    }
+
+    .code-line:not(.active) {
+      border-left: 3px solid transparent;
+    }
+
+    .code-line .ln {
+      width: 28px;
+      text-align: right;
+      color: var(--text-muted);
+      margin-right: 12px;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .code-line .code-text {
+      color: var(--text-dim);
+    }
+
+    .code-line.active .code-text {
+      color: var(--text);
+    }
+
+    .kw { color: var(--accent); }
+    .fn { color: var(--accent2); }
+    .num { color: var(--orange); }
+    .cm { color: var(--text-muted); font-style: italic; }
+    .str { color: var(--green); }
+    .var-name { color: var(--yellow); }
+
+    /* Variables panel */
+    .vars-panel {
+      margin-top: 1rem;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+    }
+
+    .vars-panel h4 {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .var-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+    }
+
+    .var-item {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      display: flex;
+      gap: 0.3rem;
+    }
+
+    .var-item .var-key {
+      color: var(--text-muted);
+    }
+
+    .var-item .var-val {
+      color: var(--accent2);
+      font-weight: 600;
+    }
+
+    .var-item .var-val.changed {
+      color: var(--yellow);
+      animation: flash 0.5s ease;
+    }
+
+    @keyframes flash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* X marker */
+    .x-marker-row {
+      display: flex;
+      gap: 3px;
+      margin-top: 4px;
+    }
+
+    .x-marker-cell {
+      width: 46px;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--red);
+      font-weight: 700;
+    }
+
+    .x-line {
+      position: absolute;
+      width: 2px;
+      background: var(--red);
+      opacity: 0.5;
+      top: -4px;
+      bottom: -4px;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .x-label {
+      position: absolute;
+      top: -20px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--red);
+      font-weight: 700;
+      transform: translateX(-50%);
+      z-index: 6;
+    }
+
+    /* Distance row */
+    .distance-row {
+      display: flex;
+      gap: 3px;
+    }
+
+    .dist-cell {
+      width: 46px;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .dist-cell.show {
+      opacity: 1;
+    }
+
+    .dist-cell.compare-left {
+      color: var(--orange);
+      font-weight: 700;
+    }
+
+    .dist-cell.compare-right {
+      color: var(--pink);
+      font-weight: 700;
+    }
+
+    /* ====== SECTION 3: Playground ====== */
+    .playground {
+      margin-top: 1rem;
+    }
+
+    .playground-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .playground-grid, .explanation-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .input-group {
+      margin-bottom: 1rem;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 0.35rem;
+      font-weight: 500;
+    }
+
+    .input-group input, .input-group select {
+      width: 100%;
+      padding: 0.6rem 0.9rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus {
+      border-color: var(--accent);
+    }
+
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+    }
+
+    .preset-btn {
+      padding: 0.35rem 0.75rem;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-mono);
+    }
+
+    .preset-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .result-box {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      border: 1px solid var(--border);
+      min-height: 200px;
+    }
+
+    .result-box h4 {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.75rem;
+    }
+
+    .result-output {
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      color: var(--green);
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .result-steps {
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      line-height: 1.8;
+      color: var(--text-dim);
+    }
+
+    .result-steps::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .result-steps::-webkit-scrollbar-track {
+      background: var(--surface3);
+    }
+
+    .result-steps::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    .error-msg {
+      color: var(--red);
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Comparison visualization */
+    .compare-viz {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      margin: 1rem 0;
+      padding: 1rem;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+    }
+
+    .compare-side {
+      text-align: center;
+      font-family: var(--font-mono);
+    }
+
+    .compare-side .value {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .compare-side .dist {
+      font-size: 0.75rem;
+      margin-top: 0.2rem;
+    }
+
+    .compare-vs {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .compare-left-side .value { color: var(--orange); }
+    .compare-left-side .dist { color: var(--orange); }
+    .compare-right-side .value { color: var(--pink); }
+    .compare-right-side .dist { color: var(--pink); }
+
+    .compare-result {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-top: 0.25rem;
+    }
+
+    .compare-result .arrow-dir {
+      color: var(--yellow);
+      font-weight: 700;
+    }
+
+    /* Separator */
+    .section-sep {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 2.5rem 0;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <!-- Header -->
+  <header>
+    <div class="problem-number">LeetCode 658 · Medium</div>
+    <h1>Find K Closest Elements</h1>
+    <div class="subtitle">Binary search on the left boundary of a sliding window</div>
+  </header>
+
+  <!-- ====== SECTION 1: Visual Explanation ====== -->
+  <div class="section-title">
+    <span class="icon" style="background: var(--accent-glow); color: var(--accent);">&#9670;</span>
+    Visual Explanation
+  </div>
+
+  <div class="explanation-grid">
+    <!-- Problem statement -->
+    <div class="card problem-box">
+      <p>Given a <strong>sorted</strong> array <code>arr</code>, and two integers <code>k</code> and <code>x</code>, return the <code>k</code> closest integers to <code>x</code>, sorted in ascending order.</p>
+      <p style="margin-top:0.4rem;">If two integers have the same distance to <code>x</code>, the <strong>smaller</strong> one is considered closer.</p>
+      <div class="example-io">
+        <div><span class="label">Input: </span><span class="val">arr = [1,2,3,4,5], k = 4, x = 3</span></div>
+        <div><span class="label">Output: </span><span class="val">[1,2,3,4]</span></div>
+      </div>
+      <div class="badges">
+        <span class="badge badge-medium">Medium</span>
+        <span class="badge badge-time">Time: O(log(n−k) + k)</span>
+        <span class="badge badge-space">Space: O(1)</span>
+      </div>
+    </div>
+
+    <!-- Key insight -->
+    <div class="insight-box">
+      <h3>&#x1F4A1; Key Insight</h3>
+      <p>The answer is always a <strong>contiguous window of size k</strong> in the sorted array. Instead of finding the closest element and expanding, we can <strong>binary search for the window's left boundary</strong>.</p>
+      <p style="margin-top:0.5rem;">At each step, compare <code>x − arr[mid]</code> vs <code>arr[mid + k] − x</code> to decide which direction to slide the window.</p>
+    </div>
+
+    <!-- Approach -->
+    <div class="approach-box">
+      <h3>Binary Search Approach</h3>
+      <ol>
+        <li>Set <code>lo = 0</code>, <code>hi = n − k</code></li>
+        <li>While <code>lo &lt; hi</code>:
+          <br>&nbsp;&nbsp;• <code>mid = (lo + hi) / 2</code>
+          <br>&nbsp;&nbsp;• If <code>x − arr[mid] &gt; arr[mid+k] − x</code>, then <code>lo = mid + 1</code>
+          <br>&nbsp;&nbsp;• Otherwise, <code>hi = mid</code>
+        </li>
+        <li>Return <code>arr[lo..lo+k]</code></li>
+      </ol>
+      <!-- Window diagram -->
+      <div class="window-diagram" id="staticDiagram"></div>
+    </div>
+  </div>
+
+  <div class="section-sep"></div>
+
+  <!-- ====== SECTION 2: Step-by-Step Animation ====== -->
+  <div class="section-title">
+    <span class="icon" style="background: var(--green-glow); color: var(--green);">&#9654;</span>
+    Step-by-Step Animation
+  </div>
+
+  <div class="card animation-section">
+    <!-- Controls -->
+    <div class="controls">
+      <button class="btn btn-primary" id="btnPlay" onclick="togglePlay()">&#9654; Play</button>
+      <button class="btn btn-secondary" id="btnStep" onclick="stepForward()">Step &#x25B6;</button>
+      <button class="btn btn-secondary" id="btnReset" onclick="resetAnimation()">&#x21BA; Reset</button>
+      <span class="step-counter" id="stepCounter">Step 0 / 0</span>
+      <div class="speed-control">
+        <label>Speed</label>
+        <input type="range" id="speedSlider" min="1" max="5" value="3" step="1">
+      </div>
+    </div>
+
+    <div class="anim-layout">
+      <!-- Left: visualization -->
+      <div>
+        <div class="array-viz" id="arrayViz"></div>
+
+        <!-- Comparison visualization -->
+        <div class="compare-viz" id="compareViz" style="display:none;">
+          <div class="compare-side compare-left-side">
+            <div class="value" id="cmpLeftVal">—</div>
+            <div class="dist" id="cmpLeftDist">|x − arr[mid]|</div>
+          </div>
+          <div class="compare-vs">vs</div>
+          <div class="compare-side compare-right-side">
+            <div class="value" id="cmpRightVal">—</div>
+            <div class="dist" id="cmpRightDist">|arr[mid+k] − x|</div>
+          </div>
+        </div>
+        <div class="compare-result" id="compareResult"></div>
+
+        <div class="narration" id="narration">Press Play or Step to begin the animation.</div>
+      </div>
+
+      <!-- Right: code + vars -->
+      <div>
+        <div class="code-panel">
+          <div class="code-panel-header">
+            <span class="dot"></span>
+            algorithm.py
+          </div>
+          <div class="code-lines" id="codePanel"></div>
+        </div>
+        <div class="vars-panel">
+          <h4>Variables</h4>
+          <div class="var-grid" id="varsPanel"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-sep"></div>
+
+  <!-- ====== SECTION 3: Interactive Playground ====== -->
+  <div class="section-title">
+    <span class="icon" style="background: var(--orange-glow); color: var(--orange);">&#9881;</span>
+    Interactive Playground
+  </div>
+
+  <div class="card playground">
+    <div class="presets">
+      <span style="font-size:0.8rem; color:var(--text-muted); margin-right:0.25rem;">Presets:</span>
+      <button class="preset-btn" onclick="loadPreset(0)">Basic</button>
+      <button class="preset-btn" onclick="loadPreset(1)">x at start</button>
+      <button class="preset-btn" onclick="loadPreset(2)">x at end</button>
+      <button class="preset-btn" onclick="loadPreset(3)">x between</button>
+      <button class="preset-btn" onclick="loadPreset(4)">Duplicates</button>
+      <button class="preset-btn" onclick="loadPreset(5)">Large gap</button>
+    </div>
+
+    <div class="playground-grid">
+      <div>
+        <div class="input-group">
+          <label>Array (comma-separated, sorted)</label>
+          <input type="text" id="pgArr" value="1,2,3,4,5" placeholder="e.g. 1,2,3,4,5">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div class="input-group">
+            <label>k</label>
+            <input type="number" id="pgK" value="4" min="1">
+          </div>
+          <div class="input-group">
+            <label>x</label>
+            <input type="number" id="pgX" value="3">
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:0.5rem;" onclick="runPlayground()">
+          &#9654; Run Algorithm
+        </button>
+        <div class="error-msg" id="pgError"></div>
+      </div>
+
+      <div class="result-box">
+        <h4>Result</h4>
+        <div class="result-output" id="pgResult">—</div>
+        <h4 style="margin-top:0.75rem;">Execution Trace</h4>
+        <div class="result-steps" id="pgSteps">Run the algorithm to see the trace.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== Algorithm =====
+  function findClosestElements(arr, k, x) {
+    const steps = [];
+    let lo = 0, hi = arr.length - k;
+
+    steps.push({
+      type: 'init',
+      lo, hi,
+      mid: null,
+      line: 1,
+      narration: `Initialize: lo = 0, hi = ${arr.length} − ${k} = ${hi}. Search space is indices [0..${hi}] for the left boundary.`
+    });
+
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      const leftDist = x - arr[mid];
+      const rightDist = arr[mid + k] - x;
+
+      steps.push({
+        type: 'compute_mid',
+        lo, hi, mid,
+        leftIdx: mid,
+        rightIdx: mid + k,
+        leftVal: arr[mid],
+        rightVal: arr[mid + k],
+        leftDist,
+        rightDist,
+        line: 3,
+        narration: `mid = ⌊(${lo} + ${hi}) / 2⌋ = ${mid}. Compare arr[${mid}]=${arr[mid]} and arr[${mid + k}]=${arr[mid + k]}.`
+      });
+
+      steps.push({
+        type: 'compare',
+        lo, hi, mid,
+        leftIdx: mid,
+        rightIdx: mid + k,
+        leftVal: arr[mid],
+        rightVal: arr[mid + k],
+        leftDist,
+        rightDist,
+        line: 4,
+        narration: `x − arr[mid] = ${x} − ${arr[mid]} = ${leftDist} ${leftDist > rightDist ? '>' : '≤'} ${rightDist} = ${arr[mid + k]} − ${x} = arr[mid+k] − x`
+      });
+
+      if (leftDist > rightDist) {
+        lo = mid + 1;
+        steps.push({
+          type: 'move',
+          direction: 'right',
+          lo, hi, mid,
+          line: 5,
+          narration: `Left element is farther → move window right: lo = mid + 1 = ${lo}.`
+        });
+      } else {
+        hi = mid;
+        steps.push({
+          type: 'move',
+          direction: 'left',
+          lo, hi, mid,
+          line: 7,
+          narration: `Right element is farther (or equal) → move window left: hi = mid = ${hi}.`
+        });
+      }
+    }
+
+    const result = arr.slice(lo, lo + k);
+    steps.push({
+      type: 'result',
+      lo, hi,
+      windowStart: lo,
+      windowEnd: lo + k - 1,
+      result,
+      line: 8,
+      narration: `lo = hi = ${lo}. Window found! Return arr[${lo}..${lo + k - 1}] = [${result.join(', ')}].`
+    });
+
+    return { result, steps };
+  }
+
+  // ===== Animation State =====
+  const defaultArr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const defaultK = 4;
+  const defaultX = 6;
+
+  let animArr = [...defaultArr];
+  let animK = defaultK;
+  let animX = defaultX;
+  let animSteps = [];
+  let currentStep = -1;
+  let isPlaying = false;
+  let playTimer = null;
+
+  // Code lines
+  const codeLines = [
+    { text: 'def findClosestElements(arr, k, x):', tokens: [['kw','def '],['fn','findClosestElements'],['','(arr, k, x):']] },
+    { text: '    lo, hi = 0, len(arr) - k', tokens: [['','    '],['var-name','lo'],['',', '],['var-name','hi'],['','  = '],['num','0'],['',', len(arr) - k']] },
+    { text: '    while lo < hi:', tokens: [['','    '],['kw','while '],['var-name','lo'],['','  < '],['var-name','hi'],[,'',':']] },
+    { text: '        mid = (lo + hi) // 2', tokens: [['','        '],['var-name','mid'],['','  = (lo + hi) // '],['num','2']] },
+    { text: '        if x - arr[mid] > arr[mid+k] - x:', tokens: [['','        '],['kw','if '],['','x - arr['],['var-name','mid'],['','] > arr['],['var-name','mid'],['','+k] - x:']] },
+    { text: '            lo = mid + 1', tokens: [['','            '],['var-name','lo'],['','  = mid + '],['num','1']] },
+    { text: '        else:', tokens: [['','        '],['kw','else'],['',':']] },
+    { text: '            hi = mid', tokens: [['','            '],['var-name','hi'],['','  = mid']] },
+    { text: '    return arr[lo:lo+k]', tokens: [['','    '],['kw','return '],['','arr['],['var-name','lo'],[,'',':lo+k]']] },
+  ];
+
+  function initAnimation() {
+    const { steps } = findClosestElements(animArr, animK, animX);
+    animSteps = steps;
+    currentStep = -1;
+    isPlaying = false;
+    clearInterval(playTimer);
+    document.getElementById('btnPlay').innerHTML = '&#9654; Play';
+    renderCodePanel();
+    renderArrayViz(null);
+    renderVars(null);
+    document.getElementById('narration').textContent = 'Press Play or Step to begin the animation.';
+    document.getElementById('narration').classList.remove('highlight');
+    document.getElementById('stepCounter').textContent = `Step 0 / ${steps.length}`;
+    document.getElementById('compareViz').style.display = 'none';
+    document.getElementById('compareResult').textContent = '';
+  }
+
+  function renderCodePanel() {
+    const panel = document.getElementById('codePanel');
+    panel.innerHTML = '';
+    codeLines.forEach((line, i) => {
+      const div = document.createElement('div');
+      div.className = 'code-line';
+      div.dataset.line = i;
+      const ln = document.createElement('span');
+      ln.className = 'ln';
+      ln.textContent = i + 1;
+      div.appendChild(ln);
+      const codeText = document.createElement('span');
+      codeText.className = 'code-text';
+      line.tokens.forEach(([cls, txt]) => {
+        if (cls) {
+          const s = document.createElement('span');
+          s.className = cls;
+          s.textContent = txt;
+          codeText.appendChild(s);
+        } else {
+          codeText.appendChild(document.createTextNode(txt));
+        }
+      });
+      div.appendChild(codeText);
+      panel.appendChild(div);
+    });
+  }
+
+  function highlightCodeLine(lineIdx) {
+    document.querySelectorAll('.code-line').forEach(el => {
+      el.classList.toggle('active', parseInt(el.dataset.line) === lineIdx);
+    });
+  }
+
+  function renderArrayViz(step) {
+    const viz = document.getElementById('arrayViz');
+    viz.innerHTML = '';
+
+    // Pointer row
+    const ptrRow = document.createElement('div');
+    ptrRow.className = 'pointer-row';
+    animArr.forEach((_, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'ptr-cell';
+      const labels = [];
+      if (step && step.lo === i) labels.push('<span class="ptr-lo">lo</span>');
+      if (step && step.hi === i) labels.push('<span class="ptr-hi">hi</span>');
+      if (step && step.mid === i) labels.push('<span class="ptr-mid">mid</span>');
+      if (labels.length > 0) {
+        cell.innerHTML = labels.join(' ') + '<span class="arrow" style="color:' +
+          (step.mid === i ? 'var(--yellow)' : step.lo === i ? 'var(--orange)' : 'var(--pink)') + '">&#9660;</span>';
+      }
+      ptrRow.appendChild(cell);
+    });
+    viz.appendChild(ptrRow);
+
+    // Cells
+    const cellRow = document.createElement('div');
+    cellRow.className = 'arr-cells';
+    cellRow.style.position = 'relative';
+
+    animArr.forEach((v, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'arr-cell';
+
+      if (step) {
+        if (step.type === 'result') {
+          if (i >= step.windowStart && i <= step.windowEnd) cell.classList.add('result');
+        } else if (step.type === 'compare' || step.type === 'compute_mid') {
+          if (step.leftIdx === i) cell.classList.add('active-left');
+          if (step.rightIdx === i) cell.classList.add('active-right');
+          // Show window for current mid
+          if (i >= step.mid && i < step.mid + animK) cell.classList.add('candidate');
+        } else if (step.type === 'move') {
+          if (i >= step.lo && i < step.lo + animK) cell.classList.add('candidate');
+        } else if (step.type === 'init') {
+          // no special highlight
+        }
+      }
+
+      cell.textContent = v;
+      cellRow.appendChild(cell);
+    });
+
+    // x position indicator
+    const xPos = findXPosition(animArr, animX);
+    if (xPos !== null) {
+      const xLine = document.createElement('div');
+      xLine.className = 'x-line';
+      xLine.style.left = `${xPos * 49 + 23}px`;
+      cellRow.appendChild(xLine);
+
+      const xLabel = document.createElement('div');
+      xLabel.className = 'x-label';
+      xLabel.textContent = `x=${animX}`;
+      xLabel.style.left = `${xPos * 49 + 23}px`;
+      cellRow.appendChild(xLabel);
+    }
+
+    viz.appendChild(cellRow);
+
+    // Index row
+    const idxRow = document.createElement('div');
+    idxRow.className = 'arr-indices';
+    animArr.forEach((_, i) => {
+      const idx = document.createElement('div');
+      idx.className = 'arr-idx';
+      idx.textContent = i;
+      idxRow.appendChild(idx);
+    });
+    viz.appendChild(idxRow);
+
+    // Distance row
+    if (step && (step.type === 'compare' || step.type === 'compute_mid')) {
+      const distRow = document.createElement('div');
+      distRow.className = 'distance-row';
+      animArr.forEach((v, i) => {
+        const d = document.createElement('div');
+        d.className = 'dist-cell show';
+        if (i === step.leftIdx) {
+          d.classList.add('compare-left');
+          d.textContent = `|${step.leftDist}|`;
+        } else if (i === step.rightIdx) {
+          d.classList.add('compare-right');
+          d.textContent = `|${step.rightDist}|`;
+        } else {
+          d.textContent = `${Math.abs(v - animX)}`;
+        }
+        distRow.appendChild(d);
+      });
+      viz.appendChild(distRow);
+    }
+  }
+
+  function findXPosition(arr, x) {
+    if (x <= arr[0]) return 0;
+    if (x >= arr[arr.length - 1]) return arr.length - 1;
+    for (let i = 0; i < arr.length - 1; i++) {
+      if (arr[i] <= x && arr[i + 1] >= x) {
+        const ratio = (x - arr[i]) / (arr[i + 1] - arr[i]);
+        return i + ratio;
+      }
+    }
+    return arr.length - 1;
+  }
+
+  function renderVars(step) {
+    const panel = document.getElementById('varsPanel');
+    if (!step) {
+      panel.innerHTML = `
+        <div class="var-item"><span class="var-key">lo:</span><span class="var-val">—</span></div>
+        <div class="var-item"><span class="var-key">hi:</span><span class="var-val">—</span></div>
+        <div class="var-item"><span class="var-key">mid:</span><span class="var-val">—</span></div>
+        <div class="var-item"><span class="var-key">x:</span><span class="var-val">${animX}</span></div>
+        <div class="var-item"><span class="var-key">k:</span><span class="var-val">${animK}</span></div>
+        <div class="var-item"><span class="var-key">n:</span><span class="var-val">${animArr.length}</span></div>
+      `;
+      return;
+    }
+
+    panel.innerHTML = `
+      <div class="var-item"><span class="var-key">lo:</span><span class="var-val">${step.lo}</span></div>
+      <div class="var-item"><span class="var-key">hi:</span><span class="var-val">${step.hi}</span></div>
+      <div class="var-item"><span class="var-key">mid:</span><span class="var-val">${step.mid !== null && step.mid !== undefined ? step.mid : '—'}</span></div>
+      <div class="var-item"><span class="var-key">x:</span><span class="var-val">${animX}</span></div>
+      <div class="var-item"><span class="var-key">k:</span><span class="var-val">${animK}</span></div>
+      <div class="var-item"><span class="var-key">n:</span><span class="var-val">${animArr.length}</span></div>
+    `;
+  }
+
+  function renderStep(idx) {
+    if (idx < 0 || idx >= animSteps.length) return;
+    const step = animSteps[idx];
+
+    highlightCodeLine(step.line);
+    renderArrayViz(step);
+    renderVars(step);
+
+    const narEl = document.getElementById('narration');
+    narEl.textContent = step.narration;
+    narEl.classList.toggle('highlight', step.type === 'result');
+
+    document.getElementById('stepCounter').textContent = `Step ${idx + 1} / ${animSteps.length}`;
+
+    // Comparison box
+    const cmpViz = document.getElementById('compareViz');
+    const cmpRes = document.getElementById('compareResult');
+
+    if (step.type === 'compare') {
+      cmpViz.style.display = 'flex';
+      document.getElementById('cmpLeftVal').textContent = step.leftVal;
+      document.getElementById('cmpLeftDist').textContent = `x − arr[${step.leftIdx}] = ${step.leftDist}`;
+      document.getElementById('cmpRightVal').textContent = step.rightVal;
+      document.getElementById('cmpRightDist').textContent = `arr[${step.rightIdx}] − x = ${step.rightDist}`;
+      if (step.leftDist > step.rightDist) {
+        cmpRes.innerHTML = `${step.leftDist} > ${step.rightDist} → <span class="arrow-dir">slide window right &#x27A1;</span>`;
+      } else {
+        cmpRes.innerHTML = `${step.leftDist} ≤ ${step.rightDist} → <span class="arrow-dir">&#x2B05; slide window left</span>`;
+      }
+    } else if (step.type !== 'compute_mid') {
+      cmpViz.style.display = 'none';
+      cmpRes.textContent = '';
+    }
+  }
+
+  function stepForward() {
+    if (currentStep < animSteps.length - 1) {
+      currentStep++;
+      renderStep(currentStep);
+    } else if (isPlaying) {
+      togglePlay();
+    }
+  }
+
+  function togglePlay() {
+    isPlaying = !isPlaying;
+    const btn = document.getElementById('btnPlay');
+    if (isPlaying) {
+      btn.innerHTML = '&#10074;&#10074; Pause';
+      if (currentStep >= animSteps.length - 1) {
+        currentStep = -1;
+        renderArrayViz(null);
+      }
+      const speed = document.getElementById('speedSlider').value;
+      const delay = [2000, 1400, 1000, 600, 300][speed - 1];
+      playTimer = setInterval(() => {
+        stepForward();
+      }, delay);
+    } else {
+      btn.innerHTML = '&#9654; Play';
+      clearInterval(playTimer);
+    }
+  }
+
+  function resetAnimation() {
+    isPlaying = false;
+    clearInterval(playTimer);
+    initAnimation();
+  }
+
+  // Speed slider
+  document.getElementById('speedSlider').addEventListener('input', () => {
+    if (isPlaying) {
+      clearInterval(playTimer);
+      const speed = document.getElementById('speedSlider').value;
+      const delay = [2000, 1400, 1000, 600, 300][speed - 1];
+      playTimer = setInterval(() => { stepForward(); }, delay);
+    }
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    if (e.code === 'ArrowRight') { e.preventDefault(); stepForward(); }
+    if (e.code === 'KeyR') { e.preventDefault(); resetAnimation(); }
+  });
+
+  // ===== Static Diagram =====
+  function renderStaticDiagram() {
+    const arr = [1, 2, 3, 4, 5, 6, 7, 8];
+    const k = 4;
+    const windowStart = 2;
+    const container = document.getElementById('staticDiagram');
+
+    const row = document.createElement('div');
+    row.className = 'arr-row';
+    arr.forEach((v, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      if (i >= windowStart && i < windowStart + k) cell.classList.add('in-window');
+      cell.textContent = v;
+      row.appendChild(cell);
+    });
+    container.appendChild(row);
+
+    const lbl = document.createElement('div');
+    lbl.className = 'bracket-label';
+    lbl.innerHTML = '&larr; window of size k=4 &rarr;';
+    lbl.style.marginTop = '6px';
+    container.appendChild(lbl);
+  }
+
+  // ===== Playground =====
+  const presets = [
+    { arr: '1,2,3,4,5', k: 4, x: 3, label: 'Basic' },
+    { arr: '1,2,3,4,5,6,7,8,9,10', k: 3, x: 1, label: 'x at start' },
+    { arr: '1,2,3,4,5,6,7,8,9,10', k: 3, x: 10, label: 'x at end' },
+    { arr: '1,3,5,7,9,11,13,15', k: 4, x: 8, label: 'x between elements' },
+    { arr: '1,1,1,2,2,3,3,3', k: 3, x: 2, label: 'Duplicates' },
+    { arr: '1,2,100,200,300,400', k: 2, x: 50, label: 'Large gap' },
+  ];
+
+  function loadPreset(idx) {
+    const p = presets[idx];
+    document.getElementById('pgArr').value = p.arr;
+    document.getElementById('pgK').value = p.k;
+    document.getElementById('pgX').value = p.x;
+    document.getElementById('pgError').textContent = '';
+  }
+
+  function runPlayground() {
+    const errEl = document.getElementById('pgError');
+    errEl.textContent = '';
+
+    try {
+      const arrStr = document.getElementById('pgArr').value.trim();
+      const arr = arrStr.split(',').map(s => {
+        const n = parseInt(s.trim(), 10);
+        if (isNaN(n)) throw new Error(`Invalid number: "${s.trim()}"`);
+        return n;
+      });
+
+      for (let i = 1; i < arr.length; i++) {
+        if (arr[i] < arr[i - 1]) throw new Error('Array must be sorted in ascending order.');
+      }
+
+      const k = parseInt(document.getElementById('pgK').value, 10);
+      const x = parseInt(document.getElementById('pgX').value, 10);
+
+      if (isNaN(k) || k < 1) throw new Error('k must be a positive integer.');
+      if (isNaN(x)) throw new Error('x must be an integer.');
+      if (k > arr.length) throw new Error('k cannot be larger than the array length.');
+
+      const { result, steps } = findClosestElements(arr, k, x);
+
+      document.getElementById('pgResult').textContent = `[${result.join(', ')}]`;
+
+      const stepsEl = document.getElementById('pgSteps');
+      stepsEl.innerHTML = '';
+      steps.forEach((s, i) => {
+        const line = document.createElement('div');
+        line.style.borderBottom = '1px solid var(--border)';
+        line.style.paddingBottom = '2px';
+        line.style.marginBottom = '2px';
+        const prefix = `<span style="color:var(--text-muted);">${i + 1}.</span> `;
+        line.innerHTML = prefix + s.narration;
+        stepsEl.appendChild(line);
+      });
+
+      // Also update animation
+      animArr = arr;
+      animK = k;
+      animX = x;
+      initAnimation();
+
+    } catch (e) {
+      errEl.textContent = e.message;
+    }
+  }
+
+  // ===== Init =====
+  renderStaticDiagram();
+  initAnimation();
+</script>
+</body>
+</html>

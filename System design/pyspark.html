@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PySpark — Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f4f6f9;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --accent: #e65100;
+      --accent-light: #fff3e0;
+      --blue: #1565c0;
+      --blue-light: #e3f2fd;
+      --green: #2e7d32;
+      --green-light: #e8f5e9;
+      --purple: #6a1b9a;
+      --purple-light: #f3e5f5;
+      --red: #c62828;
+      --red-light: #ffebee;
+      --amber: #f57f17;
+      --amber-light: #fff8e1;
+      --teal: #00695c;
+      --teal-light: #e0f2f1;
+      --radius: 12px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.06);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 0 2rem;
+    }
+
+    .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .nav-inner::-webkit-scrollbar { display: none; }
+
+    .nav-brand {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--accent);
+      padding: 1rem 1rem 1rem 0;
+      border-right: 1px solid var(--border);
+      margin-right: 0.5rem;
+      white-space: nowrap;
+    }
+
+    .nav-link {
+      padding: 1rem 0.75rem;
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    section {
+      margin-bottom: 4rem;
+      scroll-margin-top: 5rem;
+    }
+
+    .section-header {
+      margin-bottom: 2rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-orange { background: var(--accent-light); color: var(--accent); }
+    .badge-blue { background: var(--blue-light); color: var(--blue); }
+    .badge-green { background: var(--green-light); color: var(--green); }
+    .badge-purple { background: var(--purple-light); color: var(--purple); }
+
+    /* Architecture Diagram */
+    .arch-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+
+    .arch-svg {
+      width: 100%;
+      min-width: 900px;
+      height: 600px;
+    }
+
+    .arch-svg text {
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .arch-component {
+      cursor: pointer;
+      transition: transform 0.2s, filter 0.2s;
+    }
+
+    .arch-component:hover {
+      filter: brightness(0.95);
+    }
+
+    .arch-component:hover .comp-shadow {
+      opacity: 0.3;
+    }
+
+    .tooltip {
+      position: absolute;
+      background: var(--text);
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      max-width: 280px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 200;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .tooltip.visible { opacity: 1; }
+
+    /* Component Cards */
+    .components-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .comp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .comp-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .comp-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .comp-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .comp-card h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .comp-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .tech-tag {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: 'Consolas', monospace;
+      margin: 0.2rem 0.2rem 0.2rem 0;
+    }
+
+    /* Sequence Diagram */
+    .seq-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+    }
+
+    .seq-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .seq-btn {
+      padding: 0.5rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .seq-btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .seq-btn-primary:hover { background: #bf360c; }
+
+    .seq-btn-secondary {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .seq-btn-secondary:hover { background: var(--border); }
+
+    .seq-btn-secondary.active {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .speed-control input[type="range"] {
+      width: 80px;
+      accent-color: var(--accent);
+    }
+
+    .seq-narration {
+      background: var(--accent-light);
+      border-left: 3px solid var(--accent);
+      padding: 0.75rem 1rem;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      min-height: 3rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .seq-svg {
+      width: 100%;
+      min-width: 800px;
+      overflow-x: auto;
+    }
+
+    /* Comparison Table */
+    .comparison-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr:last-child td { border-bottom: none; }
+
+    .comparison-table tr.highlight {
+      background: var(--accent-light);
+    }
+
+    .comparison-table tr.highlight td:first-child {
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .chosen-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      font-size: 0.65rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 50px;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+
+    .decision-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .decision-card {
+      padding: 1.25rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .decision-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .decision-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Pitfalls */
+    .pitfall-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--amber);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin-bottom: 1rem;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .pitfall-header {
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background 0.2s;
+    }
+
+    .pitfall-header:hover { background: var(--amber-light); }
+
+    .pitfall-header h4 {
+      font-size: 0.95rem;
+      color: var(--amber);
+    }
+
+    .pitfall-chevron {
+      transition: transform 0.2s;
+      color: var(--text-muted);
+    }
+
+    .pitfall-card.open .pitfall-chevron { transform: rotate(180deg); }
+
+    .pitfall-body {
+      padding: 0 1.5rem;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s;
+    }
+
+    .pitfall-card.open .pitfall-body {
+      padding: 0 1.5rem 1.5rem;
+      max-height: 600px;
+    }
+
+    .pitfall-body dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.5rem 1rem;
+      font-size: 0.85rem;
+    }
+
+    .pitfall-body dt {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .pitfall-body dd {
+      color: var(--text-muted);
+    }
+
+    /* Best Practices */
+    .practices-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .practice-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--green);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .practice-card h4 {
+      color: var(--green);
+      font-size: 0.95rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .practice-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .practice-card li {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 0.4rem 0;
+      padding-left: 1.25rem;
+      position: relative;
+    }
+
+    .practice-card li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    /* Scaling */
+    .scaling-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .scaling-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .scaling-card h4 {
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .scaling-metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .scaling-metric:last-child { border-bottom: none; }
+
+    .scaling-metric span:first-child { color: var(--text-muted); }
+    .scaling-metric span:last-child { font-weight: 600; font-family: 'Consolas', monospace; }
+
+    .use-case-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .use-case-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .use-case-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .use-case-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .anti-use-case {
+      border-left: 3px solid var(--red);
+    }
+
+    .anti-use-case h4 { color: var(--red); }
+
+    code {
+      font-family: 'Consolas', 'Fira Code', monospace;
+      background: var(--surface-alt);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    .code-block {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 1.25rem;
+      border-radius: 8px;
+      font-family: 'Consolas', monospace;
+      font-size: 0.8rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+      line-height: 1.7;
+    }
+
+    .code-block .keyword { color: #cba6f7; }
+    .code-block .string { color: #a6e3a1; }
+    .code-block .comment { color: #6c7086; font-style: italic; }
+    .code-block .func { color: #89b4fa; }
+    .code-block .num { color: #fab387; }
+
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      .nav { padding: 0 1rem; }
+      .components-grid { grid-template-columns: 1fr; }
+      .practices-grid { grid-template-columns: 1fr; }
+      .scaling-cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <span class="nav-brand">PySpark</span>
+    <a href="#architecture" class="nav-link active">Architecture</a>
+    <a href="#components" class="nav-link">Components</a>
+    <a href="#execution-flow" class="nav-link">Execution Flow</a>
+    <a href="#comparisons" class="nav-link">Comparisons</a>
+    <a href="#use-cases" class="nav-link">Use Cases & Pitfalls</a>
+    <a href="#best-practices" class="nav-link">Best Practices</a>
+    <a href="#scaling" class="nav-link">Scaling</a>
+  </div>
+</nav>
+
+<div class="tooltip" id="tooltip"></div>
+
+<div class="container">
+
+  <!-- Section 1: Architecture -->
+  <section id="architecture">
+    <div class="section-header">
+      <h2>Architecture Diagram</h2>
+      <p>PySpark's distributed computing architecture — how your Python code becomes parallel computation across a cluster</p>
+    </div>
+    <div class="arch-container">
+      <svg class="arch-svg" viewBox="0 0 1000 600" id="archSvg">
+        <!-- Background groups -->
+        <rect x="20" y="20" width="280" height="560" rx="16" fill="#fff3e0" stroke="#e65100" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.5"/>
+        <text x="40" y="52" font-size="11" font-weight="600" fill="#e65100" text-transform="uppercase" letter-spacing="1">DRIVER NODE</text>
+
+        <rect x="360" y="20" width="620" height="560" rx="16" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.5"/>
+        <text x="380" y="52" font-size="11" font-weight="600" fill="#1565c0" text-transform="uppercase" letter-spacing="1">WORKER NODES (CLUSTER)</text>
+
+        <!-- Driver components -->
+        <g class="arch-component" data-comp="sparkcontext" onclick="scrollToComp('sparkcontext')">
+          <rect x="50" y="80" width="220" height="70" rx="12" fill="#ffffff" stroke="#e65100" stroke-width="2"/>
+          <text x="160" y="112" text-anchor="middle" font-size="13" font-weight="700" fill="#e65100">SparkContext</text>
+          <text x="160" y="132" text-anchor="middle" font-size="10" fill="#64748b">Entry point & coordinator</text>
+        </g>
+
+        <g class="arch-component" data-comp="sparksession" onclick="scrollToComp('sparksession')">
+          <rect x="50" y="170" width="220" height="70" rx="12" fill="#ffffff" stroke="#6a1b9a" stroke-width="2"/>
+          <text x="160" y="202" text-anchor="middle" font-size="13" font-weight="700" fill="#6a1b9a">SparkSession</text>
+          <text x="160" y="222" text-anchor="middle" font-size="10" fill="#64748b">Unified API (SQL, DF, Streaming)</text>
+        </g>
+
+        <g class="arch-component" data-comp="dagscheduler" onclick="scrollToComp('dagscheduler')">
+          <rect x="50" y="260" width="220" height="70" rx="12" fill="#ffffff" stroke="#2e7d32" stroke-width="2"/>
+          <text x="160" y="292" text-anchor="middle" font-size="13" font-weight="700" fill="#2e7d32">DAG Scheduler</text>
+          <text x="160" y="312" text-anchor="middle" font-size="10" fill="#64748b">Splits job into stages</text>
+        </g>
+
+        <g class="arch-component" data-comp="taskscheduler" onclick="scrollToComp('taskscheduler')">
+          <rect x="50" y="350" width="220" height="70" rx="12" fill="#ffffff" stroke="#1565c0" stroke-width="2"/>
+          <text x="160" y="382" text-anchor="middle" font-size="13" font-weight="700" fill="#1565c0">Task Scheduler</text>
+          <text x="160" y="402" text-anchor="middle" font-size="10" fill="#64748b">Assigns tasks to executors</text>
+        </g>
+
+        <g class="arch-component" data-comp="py4j" onclick="scrollToComp('py4j')">
+          <rect x="50" y="450" width="220" height="70" rx="12" fill="#ffffff" stroke="#00695c" stroke-width="2"/>
+          <text x="160" y="482" text-anchor="middle" font-size="13" font-weight="700" fill="#00695c">Py4J Gateway</text>
+          <text x="160" y="502" text-anchor="middle" font-size="10" fill="#64748b">Python ↔ JVM bridge</text>
+        </g>
+
+        <!-- Cluster Manager -->
+        <g class="arch-component" data-comp="clustermanager" onclick="scrollToComp('clustermanager')">
+          <polygon points="560,80 630,100 630,140 560,160 490,140 490,100" fill="#ffffff" stroke="#c62828" stroke-width="2"/>
+          <text x="560" y="118" text-anchor="middle" font-size="11" font-weight="700" fill="#c62828">Cluster</text>
+          <text x="560" y="135" text-anchor="middle" font-size="11" font-weight="700" fill="#c62828">Manager</text>
+        </g>
+
+        <!-- Executor 1 -->
+        <g class="arch-component" data-comp="executor" onclick="scrollToComp('executor')">
+          <rect x="400" y="210" width="240" height="160" rx="12" fill="#ffffff" stroke="#1565c0" stroke-width="2"/>
+          <text x="520" y="240" text-anchor="middle" font-size="13" font-weight="700" fill="#1565c0">Executor 1</text>
+          <rect x="420" y="255" width="90" height="35" rx="6" fill="#e3f2fd" stroke="#90caf9" stroke-width="1"/>
+          <text x="465" y="277" text-anchor="middle" font-size="9" fill="#1565c0">Task 1</text>
+          <rect x="530" y="255" width="90" height="35" rx="6" fill="#e3f2fd" stroke="#90caf9" stroke-width="1"/>
+          <text x="575" y="277" text-anchor="middle" font-size="9" fill="#1565c0">Task 2</text>
+          <rect x="420" y="305" width="200" height="45" rx="6" fill="#e8f5e9" stroke="#a5d6a7" stroke-width="1"/>
+          <text x="520" y="325" text-anchor="middle" font-size="10" font-weight="600" fill="#2e7d32">Cache (Memory/Disk)</text>
+          <text x="520" y="342" text-anchor="middle" font-size="9" fill="#64748b">Block Manager</text>
+        </g>
+
+        <!-- Executor 2 -->
+        <g class="arch-component" data-comp="executor" onclick="scrollToComp('executor')">
+          <rect x="700" y="210" width="240" height="160" rx="12" fill="#ffffff" stroke="#1565c0" stroke-width="2"/>
+          <text x="820" y="240" text-anchor="middle" font-size="13" font-weight="700" fill="#1565c0">Executor 2</text>
+          <rect x="720" y="255" width="90" height="35" rx="6" fill="#e3f2fd" stroke="#90caf9" stroke-width="1"/>
+          <text x="765" y="277" text-anchor="middle" font-size="9" fill="#1565c0">Task 3</text>
+          <rect x="830" y="255" width="90" height="35" rx="6" fill="#e3f2fd" stroke="#90caf9" stroke-width="1"/>
+          <text x="875" y="277" text-anchor="middle" font-size="9" fill="#1565c0">Task 4</text>
+          <rect x="720" y="305" width="200" height="45" rx="6" fill="#e8f5e9" stroke="#a5d6a7" stroke-width="1"/>
+          <text x="820" y="325" text-anchor="middle" font-size="10" font-weight="600" fill="#2e7d32">Cache (Memory/Disk)</text>
+          <text x="820" y="342" text-anchor="middle" font-size="9" fill="#64748b">Block Manager</text>
+        </g>
+
+        <!-- Executor N -->
+        <g class="arch-component" data-comp="executor" onclick="scrollToComp('executor')">
+          <rect x="550" y="420" width="240" height="130" rx="12" fill="#ffffff" stroke="#1565c0" stroke-width="2" stroke-dasharray="5,3"/>
+          <text x="670" y="470" text-anchor="middle" font-size="13" font-weight="700" fill="#1565c0">Executor N ...</text>
+          <rect x="570" y="490" width="90" height="35" rx="6" fill="#e3f2fd" stroke="#90caf9" stroke-width="1"/>
+          <text x="615" y="512" text-anchor="middle" font-size="9" fill="#1565c0">Task N</text>
+          <rect x="680" y="490" width="90" height="35" rx="6" fill="#e3f2fd" stroke="#90caf9" stroke-width="1"/>
+          <text x="725" y="512" text-anchor="middle" font-size="9" fill="#1565c0">Task N+1</text>
+        </g>
+
+        <!-- Connections -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+          </marker>
+          <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#c62828"/>
+          </marker>
+        </defs>
+
+        <!-- Driver to Cluster Manager -->
+        <path d="M270 385 Q370 300 485 120" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)" stroke-dasharray="4,2"/>
+        <text x="350" y="235" font-size="9" fill="#64748b" transform="rotate(-40 350 235)">resource requests</text>
+
+        <!-- Cluster Manager to Executors -->
+        <line x1="560" y1="160" x2="520" y2="210" stroke="#c62828" stroke-width="1.5" marker-end="url(#arrowhead-red)"/>
+        <line x1="590" y1="160" x2="820" y2="210" stroke="#c62828" stroke-width="1.5" marker-end="url(#arrowhead-red)"/>
+
+        <!-- Driver to Executors (tasks) -->
+        <path d="M270 300 L400 280" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M270 310 L700 280" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="330" y="268" font-size="9" fill="#2e7d32">send tasks</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Section 2: Components -->
+  <section id="components">
+    <div class="section-header">
+      <h2>Component Breakdown</h2>
+      <p>Key building blocks of the PySpark ecosystem and how they work together</p>
+    </div>
+    <div class="components-grid">
+      <div class="comp-card" id="comp-sparksession">
+        <div class="comp-card-header">
+          <div class="comp-icon" style="background: var(--purple-light);">
+            <svg width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="3" fill="none" stroke="#6a1b9a" stroke-width="2"/><circle cx="10" cy="10" r="3" fill="#6a1b9a"/></svg>
+          </div>
+          <h3>SparkSession</h3>
+        </div>
+        <p>Unified entry point for all Spark functionality. Replaces the older SparkContext, SQLContext, and HiveContext with a single interface.</p>
+        <div><span class="tech-tag">spark.sql()</span><span class="tech-tag">spark.read</span><span class="tech-tag">spark.createDataFrame()</span></div>
+        <div style="margin-top:0.75rem; font-size:0.8rem; color:var(--text-muted);">
+          <strong>Scaling:</strong> One per application. Lightweight on driver; delegates work to executors.
+        </div>
+      </div>
+
+      <div class="comp-card" id="comp-sparkcontext">
+        <div class="comp-card-header">
+          <div class="comp-icon" style="background: var(--accent-light);">
+            <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="#e65100" stroke-width="2"/><path d="M10 5v5l3 3" stroke="#e65100" stroke-width="2" fill="none"/></svg>
+          </div>
+          <h3>SparkContext</h3>
+        </div>
+        <p>The core connection to the cluster. Coordinates resource allocation, job scheduling, and maintains lineage information for fault tolerance.</p>
+        <div><span class="tech-tag">sc.parallelize()</span><span class="tech-tag">sc.textFile()</span><span class="tech-tag">sc.broadcast()</span></div>
+        <div style="margin-top:0.75rem; font-size:0.8rem; color:var(--text-muted);">
+          <strong>Scaling:</strong> Single instance per JVM. Manages all cluster resources.
+        </div>
+      </div>
+
+      <div class="comp-card" id="comp-dataframe">
+        <div class="comp-card-header">
+          <div class="comp-icon" style="background: var(--blue-light);">
+            <svg width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="3" rx="1" fill="#1565c0"/><rect x="3" y="9" width="14" height="3" rx="1" fill="#1565c0" opacity="0.6"/><rect x="3" y="14" width="14" height="3" rx="1" fill="#1565c0" opacity="0.3"/></svg>
+          </div>
+          <h3>DataFrame API</h3>
+        </div>
+        <p>Distributed collection of rows organized into named columns. Offers optimized execution through Catalyst optimizer and Tungsten execution engine.</p>
+        <div><span class="tech-tag">df.select()</span><span class="tech-tag">df.filter()</span><span class="tech-tag">df.groupBy()</span><span class="tech-tag">df.join()</span></div>
+        <div style="margin-top:0.75rem; font-size:0.8rem; color:var(--text-muted);">
+          <strong>Key advantage:</strong> 10-100x faster than RDD API due to Catalyst query optimization.
+        </div>
+      </div>
+
+      <div class="comp-card" id="comp-rdd">
+        <div class="comp-card-header">
+          <div class="comp-icon" style="background: var(--green-light);">
+            <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="7" cy="7" r="3" fill="none" stroke="#2e7d32" stroke-width="1.5"/><circle cx="13" cy="7" r="3" fill="none" stroke="#2e7d32" stroke-width="1.5"/><circle cx="10" cy="13" r="3" fill="none" stroke="#2e7d32" stroke-width="1.5"/></svg>
+          </div>
+          <h3>RDD (Resilient Distributed Dataset)</h3>
+        </div>
+        <p>Fundamental data structure — an immutable, partitioned collection that can be processed in parallel. Supports fault tolerance via lineage.</p>
+        <div><span class="tech-tag">rdd.map()</span><span class="tech-tag">rdd.reduce()</span><span class="tech-tag">rdd.filter()</span><span class="tech-tag">rdd.flatMap()</span></div>
+        <div style="margin-top:0.75rem; font-size:0.8rem; color:var(--text-muted);">
+          <strong>When to use:</strong> Low-level control, unstructured data, or custom partitioning logic.
+        </div>
+      </div>
+
+      <div class="comp-card" id="comp-catalyst">
+        <div class="comp-card-header">
+          <div class="comp-icon" style="background: var(--teal-light);">
+            <svg width="20" height="20" viewBox="0 0 20 20"><path d="M4 16 L10 4 L16 16 Z" fill="none" stroke="#00695c" stroke-width="2"/><line x1="7" y1="12" x2="13" y2="12" stroke="#00695c" stroke-width="1.5"/></svg>
+          </div>
+          <h3>Catalyst Optimizer</h3>
+        </div>
+        <p>Query optimization engine that transforms logical plans into optimized physical execution plans. Applies rule-based and cost-based optimizations.</p>
+        <div><span class="tech-tag">Predicate pushdown</span><span class="tech-tag">Column pruning</span><span class="tech-tag">Join reorder</span></div>
+        <div style="margin-top:0.75rem; font-size:0.8rem; color:var(--text-muted);">
+          <strong>Stages:</strong> Analysis → Logical optimization → Physical planning → Code generation
+        </div>
+      </div>
+
+      <div class="comp-card" id="comp-dagscheduler">
+        <div class="comp-card-header">
+          <div class="comp-icon" style="background: var(--green-light);">
+            <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="5" cy="5" r="2.5" fill="#2e7d32"/><circle cx="15" cy="5" r="2.5" fill="#2e7d32"/><circle cx="10" cy="15" r="2.5" fill="#2e7d32"/><line x1="5" y1="7.5" x2="10" y2="12.5" stroke="#2e7d32" stroke-width="1.5"/><line x1="15" y1="7.5" x2="10" y2="12.5" stroke="#2e7d32" stroke-width="1.5"/></svg>
+          </div>
+          <h3>DAG Scheduler</h3>
+        </div>
+        <p>Translates RDD lineage graphs into stages. Stages are separated at shuffle boundaries — wide dependencies force a new stage.</p>
+        <div><span class="tech-tag">Stages</span><span class="tech-tag">Shuffle boundaries</span><span class="tech-tag">Narrow/Wide deps</span></div>
+        <div style="margin-top:0.75rem; font-size:0.8rem; color:var(--text-muted);">
+          <strong>Key insight:</strong> Narrow transforms pipeline within one stage; wide transforms (shuffle) create stage boundaries.
+        </div>
+      </div>
+
+      <div class="comp-card" id="comp-executor">
+        <div class="comp-card-header">
+          <div class="comp-icon" style="background: var(--blue-light);">
+            <svg width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="6" width="6" height="8" rx="2" fill="#1565c0"/><rect x="11" y="6" width="6" height="8" rx="2" fill="#1565c0" opacity="0.6"/></svg>
+          </div>
+          <h3>Executors</h3>
+        </div>
+        <p>JVM processes on worker nodes that run tasks and store data. Each executor has dedicated CPU cores and memory allocated by the cluster manager.</p>
+        <div><span class="tech-tag">--executor-memory</span><span class="tech-tag">--executor-cores</span><span class="tech-tag">--num-executors</span></div>
+        <div style="margin-top:0.75rem; font-size:0.8rem; color:var(--text-muted);">
+          <strong>Scaling:</strong> Horizontal — add more executors or increase cores/memory per executor.
+        </div>
+      </div>
+
+      <div class="comp-card" id="comp-py4j">
+        <div class="comp-card-header">
+          <div class="comp-icon" style="background: var(--teal-light);">
+            <svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="7" width="7" height="6" rx="2" fill="#00695c"/><rect x="11" y="7" width="7" height="6" rx="2" fill="#00695c" opacity="0.6"/><line x1="9" y1="10" x2="11" y2="10" stroke="#00695c" stroke-width="2"/></svg>
+          </div>
+          <h3>Py4J Gateway</h3>
+        </div>
+        <p>Bridge between Python and JVM. PySpark commands are translated to JVM calls. For UDFs, data serializes via Arrow (columnar) or Pickle (row-wise).</p>
+        <div><span class="tech-tag">Py4J</span><span class="tech-tag">Apache Arrow</span><span class="tech-tag">Pickle serialization</span></div>
+        <div style="margin-top:0.75rem; font-size:0.8rem; color:var(--text-muted);">
+          <strong>Performance tip:</strong> Use vectorized UDFs (pandas_udf) for 3-100x faster Python execution.
+        </div>
+      </div>
+
+      <div class="comp-card" id="comp-clustermanager">
+        <div class="comp-card-header">
+          <div class="comp-icon" style="background: var(--red-light);">
+            <svg width="20" height="20" viewBox="0 0 20 20"><polygon points="10,3 17,7 17,13 10,17 3,13 3,7" fill="none" stroke="#c62828" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" fill="#c62828"/></svg>
+          </div>
+          <h3>Cluster Manager</h3>
+        </div>
+        <p>Allocates resources across applications. PySpark supports multiple: YARN (Hadoop), Kubernetes, Mesos, and Standalone mode.</p>
+        <div><span class="tech-tag">YARN</span><span class="tech-tag">Kubernetes</span><span class="tech-tag">Standalone</span><span class="tech-tag">Mesos</span></div>
+        <div style="margin-top:0.75rem; font-size:0.8rem; color:var(--text-muted);">
+          <strong>In production:</strong> YARN for Hadoop ecosystems; K8s for cloud-native deployments.
+        </div>
+      </div>
+
+      <div class="comp-card" id="comp-taskscheduler">
+        <div class="comp-card-header">
+          <div class="comp-icon" style="background: var(--blue-light);">
+            <svg width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="3" width="5" height="5" rx="1" fill="#1565c0"/><rect x="12" y="3" width="5" height="5" rx="1" fill="#1565c0" opacity="0.7"/><rect x="3" y="12" width="5" height="5" rx="1" fill="#1565c0" opacity="0.5"/><rect x="12" y="12" width="5" height="5" rx="1" fill="#1565c0" opacity="0.3"/></svg>
+          </div>
+          <h3>Task Scheduler</h3>
+        </div>
+        <p>Assigns individual tasks to executor slots based on data locality (PROCESS_LOCAL > NODE_LOCAL > RACK_LOCAL > ANY). Handles retries on failure.</p>
+        <div><span class="tech-tag">Data locality</span><span class="tech-tag">Speculation</span><span class="tech-tag">Fair scheduler</span></div>
+        <div style="margin-top:0.75rem; font-size:0.8rem; color:var(--text-muted);">
+          <strong>Config:</strong> <code>spark.locality.wait</code> controls how long to wait for optimal locality.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Execution Flow -->
+  <section id="execution-flow">
+    <div class="section-header">
+      <h2>Execution Flow</h2>
+      <p>How a PySpark job transforms from Python code to distributed parallel computation</p>
+    </div>
+    <div class="seq-container">
+      <div class="seq-controls">
+        <button class="seq-btn seq-btn-primary" id="seqPlayBtn" onclick="toggleSeqPlay()">&#9654; Play</button>
+        <button class="seq-btn seq-btn-secondary" onclick="seqStep()">Step &#9654;|</button>
+        <button class="seq-btn seq-btn-secondary" onclick="seqReset()">Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" min="1" max="5" value="3" id="seqSpeed">
+        </div>
+        <div style="flex:1;"></div>
+        <button class="seq-btn seq-btn-secondary active" data-flow="job" onclick="setFlow('job')">Job Submission</button>
+        <button class="seq-btn seq-btn-secondary" data-flow="shuffle" onclick="setFlow('shuffle')">Shuffle</button>
+      </div>
+      <div class="seq-narration" id="seqNarration">Click "Play" to see how a PySpark job executes across the cluster.</div>
+      <div style="overflow-x: auto;">
+        <svg id="seqSvg" class="seq-svg" viewBox="0 0 900 450" height="450">
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Comparisons -->
+  <section id="comparisons">
+    <div class="section-header">
+      <h2>Comparisons with Alternatives</h2>
+      <p>Understanding where PySpark fits relative to other distributed data processing frameworks</p>
+    </div>
+    <div class="comparison-container" style="overflow-x: auto;">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Framework</th>
+            <th>Processing Model</th>
+            <th>Strengths</th>
+            <th>Limitations</th>
+            <th>Best For</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight">
+            <td>PySpark <span class="chosen-badge">FOCUS</span></td>
+            <td>Batch + Streaming (micro-batch / continuous)</td>
+            <td>Unified engine, massive ecosystem, SQL support, MLlib, scales to PBs</td>
+            <td>JVM overhead from Python, high memory usage, cluster setup complexity</td>
+            <td>Large-scale ETL, data warehousing, ML pipelines, interactive analytics</td>
+          </tr>
+          <tr>
+            <td>Dask</td>
+            <td>Parallel task graphs (eager/lazy)</td>
+            <td>Native Python, familiar APIs (pandas/numpy), low overhead, easy local dev</td>
+            <td>Smaller community, less mature SQL, weaker at very large scale (&gt;100TB)</td>
+            <td>Python-heavy workloads, pandas at scale, quick prototyping</td>
+          </tr>
+          <tr>
+            <td>Apache Flink</td>
+            <td>True streaming (event-time, exactly-once)</td>
+            <td>Low latency streaming, event-time processing, state management</td>
+            <td>Steeper learning curve, smaller batch ecosystem, less Python support</td>
+            <td>Real-time event processing, complex event patterns, streaming-first</td>
+          </tr>
+          <tr>
+            <td>Polars</td>
+            <td>Single-node parallel (Rust-based)</td>
+            <td>Extremely fast, zero-copy, lazy evaluation, minimal memory, ergonomic API</td>
+            <td>Single machine only, no built-in distribution, limited ML integration</td>
+            <td>Data that fits in RAM (~100GB), fast local analytics, replacing pandas</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="decision-cards">
+      <div class="decision-card" style="border-left: 3px solid var(--accent);">
+        <h4>Choose PySpark when...</h4>
+        <p>Data exceeds single-machine capacity (100GB+), you need SQL interface for analysts, require ML at scale, or need a unified batch+streaming pipeline.</p>
+      </div>
+      <div class="decision-card" style="border-left: 3px solid var(--blue);">
+        <h4>Choose Dask when...</h4>
+        <p>Your team is Python-native, data is 10-500GB, you want pandas-like APIs without JVM overhead, or need to scale existing Python code minimally.</p>
+      </div>
+      <div class="decision-card" style="border-left: 3px solid var(--green);">
+        <h4>Choose Flink when...</h4>
+        <p>You need sub-second latency streaming, complex event processing, exactly-once semantics, or event-time windowing with out-of-order events.</p>
+      </div>
+      <div class="decision-card" style="border-left: 3px solid var(--purple);">
+        <h4>Choose Polars when...</h4>
+        <p>Data fits in memory (&lt;100GB), you want maximum single-machine speed, or you're doing iterative analysis that doesn't justify cluster overhead.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Use Cases & Pitfalls -->
+  <section id="use-cases">
+    <div class="section-header">
+      <h2>Use Cases & Common Pitfalls</h2>
+      <p>Where PySpark excels and the mistakes engineers make most often</p>
+    </div>
+
+    <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Primary Use Cases</h3>
+    <div class="use-case-grid">
+      <div class="use-case-card">
+        <h4>&#9889; Large-Scale ETL</h4>
+        <p>Processing TBs-PBs of raw data from data lakes (S3, HDFS, Delta Lake) into curated datasets. Daily/hourly batch jobs transforming semi-structured logs, JSON, Parquet.</p>
+      </div>
+      <div class="use-case-card">
+        <h4>&#128202; Data Warehousing & SQL Analytics</h4>
+        <p>Running complex analytical queries via Spark SQL on distributed data. Powers BI dashboards and ad-hoc exploration on datasets too large for traditional RDBMS.</p>
+      </div>
+      <div class="use-case-card">
+        <h4>&#129302; Machine Learning at Scale</h4>
+        <p>Feature engineering on massive datasets, distributed model training with MLlib, and large-scale inference pipelines. Integrates with scikit-learn, TensorFlow, PyTorch.</p>
+      </div>
+      <div class="use-case-card">
+        <h4>&#127758; Streaming Pipelines</h4>
+        <p>Structured Streaming for near-real-time processing of Kafka/Kinesis streams. Micro-batch (100ms+) or continuous processing for dashboards, alerts, and enrichment.</p>
+      </div>
+      <div class="use-case-card">
+        <h4>&#128300; Graph Analytics</h4>
+        <p>GraphX/GraphFrames for social network analysis, fraud detection, recommendation engines. PageRank, connected components, shortest paths on billion-edge graphs.</p>
+      </div>
+      <div class="use-case-card">
+        <h4>&#128209; Log & Event Processing</h4>
+        <p>Aggregating, parsing, and analyzing application logs, clickstreams, and IoT sensor data at scale. Common in observability and product analytics teams.</p>
+      </div>
+    </div>
+
+    <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Anti-Use Cases</h3>
+    <div class="use-case-grid">
+      <div class="use-case-card anti-use-case">
+        <h4>&#10060; Small Data (&lt;10GB)</h4>
+        <p>Cluster overhead dominates. Use pandas, Polars, or DuckDB instead — they'll be 10x faster for data that fits in RAM.</p>
+      </div>
+      <div class="use-case-card anti-use-case">
+        <h4>&#10060; Low-Latency (&lt;100ms)</h4>
+        <p>Spark's job startup alone takes seconds. For real-time serving, use Redis, Flink, or purpose-built streaming systems.</p>
+      </div>
+      <div class="use-case-card anti-use-case">
+        <h4>&#10060; OLTP Workloads</h4>
+        <p>Not designed for transactional row-level CRUD. Use PostgreSQL, MySQL, or a transactional database for application backends.</p>
+      </div>
+    </div>
+
+    <h3 style="margin: 2rem 0 1rem; font-size: 1.1rem;">Common Pitfalls</h3>
+    <div id="pitfalls-container">
+      <div class="pitfall-card">
+        <div class="pitfall-header" onclick="togglePitfall(this)">
+          <h4>&#9888;&#65039; Collecting large datasets to the driver</h4>
+          <span class="pitfall-chevron">&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <dl>
+            <dt>The mistake</dt><dd>Using <code>.collect()</code> or <code>.toPandas()</code> on a large DataFrame, pulling all data to the driver node's memory.</dd>
+            <dt>Why it happens</dt><dd>Works fine in development with small data; developers forget that production data is 1000x larger.</dd>
+            <dt>Consequence</dt><dd>Driver OOM crash, killing the entire application. No recovery possible.</dd>
+            <dt>The fix</dt><dd>Use <code>.take(n)</code>, <code>.show()</code>, or write results to storage. If you must collect, add <code>.limit()</code> first. Set <code>spark.driver.maxResultSize</code> as a safety net.</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="pitfall-card">
+        <div class="pitfall-header" onclick="togglePitfall(this)">
+          <h4>&#9888;&#65039; Data skew causing straggler tasks</h4>
+          <span class="pitfall-chevron">&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <dl>
+            <dt>The mistake</dt><dd>Joining or grouping on a key with highly uneven distribution (e.g., null keys, hot keys like "USA" in country columns).</dd>
+            <dt>Why it happens</dt><dd>Works in testing with uniform synthetic data; production data has Zipf-distributed keys.</dd>
+            <dt>Consequence</dt><dd>One task processes 90% of data while others finish instantly. Job takes hours instead of minutes.</dd>
+            <dt>The fix</dt><dd>Use <code>spark.sql.adaptive.enabled=true</code> (AQE), salting keys, broadcast joins for small tables, or <code>spark.sql.adaptive.skewJoin.enabled=true</code>.</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="pitfall-card">
+        <div class="pitfall-header" onclick="togglePitfall(this)">
+          <h4>&#9888;&#65039; Using Python UDFs instead of built-in functions</h4>
+          <span class="pitfall-chevron">&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <dl>
+            <dt>The mistake</dt><dd>Writing row-by-row Python UDFs for transformations that have equivalent Spark SQL built-in functions.</dd>
+            <dt>Why it happens</dt><dd>Python UDFs feel natural to Python developers; they don't know about the 200+ built-in functions.</dd>
+            <dt>Consequence</dt><dd>10-100x performance degradation. Each row serializes Python→JVM→Python, bypassing Catalyst optimization entirely.</dd>
+            <dt>The fix</dt><dd>Always check <code>pyspark.sql.functions</code> first. If you must use UDFs, use <code>pandas_udf</code> (vectorized) for 3-100x improvement over standard UDFs.</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="pitfall-card">
+        <div class="pitfall-header" onclick="togglePitfall(this)">
+          <h4>&#9888;&#65039; Too many small files (small file problem)</h4>
+          <span class="pitfall-chevron">&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <dl>
+            <dt>The mistake</dt><dd>Writing output with too many partitions, creating thousands of tiny files (&lt;128MB each). Or reading directories with millions of small files.</dd>
+            <dt>Why it happens</dt><dd>Default partition count is based on input splits, not optimal output size. Over-partitioning during writes.</dd>
+            <dt>Consequence</dt><dd>Massive metadata overhead on HDFS/S3 NameNode, slow reads, excessive task scheduling overhead on subsequent reads.</dd>
+            <dt>The fix</dt><dd>Use <code>.coalesce(n)</code> or <code>.repartition(n)</code> before writing. Target 128MB-1GB per output file. Use compaction jobs for existing small files.</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="pitfall-card">
+        <div class="pitfall-header" onclick="togglePitfall(this)">
+          <h4>&#9888;&#65039; Not caching/persisting reused DataFrames</h4>
+          <span class="pitfall-chevron">&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <dl>
+            <dt>The mistake</dt><dd>Using a DataFrame in multiple actions without caching, causing Spark to recompute the entire lineage each time.</dd>
+            <dt>Why it happens</dt><dd>Lazy evaluation is invisible — developers don't realize each action triggers full recomputation from source.</dd>
+            <dt>Consequence</dt><dd>2x, 5x, or 10x the computation time depending on how many times the DataFrame is reused and how expensive the transformations are.</dd>
+            <dt>The fix</dt><dd>Call <code>.cache()</code> or <code>.persist(StorageLevel.MEMORY_AND_DISK)</code> on DataFrames used by multiple downstream actions. Unpersist when done.</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="pitfall-card">
+        <div class="pitfall-header" onclick="togglePitfall(this)">
+          <h4>&#9888;&#65039; Incorrect shuffle partition count</h4>
+          <span class="pitfall-chevron">&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <dl>
+            <dt>The mistake</dt><dd>Using the default <code>spark.sql.shuffle.partitions=200</code> for all workloads regardless of data size.</dd>
+            <dt>Why it happens</dt><dd>It's a global config that works "well enough" in examples and tutorials.</dd>
+            <dt>Consequence</dt><dd>Too few partitions → OOM on large data or underutilized cores. Too many → excessive scheduling overhead and small files.</dd>
+            <dt>The fix</dt><dd>Rule of thumb: 2-4x the number of cores. For large data, target ~128MB per partition. Use AQE (<code>spark.sql.adaptive.enabled=true</code>) to auto-tune.</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 6: Best Practices -->
+  <section id="best-practices">
+    <div class="section-header">
+      <h2>Best Practices</h2>
+      <p>Proven patterns for writing efficient, maintainable PySpark applications</p>
+    </div>
+    <div class="practices-grid">
+      <div class="practice-card">
+        <h4>DataFrame API & SQL</h4>
+        <ul>
+          <li>Prefer DataFrames over RDDs — Catalyst can't optimize RDD operations</li>
+          <li>Use built-in <code>pyspark.sql.functions</code> over Python UDFs whenever possible</li>
+          <li>Use <code>pandas_udf</code> with Apache Arrow for unavoidable custom logic</li>
+          <li>Filter early — push predicates as close to the data source as possible</li>
+          <li>Select only needed columns — column pruning saves I/O and memory</li>
+        </ul>
+      </div>
+      <div class="practice-card">
+        <h4>Memory & Resource Tuning</h4>
+        <ul>
+          <li>Start with <code>spark.sql.adaptive.enabled=true</code> (AQE handles most tuning)</li>
+          <li>Size executors: 4-5 cores each, leave 1 core for OS/YARN overhead</li>
+          <li>Set <code>spark.executor.memory</code> to 70% of node RAM; rest for overhead</li>
+          <li>Use <code>spark.memory.fraction=0.6</code> (default) — adjust if GC is excessive</li>
+          <li>Monitor via Spark UI — look at GC time, shuffle read/write, task duration spread</li>
+        </ul>
+      </div>
+      <div class="practice-card">
+        <h4>Joins & Shuffles</h4>
+        <ul>
+          <li>Broadcast small tables (&lt;100MB) with <code>broadcast(df)</code> to avoid shuffles</li>
+          <li>Pre-partition tables on join keys if joining repeatedly</li>
+          <li>Use <code>spark.sql.autoBroadcastJoinThreshold</code> (default 10MB) wisely</li>
+          <li>Bucket tables on join keys for repeated joins on the same data</li>
+          <li>Avoid cross joins unless you truly need a cartesian product</li>
+        </ul>
+      </div>
+      <div class="practice-card">
+        <h4>Data Storage & I/O</h4>
+        <ul>
+          <li>Use Parquet or Delta Lake for columnar storage with predicate pushdown</li>
+          <li>Partition by high-cardinality filter columns (date, region) — avoid over-partitioning</li>
+          <li>Target 128MB–1GB per output file to balance parallelism and metadata</li>
+          <li>Use Z-ordering (Delta Lake) for multi-dimensional data skipping</li>
+          <li>Enable schema evolution carefully — use <code>mergeSchema</code> option</li>
+        </ul>
+      </div>
+      <div class="practice-card">
+        <h4>Code Organization</h4>
+        <ul>
+          <li>Structure as modular functions that return DataFrames (testable, composable)</li>
+          <li>Avoid <code>.collect()</code> in production — it defeats the purpose of distributed computing</li>
+          <li>Use <code>spark-submit</code> with <code>--py-files</code> for dependencies; avoid pip on cluster</li>
+          <li>Write unit tests with <code>pyspark.testing</code> or local SparkSession</li>
+          <li>Log DataFrame schemas and row counts at stage boundaries for debugging</li>
+        </ul>
+      </div>
+      <div class="practice-card">
+        <h4>Monitoring & Debugging</h4>
+        <ul>
+          <li>Always check Spark UI: stages tab for skew, storage tab for cache, SQL tab for plans</li>
+          <li>Use <code>df.explain(True)</code> to inspect physical plans before running at scale</li>
+          <li>Set <code>spark.eventLog.enabled=true</code> to persist logs for post-mortem analysis</li>
+          <li>Watch for "spill to disk" in task metrics — indicates memory pressure</li>
+          <li>Use <code>spark.speculation=true</code> to mitigate straggler tasks in heterogeneous clusters</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 7: Scaling -->
+  <section id="scaling">
+    <div class="section-header">
+      <h2>Scaling & Trade-offs</h2>
+      <p>Capacity planning, growth strategies, and the fundamental trade-offs in PySpark deployments</p>
+    </div>
+    <div class="scaling-cards">
+      <div class="scaling-card">
+        <h4>&#128202; Capacity Estimation</h4>
+        <div class="scaling-metric"><span>Data size (raw)</span><span>10 TB/day</span></div>
+        <div class="scaling-metric"><span>Compression ratio (Parquet)</span><span>~5:1</span></div>
+        <div class="scaling-metric"><span>Stored data per day</span><span>~2 TB</span></div>
+        <div class="scaling-metric"><span>Target processing time</span><span>&lt; 2 hours</span></div>
+        <div class="scaling-metric"><span>Throughput needed</span><span>~1.4 GB/s</span></div>
+        <div class="scaling-metric"><span>Executor count (at 100MB/s each)</span><span>~14 executors</span></div>
+        <div class="scaling-metric"><span>Buffer (2x for shuffles)</span><span>~28 executors</span></div>
+      </div>
+      <div class="scaling-card">
+        <h4>&#128640; Scaling Strategies</h4>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">
+          <p style="margin-bottom:0.5rem;"><strong>Vertical (scale up):</strong> Increase executor memory/cores. Good for memory-intensive operations (large joins, ML models). Limit: single-node hardware caps.</p>
+          <p style="margin-bottom:0.5rem;"><strong>Horizontal (scale out):</strong> Add more executors/nodes. Good for embarrassingly parallel workloads (map operations). Limit: shuffle overhead grows with node count.</p>
+          <p style="margin-bottom:0.5rem;"><strong>Dynamic allocation:</strong> <code>spark.dynamicAllocation.enabled=true</code> — auto-scales executors based on workload. Best for shared clusters with variable workloads.</p>
+          <p><strong>Partitioning strategy:</strong> Hash or range partition data by access patterns to minimize shuffles in downstream joins and aggregations.</p>
+        </div>
+      </div>
+      <div class="scaling-card">
+        <h4>&#9878;&#65039; Key Trade-offs</h4>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">
+          <p style="margin-bottom:0.5rem;"><strong>Parallelism vs. Overhead:</strong> More partitions = more parallelism but more scheduling overhead, shuffle data, and small files. Sweet spot: 2-4 tasks per core.</p>
+          <p style="margin-bottom:0.5rem;"><strong>Memory vs. Disk:</strong> Caching in memory = fast reuse but GC pressure. MEMORY_AND_DISK = slower but stable. Weigh reuse frequency vs. recompute cost.</p>
+          <p style="margin-bottom:0.5rem;"><strong>Latency vs. Throughput:</strong> Micro-batch streaming (higher throughput, ~100ms latency) vs. continuous processing (lower latency, less throughput, limited operations).</p>
+          <p><strong>Simplicity vs. Performance:</strong> Python UDFs are simple but 10-100x slower. Built-in functions are fast but require learning the API. Pandas UDFs are a middle ground.</p>
+        </div>
+      </div>
+      <div class="scaling-card">
+        <h4>&#128165; Failure Scenarios</h4>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">
+          <p style="margin-bottom:0.5rem;"><strong>Executor loss:</strong> Tasks re-scheduled on other executors. Cached data recomputed from lineage. Minimal impact if cluster has headroom.</p>
+          <p style="margin-bottom:0.5rem;"><strong>Driver failure:</strong> Entire application dies. Mitigate with checkpointing (streaming) and idempotent writes (batch). Restart from last checkpoint.</p>
+          <p style="margin-bottom:0.5rem;"><strong>OOM on executor:</strong> Task fails, retried on another executor. If persists, increase memory or reduce partition size. Check for data skew first.</p>
+          <p><strong>Shuffle service failure:</strong> All tasks depending on that shuffle data must recompute. External shuffle service (<code>spark.shuffle.service.enabled</code>) decouples shuffles from executor lifecycle.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 2rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow);">
+      <h4 style="margin-bottom: 1rem;">Quick Reference: Essential Configuration</h4>
+      <div class="code-block">
+<span class="comment"># Core execution settings</span>
+spark.sql.adaptive.enabled = <span class="keyword">true</span>          <span class="comment"># Adaptive Query Execution (auto-tunes most things)</span>
+spark.sql.adaptive.skewJoin.enabled = <span class="keyword">true</span>  <span class="comment"># Auto-handle skewed joins</span>
+spark.sql.shuffle.partitions = <span class="num">200</span>          <span class="comment"># Override based on data size; AQE adjusts dynamically</span>
+
+<span class="comment"># Memory configuration</span>
+spark.executor.memory = <span class="string">8g</span>                   <span class="comment"># Per executor heap memory</span>
+spark.executor.memoryOverhead = <span class="string">2g</span>           <span class="comment"># Off-heap (Python, Arrow, shuffle buffers)</span>
+spark.memory.fraction = <span class="num">0.6</span>                  <span class="comment"># Fraction of heap for execution + storage</span>
+spark.memory.storageFraction = <span class="num">0.5</span>           <span class="comment"># Within that, initial storage reservation</span>
+
+<span class="comment"># Dynamic allocation</span>
+spark.dynamicAllocation.enabled = <span class="keyword">true</span>
+spark.dynamicAllocation.minExecutors = <span class="num">2</span>
+spark.dynamicAllocation.maxExecutors = <span class="num">100</span>
+
+<span class="comment"># Performance</span>
+spark.sql.autoBroadcastJoinThreshold = <span class="num">100</span>m  <span class="comment"># Broadcast tables under 100MB</span>
+spark.serializer = org.apache.spark.serializer.<span class="func">KryoSerializer</span>
+spark.sql.parquet.compression.codec = <span class="string">snappy</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// Navigation highlighting
+const navLinks = document.querySelectorAll('.nav-link');
+const sections = document.querySelectorAll('section');
+
+const observerOptions = { rootMargin: '-20% 0px -70% 0px' };
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(link => link.classList.remove('active'));
+      const activeLink = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+      if (activeLink) activeLink.classList.add('active');
+    }
+  });
+}, observerOptions);
+
+sections.forEach(s => observer.observe(s));
+
+navLinks.forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+
+// Tooltip
+const tooltip = document.getElementById('tooltip');
+const compDescriptions = {
+  sparkcontext: "Core connection to the cluster. Coordinates job execution, manages resources, and provides the programming interface for creating RDDs.",
+  sparksession: "Unified entry point (Spark 2.0+) combining SparkContext, SQLContext, and HiveContext. Use spark.sql(), spark.read, and spark.createDataFrame().",
+  dagscheduler: "Converts the RDD lineage graph into a DAG of stages. Each stage contains tasks that can run in parallel without shuffling data.",
+  taskscheduler: "Takes stages from DAG Scheduler and assigns individual tasks to specific executor slots, optimizing for data locality.",
+  py4j: "Python-to-JVM bridge. DataFrame operations stay in JVM (fast). UDFs require serialization between Python and JVM workers (slow).",
+  clustermanager: "Allocates cluster resources. Options: YARN (Hadoop), Kubernetes (cloud-native), Standalone, or local mode for development.",
+  executor: "JVM process on a worker node. Runs tasks in parallel threads, manages block storage for cached data, and reports status to the driver."
+};
+
+document.querySelectorAll('.arch-component').forEach(comp => {
+  comp.addEventListener('mouseenter', e => {
+    const key = comp.dataset.comp;
+    if (compDescriptions[key]) {
+      tooltip.textContent = compDescriptions[key];
+      tooltip.classList.add('visible');
+    }
+  });
+  comp.addEventListener('mousemove', e => {
+    tooltip.style.left = e.pageX + 15 + 'px';
+    tooltip.style.top = e.pageY - 10 + 'px';
+  });
+  comp.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('visible');
+  });
+});
+
+function scrollToComp(id) {
+  const el = document.getElementById('comp-' + id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Pitfall toggle
+function togglePitfall(header) {
+  const card = header.parentElement;
+  card.classList.toggle('open');
+}
+
+// Sequence Diagram
+const flows = {
+  job: {
+    actors: ['Python Client', 'SparkSession', 'Catalyst', 'DAG Scheduler', 'Task Scheduler', 'Executor'],
+    steps: [
+      { from: 0, to: 1, label: 'df.filter().groupBy().agg()', desc: '1. Python code calls DataFrame transformations via Py4J bridge — these are lazy, building a logical plan.' },
+      { from: 1, to: 2, label: 'Logical Plan', desc: '2. On action (e.g., .show()), SparkSession submits the unresolved logical plan to the Catalyst optimizer.' },
+      { from: 2, to: 2, label: 'Optimize', desc: '3. Catalyst applies rules: predicate pushdown, column pruning, constant folding, join reordering. Generates optimized physical plan.' },
+      { from: 2, to: 3, label: 'Physical Plan', desc: '4. Optimized physical plan is sent to DAG Scheduler, which identifies shuffle boundaries and creates stages.' },
+      { from: 3, to: 3, label: 'Create Stages', desc: '5. DAG Scheduler splits the plan into stages at wide dependencies (shuffles). Each stage has a set of parallel tasks.' },
+      { from: 3, to: 4, label: 'TaskSets', desc: '6. Each stage\'s tasks are submitted to the Task Scheduler as a TaskSet for assignment to executors.' },
+      { from: 4, to: 5, label: 'Launch Tasks', desc: '7. Task Scheduler assigns tasks to executor slots based on data locality preference (PROCESS_LOCAL > NODE_LOCAL > ANY).' },
+      { from: 5, to: 5, label: 'Execute + Cache', desc: '8. Executors deserialize tasks, read data partitions, apply transformations, cache results if requested.' },
+      { from: 5, to: 4, label: 'Results', desc: '9. Executors report task completion and results back to the Task Scheduler.' },
+      { from: 4, to: 0, label: 'Final Result', desc: '10. Results aggregated and returned to the driver. For .show(), formatted output goes to Python client.' }
+    ]
+  },
+  shuffle: {
+    actors: ['Executor A', 'Shuffle Write', 'Shuffle Service', 'Shuffle Read', 'Executor B'],
+    steps: [
+      { from: 0, to: 0, label: 'Map tasks complete', desc: '1. Map-side tasks in Stage N finish processing their input partitions.' },
+      { from: 0, to: 1, label: 'Sort + Partition', desc: '2. Each mapper sorts its output by the shuffle key (groupBy/join key) and partitions it into R buckets (one per reduce task).' },
+      { from: 1, to: 2, label: 'Write shuffle files', desc: '3. Shuffle data written to local disk as index + data files. The external shuffle service registers file locations.' },
+      { from: 2, to: 2, label: 'Register blocks', desc: '4. Shuffle service tracks which blocks are on which nodes. This allows shuffle data to survive executor recycling.' },
+      { from: 3, to: 2, label: 'Fetch blocks', desc: '5. Reduce-side executors request their partitions from the shuffle service. Data transferred over network.' },
+      { from: 2, to: 3, label: 'Stream data', desc: '6. Shuffle blocks streamed to requesting executors. Multiple fetches happen in parallel with configurable buffer sizes.' },
+      { from: 3, to: 4, label: 'Merge + Sort', desc: '7. Executor B receives shuffle blocks from all mappers, merge-sorts them by key for the reduce operation.' },
+      { from: 4, to: 4, label: 'Reduce tasks', desc: '8. Reduce tasks (aggregations, joins) execute on the merged, sorted shuffle data. Stage N+1 is now processing.' }
+    ]
+  }
+};
+
+let currentFlow = 'job';
+let seqStep_i = -1;
+let seqPlaying = false;
+let seqTimer = null;
+
+function setFlow(flow) {
+  currentFlow = flow;
+  seqStep_i = -1;
+  seqPlaying = false;
+  clearInterval(seqTimer);
+  document.getElementById('seqPlayBtn').innerHTML = '&#9654; Play';
+  document.querySelectorAll('.seq-controls .seq-btn-secondary[data-flow]').forEach(b => {
+    b.classList.toggle('active', b.dataset.flow === flow);
+  });
+  drawSeqDiagram();
+  document.getElementById('seqNarration').textContent = 'Click "Play" to see the ' + (flow === 'job' ? 'job execution' : 'shuffle') + ' flow.';
+}
+
+function drawSeqDiagram() {
+  const svg = document.getElementById('seqSvg');
+  const flow = flows[currentFlow];
+  const actorCount = flow.actors.length;
+  const spacing = 850 / actorCount;
+  const startX = 50;
+  const startY = 50;
+  const lineHeight = 380 / flow.steps.length;
+
+  let html = '';
+
+  // Actor lifelines
+  flow.actors.forEach((actor, i) => {
+    const x = startX + i * spacing;
+    html += `<rect x="${x - 45}" y="10" width="90" height="32" rx="6" fill="#f4f6f9" stroke="#e2e8f0" stroke-width="1.5"/>`;
+    html += `<text x="${x}" y="31" text-anchor="middle" font-size="10" font-weight="600" fill="#1a202c">${actor}</text>`;
+    html += `<line x1="${x}" y1="42" x2="${x}" y2="440" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>`;
+  });
+
+  // Steps (arrows)
+  flow.steps.forEach((step, i) => {
+    const y = startY + 20 + i * lineHeight;
+    const fromX = startX + step.from * spacing;
+    const toX = startX + step.to * spacing;
+    const isSelf = step.from === step.to;
+    const stepId = `seq-step-${i}`;
+
+    if (isSelf) {
+      html += `<g id="${stepId}" opacity="0.3">`;
+      html += `<path d="M${fromX} ${y} C${fromX + 40} ${y} ${fromX + 40} ${y + lineHeight * 0.6} ${fromX} ${y + lineHeight * 0.6}" fill="none" stroke="#e65100" stroke-width="1.5" marker-end="url(#arrowhead)"/>`;
+      html += `<text x="${fromX + 45}" y="${y + lineHeight * 0.3}" font-size="9" fill="#e65100">${step.label}</text>`;
+      html += `</g>`;
+    } else {
+      const dir = toX > fromX ? 1 : -1;
+      html += `<g id="${stepId}" opacity="0.3">`;
+      html += `<line x1="${fromX + dir * 5}" y1="${y}" x2="${toX - dir * 5}" y2="${y}" stroke="#1565c0" stroke-width="1.5" marker-end="url(#arrowhead)"/>`;
+      const labelX = (fromX + toX) / 2;
+      html += `<text x="${labelX}" y="${y - 6}" text-anchor="middle" font-size="9" fill="#1565c0">${step.label}</text>`;
+      html += `</g>`;
+    }
+  });
+
+  svg.innerHTML = html;
+}
+
+function animateStep() {
+  const flow = flows[currentFlow];
+  if (seqStep_i >= flow.steps.length) {
+    seqPlaying = false;
+    clearInterval(seqTimer);
+    document.getElementById('seqPlayBtn').innerHTML = '&#9654; Play';
+    return;
+  }
+
+  // Highlight current step
+  for (let i = 0; i <= seqStep_i; i++) {
+    const el = document.getElementById(`seq-step-${i}`);
+    if (el) el.setAttribute('opacity', i === seqStep_i ? '1' : '0.6');
+  }
+
+  // Dim future steps
+  for (let i = seqStep_i + 1; i < flow.steps.length; i++) {
+    const el = document.getElementById(`seq-step-${i}`);
+    if (el) el.setAttribute('opacity', '0.2');
+  }
+
+  document.getElementById('seqNarration').textContent = flow.steps[seqStep_i].desc;
+}
+
+function seqStep() {
+  const flow = flows[currentFlow];
+  seqStep_i++;
+  if (seqStep_i >= flow.steps.length) seqStep_i = 0;
+  animateStep();
+}
+
+function toggleSeqPlay() {
+  if (seqPlaying) {
+    seqPlaying = false;
+    clearInterval(seqTimer);
+    document.getElementById('seqPlayBtn').innerHTML = '&#9654; Play';
+  } else {
+    seqPlaying = true;
+    document.getElementById('seqPlayBtn').innerHTML = '&#10074;&#10074; Pause';
+    const speed = 6 - document.getElementById('seqSpeed').value;
+    seqTimer = setInterval(() => {
+      seqStep_i++;
+      const flow = flows[currentFlow];
+      if (seqStep_i >= flow.steps.length) {
+        seqPlaying = false;
+        clearInterval(seqTimer);
+        document.getElementById('seqPlayBtn').innerHTML = '&#9654; Play';
+        return;
+      }
+      animateStep();
+    }, speed * 600);
+    if (seqStep_i < 0) seqStep_i = 0;
+    animateStep();
+  }
+}
+
+function seqReset() {
+  seqPlaying = false;
+  clearInterval(seqTimer);
+  seqStep_i = -1;
+  document.getElementById('seqPlayBtn').innerHTML = '&#9654; Play';
+  drawSeqDiagram();
+  document.getElementById('seqNarration').textContent = 'Click "Play" to see the flow.';
+}
+
+// Initialize
+drawSeqDiagram();
+</script>
+</body>
+</html>

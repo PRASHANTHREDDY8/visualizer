@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Load Balancer — System Design Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f3f4f6;
+      --border: #e2e5ea;
+      --text: #1a1d23;
+      --text-muted: #5f6978;
+      --accent: #2563eb;
+      --accent-light: #dbeafe;
+      --accent-dark: #1d4ed8;
+      --green: #059669;
+      --green-light: #d1fae5;
+      --orange: #d97706;
+      --orange-light: #fef3c7;
+      --red: #dc2626;
+      --red-light: #fee2e2;
+      --purple: #7c3aed;
+      --purple-light: #ede9fe;
+      --teal: #0891b2;
+      --teal-light: #cffafe;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    header {
+      padding: 48px 0 32px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-blue { background: var(--accent-light); color: var(--accent); }
+    .badge-green { background: var(--green-light); color: var(--green); }
+    .badge-orange { background: var(--orange-light); color: var(--orange); }
+    .badge-purple { background: var(--purple-light); color: var(--purple); }
+
+    section {
+      margin-bottom: 64px;
+    }
+
+    section > h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--accent-light);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    section > h2 .icon {
+      width: 28px;
+      height: 28px;
+      background: var(--accent-light);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    /* Architecture Diagram */
+    .arch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 32px;
+      overflow: hidden;
+    }
+
+    .arch-diagram svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .arch-diagram svg text {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .svg-component {
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .svg-component:hover {
+      opacity: 0.85;
+    }
+
+    .svg-tooltip {
+      position: absolute;
+      background: var(--text);
+      color: white;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 100;
+      max-width: 250px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .svg-tooltip.visible {
+      opacity: 1;
+    }
+
+    /* Component Cards */
+    .component-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 20px;
+    }
+
+    .comp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+
+    .comp-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .comp-card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .comp-card .purpose {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 14px;
+    }
+
+    .comp-card .detail {
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .comp-card .detail-label {
+      font-weight: 600;
+      min-width: 90px;
+      color: var(--accent);
+    }
+
+    /* Sequence Diagram */
+    .sequence-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .sequence-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 24px;
+      background: var(--surface-alt);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .sequence-controls button {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .sequence-controls button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .sequence-controls button.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .sequence-controls .flow-select {
+      margin-left: auto;
+      display: flex;
+      gap: 6px;
+    }
+
+    .sequence-controls .flow-select button {
+      font-size: 0.8rem;
+      padding: 6px 12px;
+    }
+
+    .sequence-area {
+      padding: 32px;
+      min-height: 420px;
+      position: relative;
+    }
+
+    .sequence-area svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .step-narration {
+      padding: 16px 24px;
+      background: var(--surface-alt);
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .step-narration .step-num {
+      background: var(--accent);
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* Algorithms Section */
+    .algo-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      background: var(--surface-alt);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      width: fit-content;
+    }
+
+    .algo-tabs button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .algo-tabs button.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .algo-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .algo-visual {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .algo-visual h4 {
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+    }
+
+    .algo-explanation {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .algo-explanation h4 {
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+    }
+
+    .algo-explanation p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .algo-explanation ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .algo-explanation ul li {
+      font-size: 0.85rem;
+      padding: 6px 0;
+      padding-left: 18px;
+      position: relative;
+      color: var(--text-muted);
+    }
+
+    .algo-explanation ul li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+    }
+
+    /* Server visualization */
+    .server-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .server-box {
+      width: 80px;
+      height: 44px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: white;
+      transition: all 0.3s;
+    }
+
+    .server-bar {
+      flex: 1;
+      height: 28px;
+      background: var(--surface-alt);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .server-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.5s ease;
+    }
+
+    .server-bar-label {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* Scaling & Trade-offs */
+    .tradeoff-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .tradeoff-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .tradeoff-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tradeoff-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .capacity-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 16px;
+    }
+
+    .capacity-table th, .capacity-table td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .capacity-table th {
+      background: var(--surface-alt);
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--text-muted);
+    }
+
+    .capacity-table td:last-child {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--accent);
+    }
+
+    /* Interactive Demo */
+    .demo-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .demo-header {
+      padding: 16px 24px;
+      background: var(--surface-alt);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .demo-header label {
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .demo-header select, .demo-header input {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      background: var(--surface);
+    }
+
+    .demo-header button {
+      padding: 8px 18px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .demo-header button:hover {
+      background: var(--accent-dark);
+    }
+
+    .demo-body {
+      padding: 32px;
+      min-height: 300px;
+    }
+
+    .demo-lb {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .demo-requests {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .demo-request {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: white;
+      transition: all 0.3s;
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+
+    .demo-request.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .demo-lb-node {
+      width: 120px;
+      height: 60px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 0.85rem;
+      box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+    }
+
+    .demo-servers {
+      display: flex;
+      gap: 16px;
+    }
+
+    .demo-server {
+      width: 100px;
+      padding: 12px;
+      background: var(--surface-alt);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .demo-server.active {
+      border-color: var(--green);
+      background: var(--green-light);
+    }
+
+    .demo-server .name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .demo-server .count {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .demo-server .label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    /* Speed slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+    }
+
+    @media (max-width: 900px) {
+      .algo-content {
+        grid-template-columns: 1fr;
+      }
+      .component-grid {
+        grid-template-columns: 1fr;
+      }
+      header h1 {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Load Balancer</h1>
+    <p>Distributes incoming network traffic across multiple servers to ensure high availability, reliability, and performance at scale.</p>
+    <div style="margin-top: 16px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+      <span class="badge badge-blue">Networking</span>
+      <span class="badge badge-green">High Availability</span>
+      <span class="badge badge-orange">Scalability</span>
+      <span class="badge badge-purple">Layer 4 & 7</span>
+    </div>
+  </header>
+
+  <!-- Architecture Diagram -->
+  <section id="architecture">
+    <h2><span class="icon">◇</span> Architecture Overview</h2>
+    <div class="arch-diagram" id="archDiagram">
+      <svg viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg">
+        <!-- Grouping labels -->
+        <rect x="20" y="10" width="860" height="70" rx="8" fill="#f0f9ff" stroke="#bfdbfe" stroke-dasharray="4"/>
+        <text x="40" y="35" font-size="11" font-weight="600" fill="#3b82f6">CLIENT LAYER</text>
+
+        <rect x="20" y="110" width="860" height="160" rx="8" fill="#faf5ff" stroke="#e9d5ff" stroke-dasharray="4"/>
+        <text x="40" y="135" font-size="11" font-weight="600" fill="#7c3aed">LOAD BALANCING LAYER</text>
+
+        <rect x="20" y="300" width="860" height="90" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-dasharray="4"/>
+        <text x="40" y="325" font-size="11" font-weight="600" fill="#16a34a">APPLICATION LAYER</text>
+
+        <rect x="20" y="420" width="860" height="90" rx="8" fill="#fffbeb" stroke="#fde68a" stroke-dasharray="4"/>
+        <text x="40" y="445" font-size="11" font-weight="600" fill="#d97706">DATA LAYER</text>
+
+        <!-- Clients -->
+        <g class="svg-component" data-component="clients">
+          <rect x="150" y="35" width="90" height="36" rx="8" fill="#3b82f6"/>
+          <text x="195" y="58" text-anchor="middle" font-size="11" font-weight="600" fill="white">Clients</text>
+        </g>
+        <g class="svg-component" data-component="dns">
+          <rect x="360" y="35" width="90" height="36" rx="8" fill="#6366f1"/>
+          <text x="405" y="58" text-anchor="middle" font-size="11" font-weight="600" fill="white">DNS</text>
+        </g>
+        <g class="svg-component" data-component="cdn">
+          <rect x="570" y="35" width="90" height="36" rx="8" fill="#8b5cf6"/>
+          <text x="615" y="58" text-anchor="middle" font-size="11" font-weight="600" fill="white">CDN</text>
+        </g>
+
+        <!-- Load Balancers -->
+        <g class="svg-component" data-component="lb-l4">
+          <polygon points="350,160 420,140 490,160 490,200 420,220 350,200" fill="#7c3aed" stroke="#6d28d9" stroke-width="1.5"/>
+          <text x="420" y="177" text-anchor="middle" font-size="10" font-weight="600" fill="white">L4 Load</text>
+          <text x="420" y="193" text-anchor="middle" font-size="10" font-weight="600" fill="white">Balancer</text>
+        </g>
+
+        <g class="svg-component" data-component="lb-l7-1">
+          <polygon points="180,225 240,210 300,225 300,255 240,270 180,255" fill="#a855f7" stroke="#9333ea" stroke-width="1.5"/>
+          <text x="240" y="244" text-anchor="middle" font-size="9" font-weight="600" fill="white">L7 LB #1</text>
+        </g>
+
+        <g class="svg-component" data-component="lb-l7-2">
+          <polygon points="500,225 560,210 620,225 620,255 560,270 500,255" fill="#a855f7" stroke="#9333ea" stroke-width="1.5"/>
+          <text x="560" y="244" text-anchor="middle" font-size="9" font-weight="600" fill="white">L7 LB #2</text>
+        </g>
+
+        <!-- Health Checker -->
+        <g class="svg-component" data-component="health">
+          <rect x="700" y="155" width="120" height="40" rx="8" fill="#f97316" stroke="#ea580c" stroke-width="1"/>
+          <text x="760" y="179" text-anchor="middle" font-size="10" font-weight="600" fill="white">Health Checker</text>
+        </g>
+
+        <!-- Servers -->
+        <g class="svg-component" data-component="server-1">
+          <rect x="100" y="335" width="100" height="44" rx="8" fill="#16a34a"/>
+          <text x="150" y="362" text-anchor="middle" font-size="10" font-weight="600" fill="white">Server 1</text>
+        </g>
+        <g class="svg-component" data-component="server-2">
+          <rect x="260" y="335" width="100" height="44" rx="8" fill="#16a34a"/>
+          <text x="310" y="362" text-anchor="middle" font-size="10" font-weight="600" fill="white">Server 2</text>
+        </g>
+        <g class="svg-component" data-component="server-3">
+          <rect x="420" y="335" width="100" height="44" rx="8" fill="#16a34a"/>
+          <text x="470" y="362" text-anchor="middle" font-size="10" font-weight="600" fill="white">Server 3</text>
+        </g>
+        <g class="svg-component" data-component="server-4">
+          <rect x="580" y="335" width="100" height="44" rx="8" fill="#16a34a"/>
+          <text x="630" y="362" text-anchor="middle" font-size="10" font-weight="600" fill="white">Server 4</text>
+        </g>
+        <g class="svg-component" data-component="server-5">
+          <rect x="740" y="335" width="100" height="44" rx="8" fill="#16a34a"/>
+          <text x="790" y="362" text-anchor="middle" font-size="10" font-weight="600" fill="white">Server 5</text>
+        </g>
+
+        <!-- Database -->
+        <g class="svg-component" data-component="db-primary">
+          <ellipse cx="310" cy="465" rx="50" ry="14" fill="#d97706"/>
+          <rect x="260" y="455" width="100" height="30" fill="#d97706"/>
+          <ellipse cx="310" cy="485" rx="50" ry="14" fill="#b45309"/>
+          <ellipse cx="310" cy="455" rx="50" ry="14" fill="#f59e0b"/>
+          <text x="310" y="475" text-anchor="middle" font-size="9" font-weight="600" fill="white">Primary DB</text>
+        </g>
+        <g class="svg-component" data-component="db-replica">
+          <ellipse cx="520" cy="465" rx="50" ry="14" fill="#d97706"/>
+          <rect x="470" y="455" width="100" height="30" fill="#d97706"/>
+          <ellipse cx="520" cy="485" rx="50" ry="14" fill="#b45309"/>
+          <ellipse cx="520" cy="455" rx="50" ry="14" fill="#f59e0b"/>
+          <text x="520" y="475" text-anchor="middle" font-size="9" font-weight="600" fill="white">Read Replica</text>
+        </g>
+        <g class="svg-component" data-component="cache">
+          <rect x="680" y="455" width="110" height="40" rx="8" fill="#ef4444"/>
+          <text x="735" y="479" text-anchor="middle" font-size="10" font-weight="600" fill="white">Redis Cache</text>
+        </g>
+
+        <!-- Connections -->
+        <line x1="195" y1="71" x2="380" y2="140" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line x1="405" y1="71" x2="410" y2="140" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <line x1="390" y1="210" x2="260" y2="215" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line x1="450" y1="210" x2="545" y2="215" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <line x1="200" y1="270" x2="145" y2="335" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <line x1="240" y1="270" x2="290" y2="335" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <line x1="270" y1="270" x2="445" y2="335" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <line x1="540" y1="270" x2="470" y2="335" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <line x1="560" y1="270" x2="630" y2="335" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <line x1="590" y1="270" x2="780" y2="335" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Health check dotted lines -->
+        <line x1="700" y1="175" x2="200" y2="357" stroke="#f97316" stroke-width="1" stroke-dasharray="4" opacity="0.5"/>
+        <line x1="700" y1="175" x2="360" y2="357" stroke="#f97316" stroke-width="1" stroke-dasharray="4" opacity="0.5"/>
+        <line x1="700" y1="175" x2="520" y2="357" stroke="#f97316" stroke-width="1" stroke-dasharray="4" opacity="0.5"/>
+        <line x1="720" y1="195" x2="680" y2="357" stroke="#f97316" stroke-width="1" stroke-dasharray="4" opacity="0.5"/>
+        <line x1="740" y1="195" x2="840" y2="357" stroke="#f97316" stroke-width="1" stroke-dasharray="4" opacity="0.5"/>
+
+        <!-- Server to DB -->
+        <line x1="150" y1="379" x2="280" y2="455" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3" opacity="0.6"/>
+        <line x1="310" y1="379" x2="310" y2="455" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3" opacity="0.6"/>
+        <line x1="470" y1="379" x2="500" y2="455" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3" opacity="0.6"/>
+        <line x1="630" y1="379" x2="700" y2="455" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3" opacity="0.6"/>
+        <line x1="790" y1="379" x2="730" y2="455" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3" opacity="0.6"/>
+
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#94a3b8"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+    <div class="svg-tooltip" id="tooltip"></div>
+  </section>
+
+  <!-- Component Breakdown -->
+  <section id="components">
+    <h2><span class="icon">□</span> Component Breakdown</h2>
+    <div class="component-grid">
+      <div class="comp-card">
+        <h3><span style="color: var(--purple)">⬡</span> Layer 4 Load Balancer</h3>
+        <div class="purpose">Distributes traffic based on IP and TCP/UDP port without inspecting packet contents.</div>
+        <div class="detail"><span class="detail-label">Technology</span> AWS NLB, HAProxy (TCP mode), IPVS</div>
+        <div class="detail"><span class="detail-label">Throughput</span> Millions of packets/sec, sub-ms latency</div>
+        <div class="detail"><span class="detail-label">Scaling</span> Horizontal via DNS or ECMP routing</div>
+      </div>
+      <div class="comp-card">
+        <h3><span style="color: var(--purple)">⬡</span> Layer 7 Load Balancer</h3>
+        <div class="purpose">Inspects HTTP headers, URLs, and cookies to make intelligent routing decisions.</div>
+        <div class="detail"><span class="detail-label">Technology</span> NGINX, Envoy, AWS ALB, Traefik</div>
+        <div class="detail"><span class="detail-label">Features</span> Path routing, SSL termination, compression</div>
+        <div class="detail"><span class="detail-label">Scaling</span> Horizontal behind L4 LB</div>
+      </div>
+      <div class="comp-card">
+        <h3><span style="color: var(--orange)">●</span> Health Checker</h3>
+        <div class="purpose">Continuously monitors backend server health and removes unhealthy nodes from the pool.</div>
+        <div class="detail"><span class="detail-label">Interval</span> Every 5-30 seconds per target</div>
+        <div class="detail"><span class="detail-label">Checks</span> TCP connect, HTTP 200, custom endpoints</div>
+        <div class="detail"><span class="detail-label">Threshold</span> 2-3 failures before removal</div>
+      </div>
+      <div class="comp-card">
+        <h3><span style="color: var(--green)">■</span> Backend Servers</h3>
+        <div class="purpose">Application instances that process the actual business logic for incoming requests.</div>
+        <div class="detail"><span class="detail-label">Scaling</span> Auto-scale based on CPU/RPS metrics</div>
+        <div class="detail"><span class="detail-label">Stateless</span> No local session state — store in Redis</div>
+        <div class="detail"><span class="detail-label">Deploy</span> Rolling updates with graceful drain</div>
+      </div>
+      <div class="comp-card">
+        <h3><span style="color: var(--teal)">◆</span> Session Persistence</h3>
+        <div class="purpose">Ensures a client's requests consistently reach the same server when needed.</div>
+        <div class="detail"><span class="detail-label">Methods</span> Cookie-based, IP hash, header-based</div>
+        <div class="detail"><span class="detail-label">Trade-off</span> Sticky sessions reduce distribution evenness</div>
+        <div class="detail"><span class="detail-label">Best for</span> WebSocket, shopping carts, uploads</div>
+      </div>
+      <div class="comp-card">
+        <h3><span style="color: var(--red)">◈</span> SSL/TLS Termination</h3>
+        <div class="purpose">Offloads encryption/decryption from backend servers, reducing their CPU load.</div>
+        <div class="detail"><span class="detail-label">Location</span> At L7 load balancer (most common)</div>
+        <div class="detail"><span class="detail-label">Benefit</span> Centralized cert management, backend HTTP</div>
+        <div class="detail"><span class="detail-label">Security</span> Re-encrypt to backends in zero-trust envs</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sequence Diagram -->
+  <section id="sequence">
+    <h2><span class="icon">→</span> Request Flow</h2>
+    <div class="sequence-container">
+      <div class="sequence-controls">
+        <button id="seqPlay" class="active">▶ Play</button>
+        <button id="seqPause">⏸ Pause</button>
+        <button id="seqReset">↺ Reset</button>
+        <label style="margin-left:12px;">Speed:</label>
+        <input type="range" id="seqSpeed" min="1" max="5" value="3" style="width:80px;">
+        <div class="flow-select">
+          <button class="active" data-flow="normal">Normal Flow</button>
+          <button data-flow="failover">Failover</button>
+          <button data-flow="sticky">Sticky Session</button>
+        </div>
+      </div>
+      <div class="sequence-area" id="sequenceArea">
+        <svg id="seqSvg" viewBox="0 0 800 340" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="step-narration" id="stepNarration">
+        <span class="step-num">-</span>
+        <span id="narrationText">Press Play to start the animation</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Load Balancing Algorithms -->
+  <section id="algorithms">
+    <h2><span class="icon">⚙</span> Load Balancing Algorithms</h2>
+    <div class="algo-tabs" id="algoTabs">
+      <button class="active" data-algo="round-robin">Round Robin</button>
+      <button data-algo="weighted">Weighted</button>
+      <button data-algo="least-conn">Least Connections</button>
+      <button data-algo="ip-hash">IP Hash</button>
+    </div>
+    <div class="algo-content" id="algoContent">
+      <div class="algo-visual" id="algoVisual"></div>
+      <div class="algo-explanation" id="algoExplanation"></div>
+    </div>
+  </section>
+
+  <!-- Interactive Demo -->
+  <section id="demo">
+    <h2><span class="icon">▷</span> Interactive Simulation</h2>
+    <div class="demo-container">
+      <div class="demo-header">
+        <label>Algorithm:</label>
+        <select id="demoAlgo">
+          <option value="round-robin">Round Robin</option>
+          <option value="weighted">Weighted Round Robin</option>
+          <option value="least-conn">Least Connections</option>
+          <option value="random">Random</option>
+        </select>
+        <label>Servers:</label>
+        <select id="demoServers">
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5" selected>5</option>
+        </select>
+        <label>Requests:</label>
+        <input type="number" id="demoRequests" value="20" min="5" max="50" style="width:60px;">
+        <button id="demoRun">Simulate</button>
+      </div>
+      <div class="demo-body" id="demoBody">
+        <div class="demo-lb">
+          <div class="demo-requests" id="demoReqVisual"></div>
+          <div class="demo-lb-node">Load Balancer</div>
+          <div class="demo-servers" id="demoServerVisual"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Scaling & Trade-offs -->
+  <section id="tradeoffs">
+    <h2><span class="icon">⚖</span> Scaling & Trade-offs</h2>
+
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 24px;">
+      <h4 style="margin-bottom: 12px;">Capacity Estimation (example: 10M daily active users)</h4>
+      <table class="capacity-table">
+        <thead>
+          <tr><th>Metric</th><th>Estimate</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Peak QPS</td><td>~50,000 req/s</td></tr>
+          <tr><td>Avg request size</td><td>~2 KB</td></tr>
+          <tr><td>Peak bandwidth</td><td>~100 MB/s</td></tr>
+          <tr><td>Backend servers needed (1K RPS each)</td><td>50 servers</td></tr>
+          <tr><td>LB capacity (L4 NLB)</td><td>1M+ packets/s</td></tr>
+          <tr><td>LB capacity (L7 per instance)</td><td>~50K concurrent connections</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tradeoff-grid">
+      <div class="tradeoff-card">
+        <h4>⬆ Horizontal Scaling</h4>
+        <p>Add more LB instances behind DNS or BGP anycast. L4 balancers in front of L7 fleet. Each L7 instance handles ~50K connections. Scale linearly by adding nodes.</p>
+      </div>
+      <div class="tradeoff-card">
+        <h4>🔄 Active-Passive vs Active-Active</h4>
+        <p><strong>Active-passive:</strong> standby LB takes over on failure (simpler, some failover delay). <strong>Active-active:</strong> all LBs serve traffic simultaneously (better utilization, needs state sync).</p>
+      </div>
+      <div class="tradeoff-card">
+        <h4>⚠ Single Point of Failure</h4>
+        <p>The LB itself must be redundant. Solutions: floating IP with keepalived/VRRP, cloud-managed LBs (AWS ELB), DNS failover across regions, or anycast BGP routing.</p>
+      </div>
+      <div class="tradeoff-card">
+        <h4>🔒 SSL Termination Trade-off</h4>
+        <p>Terminating at LB simplifies backends but means unencrypted internal traffic. For compliance, use mutual TLS between LB and backends (adds ~2ms latency).</p>
+      </div>
+      <div class="tradeoff-card">
+        <h4>📍 Global vs Regional</h4>
+        <p>Global LB (GeoDNS/Anycast) routes to nearest region. Regional LB distributes within a data center. Two tiers are standard for multinational services.</p>
+      </div>
+      <div class="tradeoff-card">
+        <h4>💔 Connection Draining</h4>
+        <p>When removing a server, allow existing requests to complete (30-60s drain period). New requests go elsewhere immediately. Critical for zero-downtime deploys.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+// Tooltip for architecture diagram
+const tooltip = document.getElementById('tooltip');
+const componentInfo = {
+  'clients': 'End users sending HTTP/HTTPS requests. Can be browsers, mobile apps, or API consumers.',
+  'dns': 'Resolves domain to LB IP. Can implement geographic routing for global distribution.',
+  'cdn': 'Caches static assets at edge. Reduces load on origin servers for images, JS, CSS.',
+  'lb-l4': 'Layer 4 (Transport): Routes based on IP:port using NAT/DSR. Ultra-fast, no content inspection.',
+  'lb-l7-1': 'Layer 7 (Application): Inspects HTTP headers for smart routing — path, host, cookies.',
+  'lb-l7-2': 'Second L7 instance for redundancy and capacity. Active-active configuration.',
+  'health': 'Pings servers every 10s. 3 consecutive failures → marks unhealthy. Auto-recovers on success.',
+  'server-1': 'Application server instance. Stateless, auto-scaled. Handles ~1000 RPS per instance.',
+  'server-2': 'Application server instance. Stateless, auto-scaled. Handles ~1000 RPS per instance.',
+  'server-3': 'Application server instance. Stateless, auto-scaled. Handles ~1000 RPS per instance.',
+  'server-4': 'Application server instance. Stateless, auto-scaled. Handles ~1000 RPS per instance.',
+  'server-5': 'Application server instance. Stateless, auto-scaled. Handles ~1000 RPS per instance.',
+  'db-primary': 'Primary database for writes. Replicates async to read replicas for read scaling.',
+  'db-replica': 'Read-only replica. LB can route read queries here to reduce primary load.',
+  'cache': 'Redis — session store and response cache. Sub-ms reads, reduces DB load by 80%+.'
+};
+
+document.querySelectorAll('.svg-component').forEach(el => {
+  el.addEventListener('mouseenter', (e) => {
+    const comp = el.dataset.component;
+    if (componentInfo[comp]) {
+      tooltip.textContent = componentInfo[comp];
+      tooltip.classList.add('visible');
+    }
+  });
+  el.addEventListener('mousemove', (e) => {
+    tooltip.style.left = (e.pageX + 12) + 'px';
+    tooltip.style.top = (e.pageY - 40) + 'px';
+  });
+  el.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('visible');
+  });
+});
+
+// Sequence Diagram
+const seqSvg = document.getElementById('seqSvg');
+const flows = {
+  normal: {
+    actors: ['Client', 'DNS', 'L4 LB', 'L7 LB', 'Server 2', 'DB'],
+    steps: [
+      { from: 0, to: 1, label: 'DNS lookup', desc: 'Client resolves api.example.com → DNS returns LB virtual IP (e.g., 203.0.113.10)' },
+      { from: 0, to: 2, label: 'TCP SYN', desc: 'Client opens TCP connection to L4 load balancer virtual IP on port 443' },
+      { from: 2, to: 3, label: 'Forward', desc: 'L4 LB selects an L7 LB instance using ECMP hashing and forwards the TCP stream' },
+      { from: 3, to: 3, label: 'SSL terminate', desc: 'L7 LB terminates TLS, inspects HTTP headers: method, path, Host, cookies' },
+      { from: 3, to: 4, label: 'Route (least-conn)', desc: 'L7 LB picks Server 2 (fewest active connections) and forwards the HTTP request' },
+      { from: 4, to: 5, label: 'Query', desc: 'Server 2 processes logic, queries database for required data' },
+      { from: 5, to: 4, label: 'Response', desc: 'Database returns result set to Server 2' },
+      { from: 4, to: 3, label: 'HTTP 200', desc: 'Server 2 sends HTTP 200 response back through L7 LB' },
+      { from: 3, to: 0, label: 'Encrypted response', desc: 'L7 LB re-encrypts response via TLS and sends to client. Total latency: ~45ms' },
+    ]
+  },
+  failover: {
+    actors: ['Client', 'L7 LB', 'Server 1', 'Server 2', 'Health Check'],
+    steps: [
+      { from: 4, to: 2, label: 'Health check', desc: 'Health checker sends GET /health to Server 1 every 10 seconds' },
+      { from: 2, to: 4, label: 'Timeout!', desc: 'Server 1 fails to respond within 3 seconds — first failure counted' },
+      { from: 4, to: 2, label: 'Retry (2/3)', desc: 'Second health check attempt — still no response. Threshold: 3 failures to mark unhealthy.' },
+      { from: 4, to: 2, label: 'Retry (3/3)', desc: 'Third consecutive failure. Health checker marks Server 1 as UNHEALTHY.' },
+      { from: 4, to: 1, label: 'Remove server', desc: 'Health checker notifies LB to remove Server 1 from active pool. No new traffic routed there.' },
+      { from: 0, to: 1, label: 'New request', desc: 'Client sends request. LB only considers healthy servers in the pool.' },
+      { from: 1, to: 3, label: 'Route to healthy', desc: 'LB routes to Server 2 (healthy). Server 1 is skipped. Zero downtime for the client.' },
+      { from: 3, to: 0, label: 'Response', desc: 'Server 2 handles request normally. Failover was transparent to the client.' },
+    ]
+  },
+  sticky: {
+    actors: ['Client A', 'L7 LB', 'Server 1', 'Server 3', 'Redis'],
+    steps: [
+      { from: 0, to: 1, label: 'First request', desc: 'Client A sends first request. No session cookie present — LB treats as new session.' },
+      { from: 1, to: 2, label: 'Route (round-robin)', desc: 'LB picks Server 1 via round-robin. Sets sticky cookie: SERVERID=srv1; Path=/; HttpOnly' },
+      { from: 2, to: 4, label: 'Store session', desc: 'Server 1 creates session, stores in Redis (shared state). Returns Set-Cookie to client.' },
+      { from: 2, to: 0, label: 'Response + cookie', desc: 'Client receives response with SERVERID=srv1 cookie. Browser will send it on future requests.' },
+      { from: 0, to: 1, label: 'Request + cookie', desc: 'Client A sends second request. Browser includes Cookie: SERVERID=srv1 header.' },
+      { from: 1, to: 2, label: 'Sticky → Server 1', desc: 'LB reads cookie, routes to Server 1 again. Ensures in-memory caches stay warm.' },
+      { from: 2, to: 0, label: 'Fast response', desc: 'Server 1 has session in local cache (no Redis round-trip needed). Responds in ~12ms vs ~25ms.' },
+    ]
+  }
+};
+
+let currentFlow = 'normal';
+let seqStep = -1;
+let seqPlaying = false;
+let seqTimer = null;
+let seqSpeedMs = 1500;
+
+function drawSequence(flowName) {
+  const flow = flows[flowName];
+  const svg = seqSvg;
+  const actorCount = flow.actors.length;
+  const spacing = 800 / (actorCount + 1);
+  let html = '';
+
+  flow.actors.forEach((actor, i) => {
+    const x = spacing * (i + 1);
+    html += `<rect x="${x - 40}" y="10" width="80" height="30" rx="6" fill="#1e293b"/>`;
+    html += `<text x="${x}" y="30" text-anchor="middle" font-size="10" font-weight="600" fill="white">${actor}</text>`;
+    html += `<line x1="${x}" y1="45" x2="${x}" y2="330" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4"/>`;
+  });
+
+  flow.steps.forEach((step, i) => {
+    const fromX = spacing * (step.from + 1);
+    const toX = spacing * (step.to + 1);
+    const y = 70 + i * 30;
+    const opacity = (seqStep >= i) ? 1 : 0.15;
+    const color = (seqStep === i) ? '#2563eb' : '#64748b';
+    const strokeWidth = (seqStep === i) ? 2.5 : 1.5;
+
+    if (fromX === toX) {
+      html += `<path d="M${fromX + 5},${y} C${fromX + 35},${y} ${fromX + 35},${y + 20} ${fromX + 5},${y + 20}"
+        stroke="${color}" stroke-width="${strokeWidth}" fill="none" opacity="${opacity}" marker-end="url(#seqArrow)"/>`;
+      html += `<text x="${fromX + 38}" y="${y + 12}" font-size="8" fill="${color}" opacity="${opacity}">${step.label}</text>`;
+    } else {
+      html += `<line x1="${fromX}" y1="${y}" x2="${toX}" y2="${y}"
+        stroke="${color}" stroke-width="${strokeWidth}" opacity="${opacity}" marker-end="url(#seqArrow)"/>`;
+      const midX = (fromX + toX) / 2;
+      html += `<text x="${midX}" y="${y - 6}" text-anchor="middle" font-size="8" fill="${color}" opacity="${opacity}">${step.label}</text>`;
+    }
+  });
+
+  html += `<defs><marker id="seqArrow" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+    <path d="M0,0 L7,2.5 L0,5 Z" fill="#64748b"/></marker></defs>`;
+
+  svg.innerHTML = html;
+
+  const narration = document.getElementById('narrationText');
+  const stepNum = document.querySelector('.step-num');
+  if (seqStep >= 0 && seqStep < flow.steps.length) {
+    narration.textContent = flow.steps[seqStep].desc;
+    stepNum.textContent = seqStep + 1;
+  } else {
+    narration.textContent = 'Press Play to start the animation';
+    stepNum.textContent = '-';
+  }
+}
+
+function seqAdvance() {
+  const flow = flows[currentFlow];
+  seqStep++;
+  if (seqStep >= flow.steps.length) {
+    seqStep = flow.steps.length - 1;
+    seqPlaying = false;
+    clearInterval(seqTimer);
+  }
+  drawSequence(currentFlow);
+}
+
+document.getElementById('seqPlay').addEventListener('click', () => {
+  if (seqPlaying) return;
+  seqPlaying = true;
+  if (seqStep >= flows[currentFlow].steps.length - 1) seqStep = -1;
+  seqTimer = setInterval(seqAdvance, seqSpeedMs);
+  seqAdvance();
+});
+
+document.getElementById('seqPause').addEventListener('click', () => {
+  seqPlaying = false;
+  clearInterval(seqTimer);
+});
+
+document.getElementById('seqReset').addEventListener('click', () => {
+  seqPlaying = false;
+  clearInterval(seqTimer);
+  seqStep = -1;
+  drawSequence(currentFlow);
+});
+
+document.getElementById('seqSpeed').addEventListener('input', (e) => {
+  const speeds = [2500, 2000, 1500, 1000, 600];
+  seqSpeedMs = speeds[e.target.value - 1];
+  if (seqPlaying) {
+    clearInterval(seqTimer);
+    seqTimer = setInterval(seqAdvance, seqSpeedMs);
+  }
+});
+
+document.querySelectorAll('.flow-select button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.flow-select button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFlow = btn.dataset.flow;
+    seqStep = -1;
+    seqPlaying = false;
+    clearInterval(seqTimer);
+    drawSequence(currentFlow);
+  });
+});
+
+drawSequence('normal');
+
+// Algorithm visualizations
+const algoData = {
+  'round-robin': {
+    title: 'Round Robin',
+    desc: 'Distributes requests sequentially across all servers in a circular order. Each server gets exactly one request before the cycle repeats.',
+    pros: ['Simple to implement and understand', 'Equal distribution when servers are identical', 'No state tracking needed'],
+    cons: ['Ignores server capacity differences', 'Ignores current server load', 'Long-running requests cause uneven actual load'],
+    useCase: 'Homogeneous servers with uniform request processing time.'
+  },
+  'weighted': {
+    title: 'Weighted Round Robin',
+    desc: 'Like round-robin but assigns weight proportional to server capacity. A server with weight 3 gets three requests for every one sent to a server with weight 1.',
+    pros: ['Accounts for different server capacities', 'Still simple and predictable', 'Good for heterogeneous hardware'],
+    cons: ['Weights are static — don\'t adapt to real-time load', 'Requires manual weight configuration', 'Burst traffic can still overwhelm lighter servers'],
+    useCase: 'Mixed server sizes (e.g., 8-core and 16-core machines in the same pool).'
+  },
+  'least-conn': {
+    title: 'Least Connections',
+    desc: 'Routes each new request to the server with the fewest active connections. Naturally adapts to servers with varying response times.',
+    pros: ['Adapts to real-time load automatically', 'Handles slow requests gracefully', 'Best for long-lived connections (WebSocket, gRPC)'],
+    cons: ['Requires tracking connection state', 'Slight overhead per routing decision', 'New servers get flooded initially (use slow-start)'],
+    useCase: 'Requests with highly variable processing times, or long-lived connections.'
+  },
+  'ip-hash': {
+    title: 'IP Hash (Consistent Hashing)',
+    desc: 'Hashes the client IP to deterministically select a server. Same client always reaches the same server (unless the pool changes).',
+    pros: ['Natural session affinity without cookies', 'No shared state needed for stickiness', 'Consistent hashing minimizes reshuffling on pool changes'],
+    cons: ['Uneven distribution if IP traffic is skewed', 'NAT can concentrate many users on one IP', 'Server removal reshuffles some clients'],
+    useCase: 'Stateful services needing session affinity, or caching layers where cache hits matter.'
+  }
+};
+
+function renderAlgoVisual(algo) {
+  const visual = document.getElementById('algoVisual');
+  const servers = ['A', 'B', 'C', 'D'];
+  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+  let loads = [0, 0, 0, 0];
+  const total = 12;
+
+  if (algo === 'round-robin') {
+    for (let i = 0; i < total; i++) loads[i % 4]++;
+  } else if (algo === 'weighted') {
+    const weights = [3, 2, 1, 1];
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    let idx = 0;
+    for (let i = 0; i < total; i++) {
+      loads[idx]++;
+      if (loads[idx] >= Math.round(total * weights[idx] / totalWeight)) idx = Math.min(idx + 1, 3);
+    }
+    loads = [5, 4, 2, 1];
+  } else if (algo === 'least-conn') {
+    loads = [3, 3, 3, 3];
+  } else if (algo === 'ip-hash') {
+    loads = [4, 2, 5, 1];
+  }
+
+  const maxLoad = Math.max(...loads);
+  let html = `<h4>Request Distribution (${total} requests)</h4>`;
+  servers.forEach((s, i) => {
+    const pct = (loads[i] / total * 100).toFixed(0);
+    html += `
+      <div class="server-row">
+        <div class="server-box" style="background:${colors[i]}">S-${s}</div>
+        <div class="server-bar">
+          <div class="server-bar-fill" style="width:${pct}%;background:${colors[i]}44;border:2px solid ${colors[i]}"></div>
+          <span class="server-bar-label">${loads[i]} req (${pct}%)</span>
+        </div>
+      </div>`;
+  });
+
+  if (algo === 'weighted') {
+    html += `<div style="margin-top:16px;font-size:0.8rem;color:var(--text-muted)">Weights: A=3, B=2, C=1, D=1</div>`;
+  }
+  visual.innerHTML = html;
+}
+
+function renderAlgoExplanation(algo) {
+  const data = algoData[algo];
+  const el = document.getElementById('algoExplanation');
+  el.innerHTML = `
+    <h4>${data.title}</h4>
+    <p>${data.desc}</p>
+    <p style="font-weight:600;color:var(--green);margin-top:12px;margin-bottom:4px;">Advantages:</p>
+    <ul>${data.pros.map(p => `<li>${p}</li>`).join('')}</ul>
+    <p style="font-weight:600;color:var(--red);margin-top:12px;margin-bottom:4px;">Disadvantages:</p>
+    <ul>${data.cons.map(c => `<li>${c}</li>`).join('')}</ul>
+    <p style="margin-top:12px;padding:10px;background:var(--accent-light);border-radius:6px;font-size:0.85rem;"><strong>Best for:</strong> ${data.useCase}</p>
+  `;
+}
+
+document.querySelectorAll('#algoTabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#algoTabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderAlgoVisual(btn.dataset.algo);
+    renderAlgoExplanation(btn.dataset.algo);
+  });
+});
+
+renderAlgoVisual('round-robin');
+renderAlgoExplanation('round-robin');
+
+// Interactive Demo
+function runDemo() {
+  const algo = document.getElementById('demoAlgo').value;
+  const serverCount = parseInt(document.getElementById('demoServers').value);
+  const reqCount = parseInt(document.getElementById('demoRequests').value);
+
+  const servers = Array.from({ length: serverCount }, (_, i) => ({ name: `S${i + 1}`, count: 0, connections: 0 }));
+  const weights = [5, 3, 2, 1, 1];
+  let rrIndex = 0;
+
+  const reqContainer = document.getElementById('demoReqVisual');
+  const srvContainer = document.getElementById('demoServerVisual');
+
+  srvContainer.innerHTML = servers.map(s => `
+    <div class="demo-server" id="demo-${s.name}">
+      <div class="name">${s.name}</div>
+      <div class="count">0</div>
+      <div class="label">requests</div>
+    </div>
+  `).join('');
+
+  const reqColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+  reqContainer.innerHTML = '';
+
+  let i = 0;
+  const interval = setInterval(() => {
+    if (i >= reqCount) { clearInterval(interval); return; }
+
+    let target;
+    if (algo === 'round-robin') {
+      target = rrIndex % serverCount;
+      rrIndex++;
+    } else if (algo === 'weighted') {
+      const totalWeight = weights.slice(0, serverCount).reduce((a, b) => a + b, 0);
+      let r = Math.random() * totalWeight;
+      target = 0;
+      for (let j = 0; j < serverCount; j++) {
+        r -= weights[j];
+        if (r <= 0) { target = j; break; }
+      }
+    } else if (algo === 'least-conn') {
+      target = 0;
+      let minConn = servers[0].count;
+      for (let j = 1; j < serverCount; j++) {
+        if (servers[j].count < minConn) { minConn = servers[j].count; target = j; }
+      }
+    } else {
+      target = Math.floor(Math.random() * serverCount);
+    }
+
+    servers[target].count++;
+    const srvEl = document.getElementById(`demo-${servers[target].name}`);
+    srvEl.classList.add('active');
+    srvEl.querySelector('.count').textContent = servers[target].count;
+    setTimeout(() => srvEl.classList.remove('active'), 200);
+
+    const dot = document.createElement('div');
+    dot.className = 'demo-request';
+    dot.style.background = reqColors[target % reqColors.length];
+    dot.textContent = i + 1;
+    reqContainer.appendChild(dot);
+    requestAnimationFrame(() => dot.classList.add('visible'));
+
+    i++;
+  }, 150);
+}
+
+document.getElementById('demoRun').addEventListener('click', runDemo);
+runDemo();
+</script>
+
+</body>
+</html>

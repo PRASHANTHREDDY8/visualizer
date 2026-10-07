@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MySQL Internals & Tuning — Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f3f5f7;
+      --border: #e2e6ea;
+      --text: #1a2332;
+      --text-muted: #5a6b7d;
+      --accent: #2563eb;
+      --accent-light: #dbeafe;
+      --orange: #ea580c;
+      --orange-light: #fff7ed;
+      --green: #16a34a;
+      --green-light: #dcfce7;
+      --purple: #7c3aed;
+      --purple-light: #ede9fe;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --teal: #0891b2;
+      --teal-light: #ecfeff;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+      --shadow-lg: 0 4px 16px rgba(0,0,0,0.1), 0 12px 40px rgba(0,0,0,0.06);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f2440 100%);
+      color: white;
+      padding: 48px 32px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.85;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .nav-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      padding: 16px 32px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-tab {
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .nav-tab:hover { background: var(--surface-alt); color: var(--text); }
+    .nav-tab.active { background: var(--accent); color: white; }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 32px; }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: var(--text);
+    }
+
+    .section-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      max-width: 700px;
+    }
+
+    /* Architecture Diagram */
+    .arch-diagram {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 40px;
+      overflow-x: auto;
+    }
+
+    .arch-diagram svg {
+      width: 100%;
+      min-width: 900px;
+      height: auto;
+    }
+
+    .arch-layer {
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+
+    .arch-layer:hover { opacity: 0.9; }
+
+    .arch-component {
+      cursor: pointer;
+      transition: transform 0.2s, filter 0.2s;
+    }
+
+    .arch-component:hover {
+      filter: brightness(1.05);
+    }
+
+    /* Component Cards */
+    .components-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 20px;
+    }
+
+    .component-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      border-left: 4px solid var(--accent);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .component-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .component-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .component-card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .component-card .detail {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .component-card .detail strong {
+      color: var(--text);
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+
+    .tag-blue { background: var(--accent-light); color: var(--accent); }
+    .tag-green { background: var(--green-light); color: var(--green); }
+    .tag-orange { background: var(--orange-light); color: var(--orange); }
+    .tag-purple { background: var(--purple-light); color: var(--purple); }
+    .tag-red { background: var(--red-light); color: var(--red); }
+    .tag-teal { background: var(--teal-light); color: var(--teal); }
+
+    /* Query Flow Animation */
+    .flow-container {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 32px;
+    }
+
+    .flow-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .flow-btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .flow-btn:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .flow-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .flow-speed {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .flow-speed input[type="range"] {
+      width: 100px;
+      accent-color: var(--accent);
+    }
+
+    .flow-svg-container {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      overflow-x: auto;
+      min-height: 400px;
+    }
+
+    .flow-narration {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .flow-narration .step-num {
+      background: var(--accent);
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+
+    /* Tuning Section */
+    .tuning-categories {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .tuning-cat-btn {
+      padding: 8px 16px;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tuning-cat-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .tuning-cat-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .tuning-params {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .param-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 24px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: start;
+      transition: transform 0.2s;
+    }
+
+    .param-card:hover { transform: translateX(4px); }
+
+    .param-name {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .param-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .param-details {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+
+    .param-details code {
+      background: var(--surface-alt);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.78rem;
+      color: var(--orange);
+    }
+
+    .param-impact {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .impact-badge {
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .impact-high { background: var(--red-light); color: var(--red); }
+    .impact-medium { background: var(--orange-light); color: var(--orange); }
+    .impact-low { background: var(--green-light); color: var(--green); }
+
+    /* Scaling Section */
+    .scaling-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
+    }
+
+    .scaling-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .scaling-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .scaling-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .scaling-card li {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .scaling-card li:last-child { border-bottom: none; }
+
+    .scaling-card li::before {
+      content: '→';
+      color: var(--accent);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* Interactive Calculator */
+    .calculator {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 32px;
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .calc-grid { grid-template-columns: 1fr; }
+    }
+
+    .calc-input-group {
+      margin-bottom: 16px;
+    }
+
+    .calc-input-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .calc-input-group input, .calc-input-group select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      background: var(--surface-alt);
+      color: var(--text);
+    }
+
+    .calc-input-group input:focus, .calc-input-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+
+    .calc-results {
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+    }
+
+    .calc-result-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .calc-result-item:last-child { border-bottom: none; }
+
+    .calc-result-item .value {
+      font-weight: 700;
+      color: var(--accent);
+      font-family: 'SF Mono', monospace;
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: fixed;
+      background: var(--text);
+      color: white;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      max-width: 280px;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.2s;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .tooltip.visible { opacity: 1; }
+
+    /* InnoDB Pages Visual */
+    .innodb-visual {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    .buffer-pool-grid {
+      display: grid;
+      grid-template-columns: repeat(16, 1fr);
+      gap: 3px;
+      margin-top: 16px;
+    }
+
+    .bp-page {
+      aspect-ratio: 1;
+      border-radius: 4px;
+      transition: all 0.3s;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .bp-page.clean { background: var(--green-light); border: 1px solid #86efac; }
+    .bp-page.dirty { background: var(--orange-light); border: 1px solid #fdba74; }
+    .bp-page.free { background: var(--surface-alt); border: 1px solid var(--border); }
+    .bp-page.active { background: var(--accent-light); border: 1px solid var(--accent); animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    .bp-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .bp-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .bp-legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    /* Keyboard */
+    kbd {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.75rem;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>MySQL Internals & Performance Tuning</h1>
+    <p>Deep dive into MySQL architecture, InnoDB storage engine, query execution pipeline, and critical tuning parameters</p>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="architecture">Architecture</button>
+    <button class="nav-tab" data-tab="innodb">InnoDB Deep Dive</button>
+    <button class="nav-tab" data-tab="query-flow">Query Pipeline</button>
+    <button class="nav-tab" data-tab="tuning">Tuning Parameters</button>
+    <button class="nav-tab" data-tab="scaling">Scaling & Traffic</button>
+    <button class="nav-tab" data-tab="calculator">Buffer Pool Calculator</button>
+  </div>
+
+  <div class="container">
+    <!-- Architecture Section -->
+    <div class="section active" id="architecture">
+      <h2 class="section-title">MySQL Server Architecture</h2>
+      <p class="section-subtitle">MySQL is structured in three primary layers. Each layer has distinct responsibilities and tuning opportunities.</p>
+
+      <div class="arch-diagram">
+        <svg viewBox="0 0 1000 680" xmlns="http://www.w3.org/2000/svg">
+          <!-- Connection Layer -->
+          <g class="arch-layer" data-layer="connection">
+            <rect x="50" y="20" width="900" height="130" rx="12" fill="#dbeafe" stroke="#93c5fd" stroke-width="2"/>
+            <text x="80" y="50" font-size="14" font-weight="700" fill="#1e40af">CONNECTION LAYER</text>
+
+            <g class="arch-component" data-component="thread-pool">
+              <rect x="80" y="65" width="160" height="65" rx="8" fill="white" stroke="#93c5fd" stroke-width="1.5"/>
+              <text x="160" y="92" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Thread Pool</text>
+              <text x="160" y="112" font-size="9" fill="#5a6b7d" text-anchor="middle">Connection handling</text>
+            </g>
+
+            <g class="arch-component" data-component="auth">
+              <rect x="270" y="65" width="160" height="65" rx="8" fill="white" stroke="#93c5fd" stroke-width="1.5"/>
+              <text x="350" y="92" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Authentication</text>
+              <text x="350" y="112" font-size="9" fill="#5a6b7d" text-anchor="middle">User privileges</text>
+            </g>
+
+            <g class="arch-component" data-component="conn-cache">
+              <rect x="460" y="65" width="160" height="65" rx="8" fill="white" stroke="#93c5fd" stroke-width="1.5"/>
+              <text x="540" y="92" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Connection Cache</text>
+              <text x="540" y="112" font-size="9" fill="#5a6b7d" text-anchor="middle">Thread reuse</text>
+            </g>
+
+            <g class="arch-component" data-component="ssl">
+              <rect x="650" y="65" width="160" height="65" rx="8" fill="white" stroke="#93c5fd" stroke-width="1.5"/>
+              <text x="730" y="92" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">SSL/TLS</text>
+              <text x="730" y="112" font-size="9" fill="#5a6b7d" text-anchor="middle">Encryption</text>
+            </g>
+          </g>
+
+          <!-- SQL Layer -->
+          <g class="arch-layer" data-layer="sql">
+            <rect x="50" y="170" width="900" height="200" rx="12" fill="#ede9fe" stroke="#c4b5fd" stroke-width="2"/>
+            <text x="80" y="200" font-size="14" font-weight="700" fill="#5b21b6">SQL LAYER (Server Layer)</text>
+
+            <g class="arch-component" data-component="parser">
+              <rect x="80" y="215" width="130" height="60" rx="8" fill="white" stroke="#c4b5fd" stroke-width="1.5"/>
+              <text x="145" y="242" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Parser</text>
+              <text x="145" y="258" font-size="9" fill="#5a6b7d" text-anchor="middle">SQL → AST</text>
+            </g>
+
+            <g class="arch-component" data-component="optimizer">
+              <rect x="240" y="215" width="130" height="60" rx="8" fill="white" stroke="#c4b5fd" stroke-width="1.5"/>
+              <text x="305" y="242" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Optimizer</text>
+              <text x="305" y="258" font-size="9" fill="#5a6b7d" text-anchor="middle">Query plans</text>
+            </g>
+
+            <g class="arch-component" data-component="executor">
+              <rect x="400" y="215" width="130" height="60" rx="8" fill="white" stroke="#c4b5fd" stroke-width="1.5"/>
+              <text x="465" y="242" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Executor</text>
+              <text x="465" y="258" font-size="9" fill="#5a6b7d" text-anchor="middle">Plan execution</text>
+            </g>
+
+            <g class="arch-component" data-component="query-cache">
+              <rect x="560" y="215" width="130" height="60" rx="8" fill="white" stroke="#c4b5fd" stroke-width="1.5"/>
+              <text x="625" y="242" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Query Cache</text>
+              <text x="625" y="258" font-size="9" fill="#5a6b7d" text-anchor="middle">Result cache</text>
+            </g>
+
+            <g class="arch-component" data-component="binlog">
+              <rect x="720" y="215" width="130" height="60" rx="8" fill="white" stroke="#c4b5fd" stroke-width="1.5"/>
+              <text x="785" y="242" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Binary Log</text>
+              <text x="785" y="258" font-size="9" fill="#5a6b7d" text-anchor="middle">Replication</text>
+            </g>
+
+            <!-- Arrow between parser -> optimizer -> executor -->
+            <path d="M210 245 L240 245" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrowPurple)"/>
+            <path d="M370 245 L400 245" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrowPurple)"/>
+            <path d="M530 245 L560 245" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrowPurple)"/>
+
+            <!-- Second row in SQL layer -->
+            <g class="arch-component" data-component="table-cache">
+              <rect x="80" y="295" width="160" height="55" rx="8" fill="white" stroke="#c4b5fd" stroke-width="1.5"/>
+              <text x="160" y="318" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Table Definition Cache</text>
+              <text x="160" y="335" font-size="9" fill="#5a6b7d" text-anchor="middle">Schema metadata</text>
+            </g>
+
+            <g class="arch-component" data-component="sort-buffer">
+              <rect x="270" y="295" width="160" height="55" rx="8" fill="white" stroke="#c4b5fd" stroke-width="1.5"/>
+              <text x="350" y="318" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Sort Buffer</text>
+              <text x="350" y="335" font-size="9" fill="#5a6b7d" text-anchor="middle">Per-session sorting</text>
+            </g>
+
+            <g class="arch-component" data-component="join-buffer">
+              <rect x="460" y="295" width="160" height="55" rx="8" fill="white" stroke="#c4b5fd" stroke-width="1.5"/>
+              <text x="540" y="318" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Join Buffer</text>
+              <text x="540" y="335" font-size="9" fill="#5a6b7d" text-anchor="middle">Block nested loop</text>
+            </g>
+
+            <g class="arch-component" data-component="tmp-tables">
+              <rect x="650" y="295" width="160" height="55" rx="8" fill="white" stroke="#c4b5fd" stroke-width="1.5"/>
+              <text x="730" y="318" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Temp Tables</text>
+              <text x="730" y="335" font-size="9" fill="#5a6b7d" text-anchor="middle">Intermediate results</text>
+            </g>
+          </g>
+
+          <!-- Storage Engine Layer -->
+          <g class="arch-layer" data-layer="storage">
+            <rect x="50" y="390" width="900" height="270" rx="12" fill="#dcfce7" stroke="#86efac" stroke-width="2"/>
+            <text x="80" y="420" font-size="14" font-weight="700" fill="#166534">STORAGE ENGINE LAYER</text>
+
+            <!-- InnoDB -->
+            <g class="arch-component" data-component="innodb">
+              <rect x="80" y="435" width="530" height="200" rx="8" fill="white" stroke="#86efac" stroke-width="2"/>
+              <text x="100" y="460" font-size="12" font-weight="700" fill="#166534">InnoDB (Default)</text>
+
+              <rect x="100" y="475" width="110" height="45" rx="6" fill="#dcfce7" stroke="#86efac"/>
+              <text x="155" y="498" font-size="9" font-weight="600" fill="#166534" text-anchor="middle">Buffer Pool</text>
+              <text x="155" y="512" font-size="8" fill="#5a6b7d" text-anchor="middle">Data + Index cache</text>
+
+              <rect x="225" y="475" width="110" height="45" rx="6" fill="#dcfce7" stroke="#86efac"/>
+              <text x="280" y="498" font-size="9" font-weight="600" fill="#166534" text-anchor="middle">Redo Log</text>
+              <text x="280" y="512" font-size="8" fill="#5a6b7d" text-anchor="middle">WAL (crash recovery)</text>
+
+              <rect x="350" y="475" width="110" height="45" rx="6" fill="#dcfce7" stroke="#86efac"/>
+              <text x="405" y="498" font-size="9" font-weight="600" fill="#166534" text-anchor="middle">Undo Log</text>
+              <text x="405" y="512" font-size="8" fill="#5a6b7d" text-anchor="middle">MVCC / Rollback</text>
+
+              <rect x="475" y="475" width="120" height="45" rx="6" fill="#dcfce7" stroke="#86efac"/>
+              <text x="535" y="498" font-size="9" font-weight="600" fill="#166534" text-anchor="middle">Adaptive Hash</text>
+              <text x="535" y="512" font-size="8" fill="#5a6b7d" text-anchor="middle">Auto-index hot pages</text>
+
+              <rect x="100" y="535" width="110" height="45" rx="6" fill="#dcfce7" stroke="#86efac"/>
+              <text x="155" y="558" font-size="9" font-weight="600" fill="#166534" text-anchor="middle">Change Buffer</text>
+              <text x="155" y="572" font-size="8" fill="#5a6b7d" text-anchor="middle">Secondary idx writes</text>
+
+              <rect x="225" y="535" width="110" height="45" rx="6" fill="#dcfce7" stroke="#86efac"/>
+              <text x="280" y="558" font-size="9" font-weight="600" fill="#166534" text-anchor="middle">Doublewrite</text>
+              <text x="280" y="572" font-size="8" fill="#5a6b7d" text-anchor="middle">Partial write guard</text>
+
+              <rect x="350" y="535" width="110" height="45" rx="6" fill="#dcfce7" stroke="#86efac"/>
+              <text x="405" y="558" font-size="9" font-weight="600" fill="#166534" text-anchor="middle">Lock Manager</text>
+              <text x="405" y="572" font-size="8" fill="#5a6b7d" text-anchor="middle">Row-level locks</text>
+
+              <rect x="475" y="535" width="120" height="45" rx="6" fill="#dcfce7" stroke="#86efac"/>
+              <text x="535" y="558" font-size="9" font-weight="600" fill="#166534" text-anchor="middle">Tablespaces</text>
+              <text x="535" y="572" font-size="8" fill="#5a6b7d" text-anchor="middle">.ibd files on disk</text>
+
+              <rect x="100" y="595" width="495" height="25" rx="4" fill="#f0fdf4" stroke="#86efac"/>
+              <text x="348" y="612" font-size="9" fill="#166534" text-anchor="middle">ACID | MVCC | Row-level Locking | Foreign Keys | Crash Recovery | Clustered Index (B+Tree)</text>
+            </g>
+
+            <!-- Other engines -->
+            <g class="arch-component" data-component="myisam">
+              <rect x="640" y="435" width="140" height="80" rx="8" fill="white" stroke="#86efac" stroke-width="1.5"/>
+              <text x="710" y="465" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">MyISAM</text>
+              <text x="710" y="483" font-size="8" fill="#5a6b7d" text-anchor="middle">Table-level locks</text>
+              <text x="710" y="497" font-size="8" fill="#5a6b7d" text-anchor="middle">Full-text search</text>
+            </g>
+
+            <g class="arch-component" data-component="memory">
+              <rect x="800" y="435" width="130" height="80" rx="8" fill="white" stroke="#86efac" stroke-width="1.5"/>
+              <text x="865" y="465" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">Memory</text>
+              <text x="865" y="483" font-size="8" fill="#5a6b7d" text-anchor="middle">RAM-only tables</text>
+              <text x="865" y="497" font-size="8" fill="#5a6b7d" text-anchor="middle">Temp data</text>
+            </g>
+
+            <g class="arch-component" data-component="ndb">
+              <rect x="640" y="535" width="140" height="80" rx="8" fill="white" stroke="#86efac" stroke-width="1.5"/>
+              <text x="710" y="565" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">NDB Cluster</text>
+              <text x="710" y="583" font-size="8" fill="#5a6b7d" text-anchor="middle">Distributed</text>
+              <text x="710" y="597" font-size="8" fill="#5a6b7d" text-anchor="middle">Shared-nothing</text>
+            </g>
+
+            <g class="arch-component" data-component="rocksdb">
+              <rect x="800" y="535" width="130" height="80" rx="8" fill="white" stroke="#86efac" stroke-width="1.5"/>
+              <text x="865" y="565" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">RocksDB</text>
+              <text x="865" y="583" font-size="8" fill="#5a6b7d" text-anchor="middle">LSM-tree</text>
+              <text x="865" y="597" font-size="8" fill="#5a6b7d" text-anchor="middle">Write-optimized</text>
+            </g>
+          </g>
+
+          <!-- Arrows -->
+          <defs>
+            <marker id="arrowPurple" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#7c3aed"/>
+            </marker>
+          </defs>
+
+          <!-- Layer connection arrows -->
+          <path d="M500 150 L500 170" stroke="#64748b" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowPurple)"/>
+          <path d="M500 370 L500 390" stroke="#64748b" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowPurple)"/>
+        </svg>
+      </div>
+
+      <h2 class="section-title" style="margin-top:40px;">Component Details</h2>
+      <div class="components-grid">
+        <div class="component-card" style="border-left-color: #2563eb;">
+          <h3>Thread Pool / Connection Handling</h3>
+          <p>Manages client connections with one thread per connection (default) or a thread pool (Enterprise).</p>
+          <div class="detail">
+            <strong>Key insight:</strong> Each connection consumes ~256KB–1MB of RAM. At 1000+ connections, memory becomes a bottleneck even before CPU.<br>
+            <strong>Tuning:</strong> <code>max_connections</code>, <code>thread_cache_size</code>, <code>wait_timeout</code><br>
+            <strong>Best practice:</strong> Use connection pooling (ProxySQL, PgBouncer equivalent) to keep active connections low.
+          </div>
+        </div>
+
+        <div class="component-card" style="border-left-color: #7c3aed;">
+          <h3>Query Parser</h3>
+          <p>Converts SQL text into an Abstract Syntax Tree (AST). Validates syntax and resolves table/column names.</p>
+          <div class="detail">
+            <strong>What can go wrong:</strong> Complex queries with many JOINs or subqueries increase parse time.<br>
+            <strong>Optimization:</strong> Prepared statements skip re-parsing. Keep SQL simple and avoid deeply nested subqueries.
+          </div>
+        </div>
+
+        <div class="component-card" style="border-left-color: #7c3aed;">
+          <h3>Query Optimizer</h3>
+          <p>Evaluates multiple execution plans and picks the cheapest one based on cost estimates.</p>
+          <div class="detail">
+            <strong>Uses:</strong> Index statistics, cardinality estimates, join ordering heuristics.<br>
+            <strong>Tuning:</strong> <code>optimizer_switch</code>, <code>ANALYZE TABLE</code> to refresh stats, index hints.<br>
+            <strong>Pitfall:</strong> Stale statistics lead to bad plans. Run ANALYZE TABLE after bulk loads.
+          </div>
+        </div>
+
+        <div class="component-card" style="border-left-color: #16a34a;">
+          <h3>InnoDB Buffer Pool</h3>
+          <p>The single most important structure — caches data pages and index pages in RAM to avoid disk I/O.</p>
+          <div class="detail">
+            <strong>Size rule:</strong> Set to 70-80% of available RAM on dedicated DB servers.<br>
+            <strong>Internals:</strong> LRU list with midpoint insertion (3/8 from head). Young and old sublists.<br>
+            <strong>Tuning:</strong> <code>innodb_buffer_pool_size</code>, <code>innodb_buffer_pool_instances</code>
+          </div>
+        </div>
+
+        <div class="component-card" style="border-left-color: #16a34a;">
+          <h3>Redo Log (WAL)</h3>
+          <p>Write-Ahead Log ensures crash recovery. All changes are written to redo log before disk pages are updated.</p>
+          <div class="detail">
+            <strong>How it works:</strong> Sequential writes to circular log files → extremely fast. Dirty pages are flushed later.<br>
+            <strong>Tuning:</strong> <code>innodb_log_file_size</code> (larger = fewer checkpoints, better write throughput), <code>innodb_log_buffer_size</code><br>
+            <strong>Trade-off:</strong> Larger redo log = faster writes but longer crash recovery time.
+          </div>
+        </div>
+
+        <div class="component-card" style="border-left-color: #ea580c;">
+          <h3>Binary Log</h3>
+          <p>Records all data-modifying statements for replication and point-in-time recovery.</p>
+          <div class="detail">
+            <strong>Formats:</strong> STATEMENT (SQL text), ROW (actual row changes), MIXED (auto-selects).<br>
+            <strong>Performance:</strong> ROW format is safest but generates more I/O. MIXED balances safety and performance.<br>
+            <strong>Tuning:</strong> <code>binlog_format</code>, <code>sync_binlog</code>, <code>expire_logs_days</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- InnoDB Deep Dive Section -->
+    <div class="section" id="innodb">
+      <h2 class="section-title">InnoDB Storage Engine Deep Dive</h2>
+      <p class="section-subtitle">InnoDB is the default and most critical storage engine. Understanding its internal data structures is key to performance tuning.</p>
+
+      <div class="innodb-visual">
+        <h3 style="margin-bottom:8px;">Buffer Pool Simulation</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">
+          Each square represents a 16KB page in the buffer pool. Watch how pages move through the LRU list as queries execute.
+          <button id="bp-simulate" class="flow-btn" style="margin-left:12px;">Simulate Workload</button>
+          <button id="bp-reset" class="flow-btn">Reset</button>
+        </p>
+        <div class="buffer-pool-grid" id="buffer-pool"></div>
+        <div class="bp-legend">
+          <div class="bp-legend-item"><div class="bp-legend-dot" style="background:#dcfce7;border:1px solid #86efac;"></div> Clean (in sync with disk)</div>
+          <div class="bp-legend-item"><div class="bp-legend-dot" style="background:#fff7ed;border:1px solid #fdba74;"></div> Dirty (modified, pending flush)</div>
+          <div class="bp-legend-item"><div class="bp-legend-dot" style="background:var(--surface-alt);border:1px solid var(--border);"></div> Free (available)</div>
+          <div class="bp-legend-item"><div class="bp-legend-dot" style="background:#dbeafe;border:1px solid #2563eb;"></div> Active (being accessed)</div>
+        </div>
+        <div id="bp-stats" style="margin-top:12px; font-size:0.82rem; color:var(--text-muted);"></div>
+      </div>
+
+      <div class="components-grid">
+        <div class="component-card" style="border-left-color:#16a34a;">
+          <h3>B+ Tree Clustered Index</h3>
+          <span class="tag tag-green">Core Data Structure</span>
+          <p>All InnoDB data is stored in B+ trees. The primary key IS the clustered index — row data is stored in leaf nodes ordered by PK.</p>
+          <div class="detail">
+            <strong>Why it matters:</strong> Sequential PK access is extremely fast (data locality). Random UUIDs as PKs cause massive page splits and fragmentation.<br>
+            <strong>Secondary indexes:</strong> Leaf nodes store the PK value (not a row pointer). Lookups require a "bookmark lookup" back to the clustered index.<br>
+            <strong>Page size:</strong> Default 16KB pages. Each leaf page holds many rows. Larger rows = fewer rows per page = more I/O.
+          </div>
+        </div>
+
+        <div class="component-card" style="border-left-color:#7c3aed;">
+          <h3>MVCC (Multi-Version Concurrency Control)</h3>
+          <span class="tag tag-purple">Concurrency</span>
+          <p>Readers never block writers and vice versa. Each row has a hidden transaction ID and rollback pointer.</p>
+          <div class="detail">
+            <strong>How it works:</strong> Each transaction sees a "snapshot" of data at its start time. Old versions stored in undo logs.<br>
+            <strong>Read views:</strong> Consistent reads use the snapshot. No locks needed for SELECT.<br>
+            <strong>Pitfall:</strong> Long-running transactions hold undo log space and prevent purging → undo tablespace bloat.<br>
+            <strong>Tuning:</strong> Keep transactions short. Monitor <code>trx_rows_locked</code>, <code>history_list_length</code>.
+          </div>
+        </div>
+
+        <div class="component-card" style="border-left-color:#ea580c;">
+          <h3>Redo Log (Write-Ahead Log)</h3>
+          <span class="tag tag-orange">Durability</span>
+          <p>Circular log files that record all page modifications before they hit the actual data files.</p>
+          <div class="detail">
+            <strong>Write path:</strong> Modify page in buffer pool → write redo log entry → acknowledge commit → flush dirty page later (checkpoint).<br>
+            <strong>Why sequential:</strong> Disk sequential writes are 100x faster than random writes. Redo log converts random writes to sequential.<br>
+            <strong>Sizing:</strong> Total redo log size should hold ~1 hour of writes. Too small = aggressive checkpointing = I/O spikes.<br>
+            <strong>Key params:</strong> <code>innodb_log_file_size</code>, <code>innodb_flush_log_at_trx_commit</code>
+          </div>
+        </div>
+
+        <div class="component-card" style="border-left-color:#0891b2;">
+          <h3>Change Buffer</h3>
+          <span class="tag tag-teal">Write Optimization</span>
+          <p>Caches changes to secondary index pages that aren't in the buffer pool, merging them later during reads.</p>
+          <div class="detail">
+            <strong>Benefit:</strong> Avoids random I/O for secondary index updates. Especially valuable for write-heavy workloads with many indexes.<br>
+            <strong>When it helps:</strong> Tables with many secondary indexes, inserts/updates that don't immediately read the affected index pages.<br>
+            <strong>Tuning:</strong> <code>innodb_change_buffer_max_size</code> (default 25% of buffer pool). Disable for SSDs with fast random I/O.
+          </div>
+        </div>
+
+        <div class="component-card" style="border-left-color:#dc2626;">
+          <h3>Doublewrite Buffer</h3>
+          <span class="tag tag-red">Data Integrity</span>
+          <p>Protects against partial page writes (torn pages) during crashes by writing pages to a sequential area first.</p>
+          <div class="detail">
+            <strong>Problem solved:</strong> If MySQL crashes mid-write of a 16KB page, the page is corrupt. Doublewrite ensures a good copy exists.<br>
+            <strong>Performance cost:</strong> ~5-10% write overhead. Each page is written twice (doublewrite buffer → final location).<br>
+            <strong>When to disable:</strong> On file systems with atomic writes (ZFS, certain SSDs with power-loss protection), or on replicas where you can rebuild.
+          </div>
+        </div>
+
+        <div class="component-card" style="border-left-color:#2563eb;">
+          <h3>Adaptive Hash Index (AHI)</h3>
+          <span class="tag tag-blue">Auto-Optimization</span>
+          <p>InnoDB automatically builds in-memory hash indexes for frequently accessed B+ tree pages.</p>
+          <div class="detail">
+            <strong>How it works:</strong> Monitors access patterns. If a page is accessed via the same index prefix repeatedly, builds a hash for O(1) lookup.<br>
+            <strong>When it helps:</strong> Point lookups (WHERE id = ?) on hot data. Can reduce B+ tree traversal from O(log n) to O(1).<br>
+            <strong>When it hurts:</strong> Contention on AHI latches under high concurrency. Range scans don't benefit.<br>
+            <strong>Tuning:</strong> <code>innodb_adaptive_hash_index</code> (on/off), monitor via <code>SHOW ENGINE INNODB STATUS</code>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Query Flow Section -->
+    <div class="section" id="query-flow">
+      <h2 class="section-title">Query Execution Pipeline</h2>
+      <p class="section-subtitle">Follow a SELECT query as it travels through every MySQL layer, from client connection to disk I/O and back.</p>
+
+      <div class="flow-container">
+        <div class="flow-controls">
+          <button class="flow-btn active" id="flow-play">▶ Play</button>
+          <button class="flow-btn" id="flow-pause">⏸ Pause</button>
+          <button class="flow-btn" id="flow-step">⏭ Step</button>
+          <button class="flow-btn" id="flow-reset">↺ Reset</button>
+          <div style="border-left:1px solid var(--border); height:24px; margin:0 8px;"></div>
+          <button class="flow-btn" id="flow-select" data-flow="select">SELECT</button>
+          <button class="flow-btn" id="flow-insert" data-flow="insert">INSERT</button>
+          <div class="flow-speed">
+            <span>Speed:</span>
+            <input type="range" id="flow-speed-slider" min="1" max="5" value="3">
+            <span id="flow-speed-label">3x</span>
+          </div>
+        </div>
+
+        <div class="flow-svg-container" id="flow-diagram"></div>
+
+        <div class="flow-narration" id="flow-narration">
+          <div class="step-num" id="flow-step-num">0</div>
+          <span id="flow-narration-text">Click Play to watch a query flow through the MySQL pipeline.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tuning Parameters Section -->
+    <div class="section" id="tuning">
+      <h2 class="section-title">Critical Tuning Parameters</h2>
+      <p class="section-subtitle">The 80/20 of MySQL tuning — these parameters have the highest impact on performance. Sorted by category and impact level.</p>
+
+      <div class="tuning-categories">
+        <button class="tuning-cat-btn active" data-cat="all">All</button>
+        <button class="tuning-cat-btn" data-cat="memory">Memory</button>
+        <button class="tuning-cat-btn" data-cat="io">I/O & Disk</button>
+        <button class="tuning-cat-btn" data-cat="connections">Connections</button>
+        <button class="tuning-cat-btn" data-cat="query">Query Execution</button>
+        <button class="tuning-cat-btn" data-cat="replication">Replication</button>
+        <button class="tuning-cat-btn" data-cat="logging">Logging</button>
+      </div>
+
+      <div class="tuning-params" id="tuning-params"></div>
+    </div>
+
+    <!-- Scaling Section -->
+    <div class="section" id="scaling">
+      <h2 class="section-title">Scaling MySQL for Traffic</h2>
+      <p class="section-subtitle">Strategies for handling 10x, 100x, and 1000x traffic growth.</p>
+
+      <div class="scaling-grid">
+        <div class="scaling-card">
+          <h3><span style="font-size:1.2rem;">📊</span> Read Scaling</h3>
+          <ul>
+            <li>Add read replicas (async replication) — each replica handles a portion of read traffic</li>
+            <li>Use connection-level routing: writes → primary, reads → replicas (ProxySQL, application-level)</li>
+            <li>Implement read-after-write consistency with GTID tracking when needed</li>
+            <li>Cache hot queries in Redis/Memcached — cache invalidation on write</li>
+            <li>Use semi-synchronous replication for strong-read replicas (higher latency)</li>
+          </ul>
+        </div>
+
+        <div class="scaling-card">
+          <h3><span style="font-size:1.2rem;">✍️</span> Write Scaling</h3>
+          <ul>
+            <li>Vertical scaling first — faster CPUs, NVMe SSDs, more RAM for buffer pool</li>
+            <li>Horizontal sharding — split data across multiple MySQL instances by a shard key</li>
+            <li>Batch small writes — group INSERTs into multi-row statements (10-100x faster)</li>
+            <li>Use <code>innodb_flush_log_at_trx_commit=2</code> for non-critical data (1 second durability window)</li>
+            <li>Partition large tables — prune partitions during queries, parallelize maintenance</li>
+          </ul>
+        </div>
+
+        <div class="scaling-card">
+          <h3><span style="font-size:1.2rem;">🔌</span> Connection Scaling</h3>
+          <ul>
+            <li>ProxySQL for connection multiplexing — 10,000 app connections → 100 MySQL connections</li>
+            <li>Tune <code>wait_timeout</code> to kill idle connections quickly (default 28800s is too long)</li>
+            <li>Thread pool (MySQL Enterprise or Percona) — handle more connections with fewer OS threads</li>
+            <li>Application-side connection pooling (HikariCP, SQLAlchemy pool)</li>
+            <li>Monitor <code>Threads_running</code> not <code>Threads_connected</code> — active matters, idle doesn't</li>
+          </ul>
+        </div>
+
+        <div class="scaling-card">
+          <h3><span style="font-size:1.2rem;">💾</span> Storage Scaling</h3>
+          <ul>
+            <li>NVMe SSDs eliminate I/O bottleneck — InnoDB designed for spinning disks, SSDs unlock full potential</li>
+            <li>Separate redo log and data files on different I/O paths</li>
+            <li>InnoDB compression (<code>ROW_FORMAT=COMPRESSED</code>) for cold data — saves space, costs CPU</li>
+            <li>Archive old data to cheaper storage (partitioning + partition exchange)</li>
+            <li>Use <code>innodb_page_size=4K</code> for SSD workloads (matches SSD page size)</li>
+          </ul>
+        </div>
+
+        <div class="scaling-card">
+          <h3><span style="font-size:1.2rem;">⚡</span> Query Optimization</h3>
+          <ul>
+            <li>EXPLAIN ANALYZE every slow query — understand actual vs estimated rows</li>
+            <li>Covering indexes: include all columns in the index → skip clustered index lookup</li>
+            <li>Avoid SELECT * — fetch only needed columns, reduces I/O and network</li>
+            <li>Use index condition pushdown (ICP) — filter at storage engine level, not server level</li>
+            <li>Optimize ORDER BY with proper indexes to avoid filesort (sort buffer → temp files)</li>
+          </ul>
+        </div>
+
+        <div class="scaling-card">
+          <h3><span style="font-size:1.2rem;">🛡️</span> High Availability</h3>
+          <ul>
+            <li>InnoDB Cluster (Group Replication) — automatic failover, consensus-based</li>
+            <li>Semi-synchronous replication — at least one replica confirms before commit ACK</li>
+            <li>ProxySQL for transparent failover — app doesn't know the primary changed</li>
+            <li>PITR (Point-In-Time Recovery) via binlog replay — recover to any second</li>
+            <li>Regular backup testing — a backup that hasn't been restored is not a backup</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="margin-top:32px;">
+        <h3 style="font-size:1.2rem; margin-bottom:16px;">Traffic Handling Checklist by Scale</h3>
+        <div class="scaling-grid">
+          <div class="component-card" style="border-left-color:#16a34a;">
+            <h3>100-1K QPS</h3>
+            <span class="tag tag-green">Single Server</span>
+            <div class="detail" style="margin-top:8px;">
+              <strong>Enough for:</strong> Most apps. Focus on proper indexing and buffer pool sizing.<br>
+              <strong>Actions:</strong> Set buffer pool to 70-80% RAM. Add indexes for slow queries. Connection pooling. Enable slow query log.
+            </div>
+          </div>
+          <div class="component-card" style="border-left-color:#ea580c;">
+            <h3>1K-10K QPS</h3>
+            <span class="tag tag-orange">Read Replicas</span>
+            <div class="detail" style="margin-top:8px;">
+              <strong>Add:</strong> 2-4 read replicas. ProxySQL for routing. Redis for hot query caching.<br>
+              <strong>Actions:</strong> Split read/write traffic. Optimize top 10 queries. Consider table partitioning for large tables.
+            </div>
+          </div>
+          <div class="component-card" style="border-left-color:#dc2626;">
+            <h3>10K-100K+ QPS</h3>
+            <span class="tag tag-red">Sharding Required</span>
+            <div class="detail" style="margin-top:8px;">
+              <strong>Architecture:</strong> Horizontal sharding by tenant/user/geo. Vitess or custom shard router.<br>
+              <strong>Actions:</strong> Shard large tables. Cross-shard queries via scatter-gather. Consider moving analytics to a separate system (ClickHouse, BigQuery).
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calculator Section -->
+    <div class="section" id="calculator">
+      <h2 class="section-title">Buffer Pool & Memory Calculator</h2>
+      <p class="section-subtitle">Estimate optimal MySQL memory configuration based on your workload characteristics.</p>
+
+      <div class="calculator">
+        <div class="calc-grid">
+          <div>
+            <div class="calc-input-group">
+              <label>Total Server RAM (GB)</label>
+              <input type="number" id="calc-ram" value="64" min="1" max="2048">
+            </div>
+            <div class="calc-input-group">
+              <label>Data Size on Disk (GB)</label>
+              <input type="number" id="calc-data" value="100" min="1" max="100000">
+            </div>
+            <div class="calc-input-group">
+              <label>Active Working Set (% of data frequently accessed)</label>
+              <input type="number" id="calc-working-set" value="20" min="1" max="100">
+            </div>
+            <div class="calc-input-group">
+              <label>Max Connections</label>
+              <input type="number" id="calc-connections" value="500" min="10" max="100000">
+            </div>
+            <div class="calc-input-group">
+              <label>Average Active Connections</label>
+              <input type="number" id="calc-active-conn" value="50" min="1" max="10000">
+            </div>
+            <div class="calc-input-group">
+              <label>Workload Type</label>
+              <select id="calc-workload">
+                <option value="oltp">OLTP (Short transactions, many connections)</option>
+                <option value="olap">OLAP (Complex queries, fewer connections)</option>
+                <option value="mixed">Mixed</option>
+              </select>
+            </div>
+            <button class="flow-btn active" id="calc-btn" style="margin-top:8px;">Calculate Recommendations</button>
+          </div>
+          <div class="calc-results" id="calc-results">
+            <h4 style="margin-bottom:12px; font-size:0.95rem;">Recommended Settings</h4>
+            <div id="calc-output">Click "Calculate" to see recommendations.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    // Tab navigation
+    const tabs = document.querySelectorAll('.nav-tab');
+    const sections = document.querySelectorAll('.section');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        sections.forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Buffer Pool Simulation
+    const bpGrid = document.getElementById('buffer-pool');
+    const bpStats = document.getElementById('bp-stats');
+    const PAGES = 128;
+    let pages = [];
+
+    function initBufferPool() {
+      bpGrid.innerHTML = '';
+      pages = [];
+      for (let i = 0; i < PAGES; i++) {
+        const page = document.createElement('div');
+        page.className = 'bp-page free';
+        page.title = `Page ${i}: Free`;
+        bpGrid.appendChild(page);
+        pages.push({ el: page, state: 'free', accessCount: 0 });
+      }
+      updateBPStats();
+    }
+
+    function updateBPStats() {
+      const free = pages.filter(p => p.state === 'free').length;
+      const clean = pages.filter(p => p.state === 'clean').length;
+      const dirty = pages.filter(p => p.state === 'dirty').length;
+      const active = pages.filter(p => p.state === 'active').length;
+      const hitRate = PAGES - free > 0 ? ((clean + dirty + active) / PAGES * 100).toFixed(1) : 0;
+      bpStats.innerHTML = `Buffer Pool: ${PAGES} pages (${PAGES * 16}KB) | Free: ${free} | Clean: ${clean} | Dirty: ${dirty} | Active: ${active} | Hit Rate: ${hitRate}%`;
+    }
+
+    let simInterval = null;
+
+    document.getElementById('bp-simulate').addEventListener('click', () => {
+      if (simInterval) return;
+      simInterval = setInterval(() => {
+        const action = Math.random();
+        if (action < 0.4) {
+          // Read: pick a free page or access existing
+          const freePages = pages.filter(p => p.state === 'free');
+          if (freePages.length > 0 && Math.random() < 0.3) {
+            const page = freePages[Math.floor(Math.random() * freePages.length)];
+            page.state = 'clean';
+            page.el.className = 'bp-page clean';
+          } else {
+            const usedPages = pages.filter(p => p.state !== 'free');
+            if (usedPages.length > 0) {
+              const page = usedPages[Math.floor(Math.random() * usedPages.length)];
+              page.el.className = 'bp-page active';
+              page.state = 'active';
+              setTimeout(() => {
+                if (page.state === 'active') {
+                  page.state = 'clean';
+                  page.el.className = 'bp-page clean';
+                }
+              }, 300);
+            }
+          }
+        } else if (action < 0.7) {
+          // Write: make a page dirty
+          const cleanPages = pages.filter(p => p.state === 'clean');
+          if (cleanPages.length > 0) {
+            const page = cleanPages[Math.floor(Math.random() * cleanPages.length)];
+            page.state = 'dirty';
+            page.el.className = 'bp-page dirty';
+          }
+        } else if (action < 0.85) {
+          // Flush: clean a dirty page
+          const dirtyPages = pages.filter(p => p.state === 'dirty');
+          if (dirtyPages.length > 0) {
+            const page = dirtyPages[Math.floor(Math.random() * dirtyPages.length)];
+            page.state = 'clean';
+            page.el.className = 'bp-page clean';
+          }
+        } else {
+          // Evict: LRU eviction
+          const cleanPages = pages.filter(p => p.state === 'clean');
+          if (cleanPages.length > 0 && pages.filter(p => p.state === 'free').length < 10) {
+            const page = cleanPages[0];
+            page.state = 'free';
+            page.el.className = 'bp-page free';
+          }
+        }
+        updateBPStats();
+      }, 100);
+    });
+
+    document.getElementById('bp-reset').addEventListener('click', () => {
+      if (simInterval) { clearInterval(simInterval); simInterval = null; }
+      initBufferPool();
+    });
+
+    initBufferPool();
+
+    // Query Flow Animation
+    const flowDiagram = document.getElementById('flow-diagram');
+    const flowNarration = document.getElementById('flow-narration-text');
+    const flowStepNum = document.getElementById('flow-step-num');
+    let flowPlaying = false;
+    let flowStep = 0;
+    let flowTimer = null;
+    let currentFlow = 'select';
+
+    const selectSteps = [
+      { highlight: 'client', text: 'Client sends SQL query over TCP connection to MySQL server.' },
+      { highlight: 'thread', text: 'Thread pool assigns a worker thread to handle this connection.' },
+      { highlight: 'parser', text: 'Parser tokenizes the SQL and builds an Abstract Syntax Tree. Checks syntax validity.' },
+      { highlight: 'optimizer', text: 'Optimizer evaluates access paths: full scan vs index scan vs index-only. Estimates cost of each plan.' },
+      { highlight: 'optimizer', text: 'Optimizer chooses cheapest plan. For JOINs, determines optimal join order and algorithm (NLJ, hash, sort-merge).' },
+      { highlight: 'executor', text: 'Executor begins plan execution. Opens tables, acquires necessary locks (shared locks for reads).' },
+      { highlight: 'buffer-pool', text: 'Storage engine checks Buffer Pool for requested pages. If found → buffer pool HIT (no disk I/O needed).' },
+      { highlight: 'disk', text: 'On MISS: InnoDB reads 16KB page from .ibd tablespace file on disk into buffer pool. Prefetch adjacent pages.' },
+      { highlight: 'buffer-pool', text: 'Page placed in LRU list at midpoint (3/8 from head). If accessed again quickly, promoted to young sublist.' },
+      { highlight: 'executor', text: 'Executor fetches matching rows from storage engine. Applies WHERE filters, GROUP BY, ORDER BY, LIMIT.' },
+      { highlight: 'client', text: 'Result set sent back to client. Connection returned to thread pool for reuse.' }
+    ];
+
+    const insertSteps = [
+      { highlight: 'client', text: 'Client sends INSERT statement to MySQL server.' },
+      { highlight: 'thread', text: 'Worker thread assigned. Transaction implicitly begins (autocommit=1) or uses existing transaction.' },
+      { highlight: 'parser', text: 'Parser validates INSERT syntax, resolves table and column names, checks data types.' },
+      { highlight: 'executor', text: 'Executor acquires exclusive row lock on the new row position in the clustered index.' },
+      { highlight: 'buffer-pool', text: 'Target page loaded into buffer pool (if not already there). Row inserted into the page in PK order.' },
+      { highlight: 'redo-log', text: 'Redo log entry written to log buffer describing the page modification. This is the WAL guarantee.' },
+      { highlight: 'change-buffer', text: 'Secondary index updates cached in Change Buffer (if index pages not in buffer pool). Merged later on read.' },
+      { highlight: 'undo-log', text: 'Undo log entry created with info to reverse this INSERT (for rollback and MVCC read views).' },
+      { highlight: 'redo-log', text: 'On COMMIT: redo log buffer flushed to disk (fsync). Transaction is now durable even if server crashes.' },
+      { highlight: 'binlog', text: 'Binary log event written (ROW format: actual row image). Used for replication to replicas.' },
+      { highlight: 'client', text: 'Commit acknowledgment sent to client. Dirty page will be flushed to disk later during checkpoint.' }
+    ];
+
+    function renderFlowDiagram() {
+      const steps = currentFlow === 'select' ? selectSteps : insertSteps;
+      const currentHighlight = flowStep > 0 && flowStep <= steps.length ? steps[flowStep - 1].highlight : '';
+
+      flowDiagram.innerHTML = `
+        <svg viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:800px;">
+          <!-- Client -->
+          <g>
+            <rect x="30" y="160" width="100" height="60" rx="8" fill="${currentHighlight === 'client' ? '#dbeafe' : '#f8fafc'}" stroke="${currentHighlight === 'client' ? '#2563eb' : '#e2e8f0'}" stroke-width="2"/>
+            <text x="80" y="188" text-anchor="middle" font-size="11" font-weight="600" fill="#1a2332">Client</text>
+            <text x="80" y="204" text-anchor="middle" font-size="9" fill="#64748b">Application</text>
+          </g>
+
+          <!-- Thread Pool -->
+          <g>
+            <rect x="170" y="160" width="100" height="60" rx="8" fill="${currentHighlight === 'thread' ? '#dbeafe' : '#f8fafc'}" stroke="${currentHighlight === 'thread' ? '#2563eb' : '#e2e8f0'}" stroke-width="2"/>
+            <text x="220" y="188" text-anchor="middle" font-size="11" font-weight="600" fill="#1a2332">Thread Pool</text>
+            <text x="220" y="204" text-anchor="middle" font-size="9" fill="#64748b">Connection</text>
+          </g>
+
+          <!-- Parser -->
+          <g>
+            <rect x="310" y="100" width="100" height="50" rx="8" fill="${currentHighlight === 'parser' ? '#ede9fe' : '#f8fafc'}" stroke="${currentHighlight === 'parser' ? '#7c3aed' : '#e2e8f0'}" stroke-width="2"/>
+            <text x="360" y="125" text-anchor="middle" font-size="11" font-weight="600" fill="#1a2332">Parser</text>
+            <text x="360" y="140" text-anchor="middle" font-size="9" fill="#64748b">SQL→AST</text>
+          </g>
+
+          <!-- Optimizer -->
+          <g>
+            <rect x="310" y="170" width="100" height="50" rx="8" fill="${currentHighlight === 'optimizer' ? '#ede9fe' : '#f8fafc'}" stroke="${currentHighlight === 'optimizer' ? '#7c3aed' : '#e2e8f0'}" stroke-width="2"/>
+            <text x="360" y="195" text-anchor="middle" font-size="11" font-weight="600" fill="#1a2332">Optimizer</text>
+            <text x="360" y="210" text-anchor="middle" font-size="9" fill="#64748b">Cost-based</text>
+          </g>
+
+          <!-- Executor -->
+          <g>
+            <rect x="310" y="240" width="100" height="50" rx="8" fill="${currentHighlight === 'executor' ? '#ede9fe' : '#f8fafc'}" stroke="${currentHighlight === 'executor' ? '#7c3aed' : '#e2e8f0'}" stroke-width="2"/>
+            <text x="360" y="265" text-anchor="middle" font-size="11" font-weight="600" fill="#1a2332">Executor</text>
+            <text x="360" y="280" text-anchor="middle" font-size="9" fill="#64748b">Plan runner</text>
+          </g>
+
+          <!-- Buffer Pool -->
+          <g>
+            <rect x="470" y="130" width="130" height="70" rx="8" fill="${currentHighlight === 'buffer-pool' ? '#dcfce7' : '#f8fafc'}" stroke="${currentHighlight === 'buffer-pool' ? '#16a34a' : '#e2e8f0'}" stroke-width="2"/>
+            <text x="535" y="162" text-anchor="middle" font-size="11" font-weight="600" fill="#1a2332">Buffer Pool</text>
+            <text x="535" y="180" text-anchor="middle" font-size="9" fill="#64748b">Data + Index Pages</text>
+            <text x="535" y="193" text-anchor="middle" font-size="8" fill="#16a34a">LRU Managed</text>
+          </g>
+
+          <!-- Redo Log -->
+          <g>
+            <rect x="470" y="220" width="130" height="50" rx="8" fill="${currentHighlight === 'redo-log' ? '#fff7ed' : '#f8fafc'}" stroke="${currentHighlight === 'redo-log' ? '#ea580c' : '#e2e8f0'}" stroke-width="2"/>
+            <text x="535" y="245" text-anchor="middle" font-size="11" font-weight="600" fill="#1a2332">Redo Log</text>
+            <text x="535" y="260" text-anchor="middle" font-size="9" fill="#64748b">WAL (Sequential)</text>
+          </g>
+
+          <!-- Undo Log -->
+          <g>
+            <rect x="470" y="290" width="130" height="50" rx="8" fill="${currentHighlight === 'undo-log' ? '#fef2f2' : '#f8fafc'}" stroke="${currentHighlight === 'undo-log' ? '#dc2626' : '#e2e8f0'}" stroke-width="2"/>
+            <text x="535" y="315" text-anchor="middle" font-size="11" font-weight="600" fill="#1a2332">Undo Log</text>
+            <text x="535" y="330" text-anchor="middle" font-size="9" fill="#64748b">MVCC / Rollback</text>
+          </g>
+
+          <!-- Change Buffer -->
+          <g>
+            <rect x="470" y="50" width="130" height="50" rx="8" fill="${currentHighlight === 'change-buffer' ? '#ecfeff' : '#f8fafc'}" stroke="${currentHighlight === 'change-buffer' ? '#0891b2' : '#e2e8f0'}" stroke-width="2"/>
+            <text x="535" y="75" text-anchor="middle" font-size="11" font-weight="600" fill="#1a2332">Change Buffer</text>
+            <text x="535" y="90" text-anchor="middle" font-size="9" fill="#64748b">Secondary Idx</text>
+          </g>
+
+          <!-- Disk -->
+          <g>
+            <rect x="670" y="130" width="120" height="70" rx="8" fill="${currentHighlight === 'disk' ? '#f3f5f7' : '#f8fafc'}" stroke="${currentHighlight === 'disk' ? '#64748b' : '#e2e8f0'}" stroke-width="2"/>
+            <text x="730" y="162" text-anchor="middle" font-size="11" font-weight="600" fill="#1a2332">Disk (.ibd)</text>
+            <text x="730" y="180" text-anchor="middle" font-size="9" fill="#64748b">Tablespace files</text>
+            <text x="730" y="193" text-anchor="middle" font-size="8" fill="#64748b">16KB pages</text>
+          </g>
+
+          <!-- Binary Log -->
+          <g>
+            <rect x="670" y="240" width="120" height="50" rx="8" fill="${currentHighlight === 'binlog' ? '#ede9fe' : '#f8fafc'}" stroke="${currentHighlight === 'binlog' ? '#7c3aed' : '#e2e8f0'}" stroke-width="2"/>
+            <text x="730" y="265" text-anchor="middle" font-size="11" font-weight="600" fill="#1a2332">Binary Log</text>
+            <text x="730" y="280" text-anchor="middle" font-size="9" fill="#64748b">Replication</text>
+          </g>
+
+          <!-- Arrows -->
+          <defs>
+            <marker id="arrowFlow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#64748b"/>
+            </marker>
+          </defs>
+
+          <line x1="130" y1="190" x2="168" y2="190" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowFlow)"/>
+          <line x1="270" y1="190" x2="308" y2="190" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowFlow)"/>
+          <line x1="360" y1="150" x2="360" y2="168" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowFlow)"/>
+          <line x1="360" y1="220" x2="360" y2="238" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowFlow)"/>
+          <line x1="410" y1="265" x2="468" y2="180" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowFlow)"/>
+          <line x1="600" y1="165" x2="668" y2="165" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowFlow)"/>
+          <line x1="410" y1="255" x2="468" y2="245" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowFlow)"/>
+          <line x1="600" y1="245" x2="668" y2="260" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowFlow)"/>
+        </svg>
+      `;
+    }
+
+    function playFlow() {
+      const steps = currentFlow === 'select' ? selectSteps : insertSteps;
+      if (flowStep >= steps.length) { pauseFlow(); return; }
+      flowStep++;
+      flowStepNum.textContent = flowStep;
+      flowNarration.textContent = steps[flowStep - 1].text;
+      renderFlowDiagram();
+      const speed = 6 - document.getElementById('flow-speed-slider').value;
+      flowTimer = setTimeout(playFlow, speed * 500);
+    }
+
+    function pauseFlow() {
+      flowPlaying = false;
+      if (flowTimer) { clearTimeout(flowTimer); flowTimer = null; }
+    }
+
+    document.getElementById('flow-play').addEventListener('click', () => {
+      if (!flowPlaying) { flowPlaying = true; playFlow(); }
+    });
+
+    document.getElementById('flow-pause').addEventListener('click', pauseFlow);
+
+    document.getElementById('flow-step').addEventListener('click', () => {
+      pauseFlow();
+      const steps = currentFlow === 'select' ? selectSteps : insertSteps;
+      if (flowStep < steps.length) {
+        flowStep++;
+        flowStepNum.textContent = flowStep;
+        flowNarration.textContent = steps[flowStep - 1].text;
+        renderFlowDiagram();
+      }
+    });
+
+    document.getElementById('flow-reset').addEventListener('click', () => {
+      pauseFlow();
+      flowStep = 0;
+      flowStepNum.textContent = '0';
+      flowNarration.textContent = 'Click Play to watch a query flow through the MySQL pipeline.';
+      renderFlowDiagram();
+    });
+
+    document.getElementById('flow-select').addEventListener('click', () => {
+      pauseFlow();
+      currentFlow = 'select';
+      flowStep = 0;
+      flowStepNum.textContent = '0';
+      flowNarration.textContent = 'SELECT flow ready. Click Play to begin.';
+      document.getElementById('flow-select').classList.add('active');
+      document.getElementById('flow-insert').classList.remove('active');
+      renderFlowDiagram();
+    });
+
+    document.getElementById('flow-insert').addEventListener('click', () => {
+      pauseFlow();
+      currentFlow = 'insert';
+      flowStep = 0;
+      flowStepNum.textContent = '0';
+      flowNarration.textContent = 'INSERT flow ready. Click Play to begin.';
+      document.getElementById('flow-insert').classList.add('active');
+      document.getElementById('flow-select').classList.remove('active');
+      renderFlowDiagram();
+    });
+
+    document.getElementById('flow-speed-slider').addEventListener('input', (e) => {
+      document.getElementById('flow-speed-label').textContent = e.target.value + 'x';
+    });
+
+    renderFlowDiagram();
+
+    // Tuning Parameters
+    const tuningData = [
+      {
+        name: 'innodb_buffer_pool_size',
+        cat: 'memory',
+        impact: 'high',
+        desc: 'Total memory allocated for caching data and index pages. THE most important MySQL setting.',
+        details: 'Default: <code>128MB</code> (way too small). Set to <code>70-80%</code> of total RAM on dedicated DB servers. For 64GB server, use 48-52GB. Monitor hit rate via <code>SHOW STATUS LIKE "Innodb_buffer_pool_read%"</code>. Target: >99% hit rate.',
+      },
+      {
+        name: 'innodb_buffer_pool_instances',
+        cat: 'memory',
+        impact: 'medium',
+        desc: 'Number of buffer pool instances to reduce mutex contention on the LRU list.',
+        details: 'Default: <code>8</code> (if pool > 1GB). Each instance manages its own LRU, flush list, and free list. Set to 1 instance per GB of buffer pool (up to 64). Reduces contention under high concurrency.',
+      },
+      {
+        name: 'innodb_log_file_size',
+        cat: 'io',
+        impact: 'high',
+        desc: 'Size of each redo log file. Larger = better write throughput but longer crash recovery.',
+        details: 'Default: <code>48MB</code> (too small for production). Recommended: <code>1-2GB</code> per file with 2 files (total 2-4GB). Should hold ~1 hour of writes. Too small → constant checkpointing → I/O spikes. Monitor <code>Log sequence number</code> vs <code>Log flushed up to</code>.',
+      },
+      {
+        name: 'innodb_flush_log_at_trx_commit',
+        cat: 'io',
+        impact: 'high',
+        desc: 'Controls redo log flushing on commit. Trade-off between durability and performance.',
+        details: '<code>1</code> (default): fsync on every commit. Full ACID. Safest but slowest.<br><code>2</code>: Write to OS cache on commit, fsync every second. ~2x faster. Lose up to 1s of data on OS crash (not MySQL crash).<br><code>0</code>: Flush every second only. Fastest but can lose 1s of data on any crash. Use <code>2</code> for non-critical data.',
+      },
+      {
+        name: 'innodb_io_capacity',
+        cat: 'io',
+        impact: 'high',
+        desc: 'Tells InnoDB how many I/O operations per second the disk can handle. Controls background flushing rate.',
+        details: 'Default: <code>200</code> (HDD). For SSD: <code>2000-5000</code>. For NVMe: <code>10000-20000</code>. If too low, dirty pages accumulate → sudden flush storms. If too high, wastes I/O on background work. Pair with <code>innodb_io_capacity_max</code> (2x io_capacity).',
+      },
+      {
+        name: 'innodb_flush_method',
+        cat: 'io',
+        impact: 'medium',
+        desc: 'Controls how InnoDB opens and flushes data and log files.',
+        details: '<code>O_DIRECT</code> (recommended for Linux): Bypasses OS file cache. Prevents double caching (buffer pool + OS cache). Reduces memory pressure.<br><code>fsync</code> (default): Uses OS cache. Can cause double caching waste. Use O_DIRECT unless on Windows or NFS.',
+      },
+      {
+        name: 'max_connections',
+        cat: 'connections',
+        impact: 'high',
+        desc: 'Maximum simultaneous client connections allowed.',
+        details: 'Default: <code>151</code>. Each connection uses memory (sort_buffer, join_buffer, read_buffer, thread stack ≈ 256KB-1MB each). Total per-connection memory = max_connections × per-thread-buffers. Set based on actual peak Threads_connected, not theoretical max. Use connection pooling to keep this low (200-500 typically).',
+      },
+      {
+        name: 'thread_cache_size',
+        cat: 'connections',
+        impact: 'medium',
+        desc: 'Number of threads to cache for reuse, avoiding expensive thread creation.',
+        details: 'Default: <code>-1</code> (auto). If <code>Threads_created</code> is rising quickly, increase. Set to peak concurrent connections / 4. Creating a thread costs ~0.5ms, cached reuse is ~0.01ms. Monitor <code>Threads_created</code> status variable.',
+      },
+      {
+        name: 'wait_timeout',
+        cat: 'connections',
+        impact: 'medium',
+        desc: 'Seconds to wait before closing an idle connection.',
+        details: 'Default: <code>28800</code> (8 hours — way too long). Set to <code>60-300</code> seconds for web apps. Idle connections waste memory and count against max_connections. Pair with <code>interactive_timeout</code> for CLI clients.',
+      },
+      {
+        name: 'sort_buffer_size',
+        cat: 'query',
+        impact: 'medium',
+        desc: 'Per-session buffer for ORDER BY and GROUP BY operations that can\'t use an index.',
+        details: 'Default: <code>256KB</code>. Allocated per connection when a sort is needed. If sort data exceeds this, MySQL uses temp files on disk (filesort). Increasing helps only if you see filesorts in slow log. Don\'t set too high (× max_connections = total RAM usage). <code>1-4MB</code> is usually optimal.',
+      },
+      {
+        name: 'join_buffer_size',
+        cat: 'query',
+        impact: 'medium',
+        desc: 'Per-session buffer for joins that cannot use indexes (Block Nested Loop).',
+        details: 'Default: <code>256KB</code>. Used for BNL/hash joins when no index is available. One buffer per join, so a 5-table join could use 4× this value. Better fix: add proper indexes. If you must do non-indexed joins, <code>1-4MB</code>. In MySQL 8.0+, hash join replaces BNL.',
+      },
+      {
+        name: 'tmp_table_size / max_heap_table_size',
+        cat: 'query',
+        impact: 'medium',
+        desc: 'Maximum size of in-memory temporary tables. Exceeding triggers on-disk temp tables.',
+        details: 'Effective limit is <code>MIN(tmp_table_size, max_heap_table_size)</code>. Default: <code>16MB</code>. Queries with GROUP BY, DISTINCT, UNION that exceed this write to disk. Monitor <code>Created_tmp_disk_tables</code>. Increase to <code>64-256MB</code> if ratio of disk/total temp tables > 25%.',
+      },
+      {
+        name: 'innodb_thread_concurrency',
+        cat: 'query',
+        impact: 'medium',
+        desc: 'Limits concurrent threads inside InnoDB. Prevents thread thrashing under heavy load.',
+        details: 'Default: <code>0</code> (unlimited). For high-concurrency OLTP: set to <code>2 × number_of_CPU_cores</code>. Excess threads queue instead of all competing for CPU/locks. Reduces context switching. Test values: 16, 32, 64 depending on core count.',
+      },
+      {
+        name: 'sync_binlog',
+        cat: 'replication',
+        impact: 'high',
+        desc: 'Controls binary log sync frequency. Critical for replication safety.',
+        details: '<code>1</code> (default in 8.0): fsync on every commit. Safest for replication consistency. ~10-20% write overhead.<br><code>0</code>: OS handles flushing. Fastest but risk of binlog loss on crash (replicas may miss transactions).<br><code>N</code>: Sync every N commits. Compromise. For non-critical replicas, use 0 or 100.',
+      },
+      {
+        name: 'binlog_format',
+        cat: 'replication',
+        impact: 'medium',
+        desc: 'Format of binary log events: STATEMENT, ROW, or MIXED.',
+        details: '<code>ROW</code> (default 8.0+): Logs actual row changes. Safest for replication (deterministic). Larger logs but no gotchas with non-deterministic functions.<br><code>STATEMENT</code>: Logs SQL text. Smaller but risky (UUID(), NOW(), etc. may differ on replica).<br><code>MIXED</code>: Statement when safe, row otherwise.',
+      },
+      {
+        name: 'slow_query_log + long_query_time',
+        cat: 'logging',
+        impact: 'high',
+        desc: 'Logs queries exceeding a time threshold. Essential for identifying optimization targets.',
+        details: 'Enable: <code>slow_query_log=1</code>. Set <code>long_query_time=0.1</code> (100ms) to catch sub-second slow queries. Enable <code>log_queries_not_using_indexes</code> to find missing indexes. Use pt-query-digest to analyze. In production, always have this ON.',
+      },
+      {
+        name: 'innodb_print_all_deadlocks',
+        cat: 'logging',
+        impact: 'low',
+        desc: 'Logs all deadlock information to error log (not just the latest).',
+        details: 'Default: <code>OFF</code>. Enable in production to diagnose deadlock patterns. Without it, only the latest deadlock is visible via <code>SHOW ENGINE INNODB STATUS</code>. No performance overhead. Set to ON always.',
+      },
+      {
+        name: 'innodb_read_io_threads / innodb_write_io_threads',
+        cat: 'io',
+        impact: 'medium',
+        desc: 'Number of background I/O threads for read and write operations.',
+        details: 'Default: <code>4</code> each. For NVMe SSDs with high parallelism: increase to <code>8-16</code>. Read threads handle prefetch and async I/O. Write threads handle dirty page flushing. Monitor I/O wait. If high and CPU is idle, increase these.',
+      },
+      {
+        name: 'innodb_buffer_pool_dump_at_shutdown / load_at_startup',
+        cat: 'memory',
+        impact: 'medium',
+        desc: 'Saves buffer pool page list on shutdown and reloads on startup for instant warm-up.',
+        details: 'Default: <code>ON</code> (8.0+). Without this, after restart the buffer pool is cold (empty) and performance degrades until pages are loaded from disk. Saves only page IDs (not data), so the dump file is small. Critical for fast restart in production.',
+      },
+      {
+        name: 'innodb_change_buffer_max_size',
+        cat: 'memory',
+        impact: 'low',
+        desc: 'Maximum percentage of buffer pool that can be used for the change buffer.',
+        details: 'Default: <code>25%</code>. Change buffer merges deferred secondary index updates. For read-heavy workloads: reduce to 10%. For write-heavy with many secondary indexes: keep at 25-50%. On fast SSDs where random reads are cheap, consider disabling entirely (<code>innodb_change_buffering=none</code>).',
+      },
+    ];
+
+    function renderTuningParams(cat = 'all') {
+      const container = document.getElementById('tuning-params');
+      const filtered = cat === 'all' ? tuningData : tuningData.filter(p => p.cat === cat);
+      container.innerHTML = filtered.map(p => `
+        <div class="param-card">
+          <div>
+            <div class="param-name">${p.name}</div>
+            <div class="param-desc">${p.desc}</div>
+            <div class="param-details">${p.details}</div>
+          </div>
+          <div class="param-impact">
+            <span class="impact-badge impact-${p.impact}">${p.impact} impact</span>
+            <span class="tag tag-${p.cat === 'memory' ? 'blue' : p.cat === 'io' ? 'orange' : p.cat === 'connections' ? 'green' : p.cat === 'query' ? 'purple' : p.cat === 'replication' ? 'teal' : 'red'}">${p.cat}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    document.querySelectorAll('.tuning-cat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tuning-cat-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderTuningParams(btn.dataset.cat);
+      });
+    });
+
+    renderTuningParams();
+
+    // Calculator
+    document.getElementById('calc-btn').addEventListener('click', () => {
+      const ram = parseInt(document.getElementById('calc-ram').value);
+      const dataSize = parseInt(document.getElementById('calc-data').value);
+      const workingSet = parseInt(document.getElementById('calc-working-set').value);
+      const maxConn = parseInt(document.getElementById('calc-connections').value);
+      const activeConn = parseInt(document.getElementById('calc-active-conn').value);
+      const workload = document.getElementById('calc-workload').value;
+
+      const workingSetGB = dataSize * (workingSet / 100);
+      const perConnMB = workload === 'olap' ? 8 : workload === 'oltp' ? 2 : 4;
+      const connMemGB = (maxConn * perConnMB) / 1024;
+      const osReserveGB = Math.max(2, ram * 0.05);
+      const availableForBP = ram - osReserveGB - connMemGB;
+      const bufferPoolGB = Math.min(Math.max(availableForBP * 0.9, 1), ram * 0.8);
+      const bpInstances = Math.min(Math.max(Math.floor(bufferPoolGB), 1), 64);
+      const redoLogSize = workload === 'oltp' ? '2GB' : workload === 'olap' ? '4GB' : '2GB';
+      const sortBuffer = workload === 'olap' ? '4MB' : '2MB';
+      const joinBuffer = workload === 'olap' ? '4MB' : '1MB';
+      const tmpTable = workload === 'olap' ? '256MB' : '64MB';
+      const ioCapacity = '2000-5000 (SSD) or 200 (HDD)';
+      const threadConcurrency = workload === 'oltp' ? 'CPU_cores × 2' : '0 (unlimited)';
+
+      const canFitWorkingSet = bufferPoolGB >= workingSetGB;
+
+      document.getElementById('calc-output').innerHTML = `
+        <div class="calc-result-item"><span>innodb_buffer_pool_size</span><span class="value">${bufferPoolGB.toFixed(1)}GB</span></div>
+        <div class="calc-result-item"><span>innodb_buffer_pool_instances</span><span class="value">${bpInstances}</span></div>
+        <div class="calc-result-item"><span>innodb_log_file_size</span><span class="value">${redoLogSize}</span></div>
+        <div class="calc-result-item"><span>sort_buffer_size</span><span class="value">${sortBuffer}</span></div>
+        <div class="calc-result-item"><span>join_buffer_size</span><span class="value">${joinBuffer}</span></div>
+        <div class="calc-result-item"><span>tmp_table_size</span><span class="value">${tmpTable}</span></div>
+        <div class="calc-result-item"><span>innodb_io_capacity</span><span class="value">${ioCapacity}</span></div>
+        <div class="calc-result-item"><span>innodb_thread_concurrency</span><span class="value">${threadConcurrency}</span></div>
+        <div class="calc-result-item"><span>OS + overhead reserve</span><span class="value">${osReserveGB.toFixed(1)}GB</span></div>
+        <div class="calc-result-item"><span>Per-connection memory</span><span class="value">${connMemGB.toFixed(1)}GB total</span></div>
+        <div class="calc-result-item" style="border-top:2px solid var(--border); padding-top:12px; margin-top:8px;">
+          <span>Working set fits in buffer pool?</span>
+          <span class="value" style="color:${canFitWorkingSet ? 'var(--green)' : 'var(--red)'};">${canFitWorkingSet ? 'YES' : 'NO — add RAM or reduce data'} (${workingSetGB.toFixed(1)}GB needed)</span>
+        </div>
+      `;
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (document.getElementById('query-flow').classList.contains('active')) {
+        if (e.code === 'Space') { e.preventDefault(); flowPlaying ? pauseFlow() : playFlow(); }
+        if (e.code === 'ArrowRight') { e.preventDefault(); document.getElementById('flow-step').click(); }
+        if (e.code === 'KeyR') { document.getElementById('flow-reset').click(); }
+      }
+    });
+  </script>
+</body>
+</html>

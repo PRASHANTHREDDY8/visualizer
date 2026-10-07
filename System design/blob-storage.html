@@ -1,0 +1,2043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blob Storage Deep Dive — Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f3f6f9;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --accent: #f97316;
+      --accent-light: #fff7ed;
+      --blue: #3b82f6;
+      --blue-light: #eff6ff;
+      --green: #10b981;
+      --green-light: #ecfdf5;
+      --purple: #8b5cf6;
+      --purple-light: #f5f3ff;
+      --red: #ef4444;
+      --red-light: #fef2f2;
+      --cyan: #06b6d4;
+      --cyan-light: #ecfeff;
+      --yellow: #eab308;
+      --yellow-light: #fefce8;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.1);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%);
+      color: white;
+      padding: 80px 40px 60px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 20% 80%, rgba(249,115,22,0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(59,130,246,0.1) 0%, transparent 50%);
+    }
+
+    .hero h1 {
+      font-size: 3.2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      opacity: 0.8;
+      max-width: 700px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .hero .blob-icon {
+      position: absolute;
+      opacity: 0.05;
+      font-size: 300px;
+      right: -50px;
+      top: -50px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    section {
+      margin: 60px 0;
+    }
+
+    .section-header {
+      margin-bottom: 32px;
+    }
+
+    .section-header h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-top: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-orange { background: var(--accent-light); color: var(--accent); }
+    .badge-blue { background: var(--blue-light); color: var(--blue); }
+    .badge-green { background: var(--green-light); color: var(--green); }
+    .badge-purple { background: var(--purple-light); color: var(--purple); }
+
+    /* What is Blob Storage */
+    .concept-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      margin-top: 24px;
+    }
+
+    .concept-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .concept-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .concept-card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .concept-card h3 .icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    .concept-card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .concept-card ul {
+      margin-top: 12px;
+      padding-left: 20px;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+    }
+
+    .concept-card ul li { margin-bottom: 6px; }
+
+    /* Architecture Diagram */
+    .arch-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px;
+      box-shadow: var(--shadow-md);
+      overflow-x: auto;
+    }
+
+    .arch-svg {
+      width: 100%;
+      min-width: 900px;
+      height: 520px;
+    }
+
+    .arch-svg text {
+      font-family: var(--font);
+    }
+
+    .arch-svg .component {
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .arch-svg .component:hover {
+      opacity: 0.85;
+    }
+
+    .arch-svg .conn-line {
+      stroke-dasharray: 4 3;
+      animation: dash 20s linear infinite;
+    }
+
+    @keyframes dash {
+      to { stroke-dashoffset: -100; }
+    }
+
+    /* S3 Deep Dive */
+    .s3-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .s3-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .s3-card h4 {
+      font-size: 1.05rem;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .s3-card p, .s3-card ul {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .s3-card ul { padding-left: 18px; margin-top: 8px; }
+    .s3-card ul li { margin-bottom: 4px; }
+
+    /* Storage Classes */
+    .storage-classes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .storage-class {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      text-align: center;
+      transition: border-color 0.3s, transform 0.2s;
+      cursor: pointer;
+    }
+
+    .storage-class:hover {
+      transform: translateY(-3px);
+    }
+
+    .storage-class.active {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .storage-class .class-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .storage-class .class-cost {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .storage-class .class-access {
+      font-size: 0.78rem;
+      color: var(--accent);
+      margin-top: 6px;
+      font-weight: 600;
+    }
+
+    .class-detail {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-top: 20px;
+      box-shadow: var(--shadow-sm);
+      min-height: 120px;
+    }
+
+    .class-detail h4 { margin-bottom: 8px; }
+    .class-detail p { color: var(--text-muted); font-size: 0.93rem; }
+
+    /* Use Cases */
+    .usecases-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    .usecase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .usecase-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+
+    .usecase-card:nth-child(1)::before { background: var(--accent); }
+    .usecase-card:nth-child(2)::before { background: var(--blue); }
+    .usecase-card:nth-child(3)::before { background: var(--green); }
+    .usecase-card:nth-child(4)::before { background: var(--purple); }
+    .usecase-card:nth-child(5)::before { background: var(--cyan); }
+    .usecase-card:nth-child(6)::before { background: var(--red); }
+
+    .usecase-card h4 {
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+    }
+
+    .usecase-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+
+    .usecase-examples {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .usecase-examples span {
+      padding: 3px 10px;
+      background: var(--surface-alt);
+      border-radius: 4px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    /* Comparison Table */
+    .comparison-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .comparison-table thead {
+      background: var(--surface-alt);
+    }
+
+    .comparison-table th {
+      padding: 16px 20px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      border-bottom: 2px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr:last-child td { border-bottom: none; }
+
+    .comparison-table tr:hover td {
+      background: var(--surface-alt);
+    }
+
+    .comparison-table .provider-name {
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .provider-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .check { color: var(--green); }
+    .cross { color: var(--red); }
+    .partial { color: var(--yellow); }
+
+    /* Tradeoffs */
+    .tradeoffs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+    }
+
+    .tradeoff-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .tradeoff-card h4 {
+      font-size: 1.05rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tradeoff-spectrum {
+      margin: 16px 0;
+      position: relative;
+    }
+
+    .spectrum-bar {
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(to right, var(--green), var(--yellow), var(--red));
+      position: relative;
+    }
+
+    .spectrum-marker {
+      position: absolute;
+      top: -6px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 3px solid var(--accent);
+      transform: translateX(-50%);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .spectrum-marker:hover { transform: translateX(-50%) scale(1.2); }
+
+    .spectrum-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .tradeoff-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 8px;
+    }
+
+    /* Sequence Diagram */
+    .sequence-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .sequence-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .seq-btn {
+      padding: 8px 20px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .seq-btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .seq-btn-primary:hover { background: #e86a0c; }
+
+    .seq-btn-secondary {
+      background: var(--surface-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .seq-btn-secondary:hover { background: var(--border); }
+
+    .seq-btn-secondary.active {
+      background: var(--blue-light);
+      color: var(--blue);
+      border-color: var(--blue);
+    }
+
+    .sequence-svg {
+      width: 100%;
+      min-height: 400px;
+    }
+
+    .seq-narration {
+      margin-top: 16px;
+      padding: 16px 20px;
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      font-size: 0.93rem;
+      color: var(--text);
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .seq-narration .step-num {
+      background: var(--accent);
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* Capacity Section */
+    .capacity-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    .capacity-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 24px;
+      text-align: center;
+    }
+
+    .capacity-card .value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.03em;
+    }
+
+    .capacity-card .label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .capacity-card .sublabel {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    /* Decision Tree */
+    .decision-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .decision-tree {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      align-items: center;
+    }
+
+    .decision-node {
+      background: var(--blue-light);
+      border: 2px solid var(--blue);
+      border-radius: var(--radius-sm);
+      padding: 14px 24px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-align: center;
+      position: relative;
+    }
+
+    .decision-branches {
+      display: flex;
+      gap: 40px;
+      margin-top: 20px;
+      position: relative;
+    }
+
+    .decision-branches::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+    }
+
+    .decision-branch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .branch-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 2px 10px;
+      background: var(--surface-alt);
+      border-radius: 4px;
+    }
+
+    .decision-leaf {
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    .leaf-s3 { background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); }
+    .leaf-azure { background: var(--blue-light); color: var(--blue); border: 1px solid var(--blue); }
+    .leaf-gcs { background: var(--green-light); color: var(--green); border: 1px solid var(--green); }
+    .leaf-minio { background: var(--purple-light); color: var(--purple); border: 1px solid var(--purple); }
+    .leaf-r2 { background: var(--cyan-light); color: var(--cyan); border: 1px solid var(--cyan); }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0;
+    }
+
+    .tab {
+      padding: 12px 24px;
+      border: none;
+      background: transparent;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab:hover:not(.active) {
+      color: var(--text);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Internals diagram */
+    .internals-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    .internal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .internal-card h4 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .internal-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+
+    .code-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 16px 20px;
+      border-radius: var(--radius-sm);
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      overflow-x: auto;
+      line-height: 1.7;
+    }
+
+    .code-block .keyword { color: #c084fc; }
+    .code-block .string { color: #86efac; }
+    .code-block .comment { color: #64748b; }
+    .code-block .method { color: #67e8f9; }
+
+    /* Nav dots */
+    .nav-dots {
+      position: fixed;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 100;
+    }
+
+    .nav-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .nav-dot:hover, .nav-dot.active {
+      background: var(--accent);
+      transform: scale(1.3);
+    }
+
+    .nav-dot::after {
+      content: attr(data-label);
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      white-space: nowrap;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+
+    .nav-dot:hover::after { opacity: 1; }
+
+    @media (max-width: 1024px) {
+      .concept-grid, .tradeoffs-grid, .usecases-grid, .internals-grid {
+        grid-template-columns: 1fr;
+      }
+      .s3-grid { grid-template-columns: 1fr 1fr; }
+      .capacity-grid { grid-template-columns: repeat(2, 1fr); }
+      .nav-dots { display: none; }
+    }
+
+    @media (max-width: 768px) {
+      .s3-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 2.2rem; }
+      .container { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <span class="blob-icon">&#x2601;</span>
+  <h1>Blob Storage</h1>
+  <p>The backbone of modern cloud architecture — scalable, durable object storage for any data at any scale</p>
+</div>
+
+<nav class="nav-dots">
+  <div class="nav-dot active" data-label="Overview" onclick="scrollToSection('overview')"></div>
+  <div class="nav-dot" data-label="Architecture" onclick="scrollToSection('architecture')"></div>
+  <div class="nav-dot" data-label="S3 Deep Dive" onclick="scrollToSection('s3-deep-dive')"></div>
+  <div class="nav-dot" data-label="Storage Classes" onclick="scrollToSection('storage-classes')"></div>
+  <div class="nav-dot" data-label="Use Cases" onclick="scrollToSection('usecases')"></div>
+  <div class="nav-dot" data-label="Request Flow" onclick="scrollToSection('sequence')"></div>
+  <div class="nav-dot" data-label="Alternatives" onclick="scrollToSection('alternatives')"></div>
+  <div class="nav-dot" data-label="Tradeoffs" onclick="scrollToSection('tradeoffs')"></div>
+  <div class="nav-dot" data-label="Decision Guide" onclick="scrollToSection('decision')"></div>
+</nav>
+
+<div class="container">
+
+  <!-- SECTION: What is Blob Storage -->
+  <section id="overview">
+    <div class="section-header">
+      <h2>What is Blob Storage?</h2>
+      <p>Binary Large Object (BLOB) storage is a flat-namespace object store designed for unstructured data of any size</p>
+    </div>
+
+    <div class="concept-grid">
+      <div class="concept-card">
+        <h3><span class="icon" style="background:var(--accent-light);color:var(--accent);">&#128230;</span> Core Concept</h3>
+        <p>Unlike file systems (hierarchical) or databases (structured records), blob storage treats data as opaque objects identified by a key within a flat namespace (bucket/container).</p>
+        <ul>
+          <li><strong>Object</strong> = data + metadata + unique key</li>
+          <li><strong>Bucket/Container</strong> = namespace that groups objects</li>
+          <li><strong>No hierarchy</strong> — "/" in keys is a naming convention, not a directory</li>
+          <li>Objects are immutable — you replace, never partially update</li>
+        </ul>
+      </div>
+      <div class="concept-card">
+        <h3><span class="icon" style="background:var(--blue-light);color:var(--blue);">&#128736;</span> Key Properties</h3>
+        <ul>
+          <li><strong>Durability:</strong> 99.999999999% (11 nines) — data replicated across facilities</li>
+          <li><strong>Scalability:</strong> Virtually unlimited — no provisioning needed</li>
+          <li><strong>Availability:</strong> 99.9%–99.99% depending on tier</li>
+          <li><strong>Eventual consistency:</strong> Reads after writes may be stale (though S3 is now strongly consistent)</li>
+          <li><strong>HTTP API:</strong> REST-based access (PUT, GET, DELETE)</li>
+          <li><strong>Pay-per-use:</strong> Storage GB + request count + egress bandwidth</li>
+        </ul>
+      </div>
+      <div class="concept-card">
+        <h3><span class="icon" style="background:var(--green-light);color:var(--green);">&#128200;</span> Why Not Just Use a File System?</h3>
+        <p>Traditional file systems weren't designed for cloud-scale distributed storage:</p>
+        <ul>
+          <li>File systems require mounting — blob storage is HTTP-native</li>
+          <li>File systems have fixed capacity — blob storage auto-scales</li>
+          <li>File systems have single-machine durability — blob storage replicates across AZs</li>
+          <li>File systems have path-length limits — blob keys can be up to 1024 bytes</li>
+          <li>Metadata is limited in FS — blob stores support rich custom metadata</li>
+        </ul>
+      </div>
+      <div class="concept-card">
+        <h3><span class="icon" style="background:var(--purple-light);color:var(--purple);">&#128202;</span> Data Model</h3>
+        <div class="code-block" style="margin-top:12px;">
+<span class="comment">// Object structure in blob storage</span>
+{
+  <span class="string">"bucket"</span>: <span class="string">"my-app-assets"</span>,
+  <span class="string">"key"</span>: <span class="string">"users/avatars/user-123.jpg"</span>,
+  <span class="string">"data"</span>: <span class="comment">&lt;binary bytes&gt;</span>,
+  <span class="string">"metadata"</span>: {
+    <span class="string">"content-type"</span>: <span class="string">"image/jpeg"</span>,
+    <span class="string">"x-custom-tag"</span>: <span class="string">"profile-pic"</span>
+  },
+  <span class="string">"size"</span>: 245760,
+  <span class="string">"etag"</span>: <span class="string">"d41d8cd98f00b204..."</span>,
+  <span class="string">"last_modified"</span>: <span class="string">"2025-03-15T10:30:00Z"</span>
+}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: Architecture -->
+  <section id="architecture">
+    <div class="section-header">
+      <h2>Blob Storage Architecture</h2>
+      <p>How requests flow through a typical blob storage system like S3</p>
+    </div>
+
+    <div class="arch-container">
+      <svg class="arch-svg" viewBox="0 0 1000 520">
+        <!-- Background groups -->
+        <rect x="20" y="20" width="200" height="480" rx="12" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5" opacity="0.5"/>
+        <text x="120" y="50" text-anchor="middle" font-size="11" font-weight="700" fill="#9a3412">CLIENT LAYER</text>
+
+        <rect x="260" y="20" width="220" height="480" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" opacity="0.5"/>
+        <text x="370" y="50" text-anchor="middle" font-size="11" font-weight="700" fill="#1e40af">ACCESS LAYER</text>
+
+        <rect x="520" y="20" width="220" height="480" rx="12" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1.5" opacity="0.5"/>
+        <text x="630" y="50" text-anchor="middle" font-size="11" font-weight="700" fill="#065f46">STORAGE LAYER</text>
+
+        <rect x="780" y="20" width="200" height="480" rx="12" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="1.5" opacity="0.5"/>
+        <text x="880" y="50" text-anchor="middle" font-size="11" font-weight="700" fill="#5b21b6">DATA LAYER</text>
+
+        <!-- Client -->
+        <g class="component" data-name="client">
+          <rect x="60" y="100" width="130" height="60" rx="8" fill="#fff" stroke="#f97316" stroke-width="2"/>
+          <text x="125" y="125" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Web/Mobile App</text>
+          <text x="125" y="142" text-anchor="middle" font-size="9" fill="#64748b">SDK / HTTP Client</text>
+        </g>
+
+        <g class="component" data-name="cli">
+          <rect x="60" y="200" width="130" height="60" rx="8" fill="#fff" stroke="#f97316" stroke-width="2"/>
+          <text x="125" y="225" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">CLI / Server</text>
+          <text x="125" y="242" text-anchor="middle" font-size="9" fill="#64748b">aws s3 / gsutil</text>
+        </g>
+
+        <g class="component" data-name="cdn">
+          <rect x="60" y="380" width="130" height="60" rx="8" fill="#fff" stroke="#f97316" stroke-width="2"/>
+          <text x="125" y="405" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">CDN Edge</text>
+          <text x="125" y="422" text-anchor="middle" font-size="9" fill="#64748b">CloudFront / Akamai</text>
+        </g>
+
+        <!-- Access Layer -->
+        <g class="component" data-name="lb">
+          <polygon points="370,100 410,130 370,160 330,130" fill="#fff" stroke="#3b82f6" stroke-width="2"/>
+          <text x="370" y="133" text-anchor="middle" font-size="9" font-weight="600" fill="#1a202c">LB</text>
+        </g>
+
+        <g class="component" data-name="api">
+          <rect x="300" y="200" width="140" height="70" rx="8" fill="#fff" stroke="#3b82f6" stroke-width="2"/>
+          <text x="370" y="228" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">API Gateway</text>
+          <text x="370" y="246" text-anchor="middle" font-size="9" fill="#64748b">Auth / Rate Limit</text>
+          <text x="370" y="260" text-anchor="middle" font-size="9" fill="#64748b">Request Routing</text>
+        </g>
+
+        <g class="component" data-name="metadata">
+          <rect x="300" y="320" width="140" height="70" rx="8" fill="#fff" stroke="#3b82f6" stroke-width="2"/>
+          <text x="370" y="348" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Metadata Service</text>
+          <text x="370" y="366" text-anchor="middle" font-size="9" fill="#64748b">Key → Location</text>
+          <text x="370" y="380" text-anchor="middle" font-size="9" fill="#64748b">ACLs / Versioning</text>
+        </g>
+
+        <g class="component" data-name="index">
+          <rect x="300" y="430" width="140" height="50" rx="8" fill="#fff" stroke="#3b82f6" stroke-width="2"/>
+          <text x="370" y="455" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Index / Catalog</text>
+          <text x="370" y="470" text-anchor="middle" font-size="9" fill="#64748b">Listing / Search</text>
+        </g>
+
+        <!-- Storage Layer -->
+        <g class="component" data-name="placement">
+          <rect x="560" y="100" width="140" height="60" rx="8" fill="#fff" stroke="#10b981" stroke-width="2"/>
+          <text x="630" y="125" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Placement Engine</text>
+          <text x="630" y="142" text-anchor="middle" font-size="9" fill="#64748b">Replication Factor</text>
+        </g>
+
+        <g class="component" data-name="chunk">
+          <rect x="560" y="200" width="140" height="70" rx="8" fill="#fff" stroke="#10b981" stroke-width="2"/>
+          <text x="630" y="228" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Chunk Manager</text>
+          <text x="630" y="246" text-anchor="middle" font-size="9" fill="#64748b">Splitting / Erasure</text>
+          <text x="630" y="260" text-anchor="middle" font-size="9" fill="#64748b">Coding</text>
+        </g>
+
+        <g class="component" data-name="replication">
+          <rect x="560" y="320" width="140" height="60" rx="8" fill="#fff" stroke="#10b981" stroke-width="2"/>
+          <text x="630" y="345" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Replication Mgr</text>
+          <text x="630" y="362" text-anchor="middle" font-size="9" fill="#64748b">Cross-AZ / Region</text>
+        </g>
+
+        <g class="component" data-name="gc">
+          <rect x="560" y="430" width="140" height="50" rx="8" fill="#fff" stroke="#10b981" stroke-width="2"/>
+          <text x="630" y="455" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">GC / Compaction</text>
+          <text x="630" y="470" text-anchor="middle" font-size="9" fill="#64748b">Cleanup deleted data</text>
+        </g>
+
+        <!-- Data Layer -->
+        <g class="component" data-name="disk1">
+          <rect x="810" y="100" width="130" height="100" rx="8" fill="#fff" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="875" y="130" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">AZ-1 Storage</text>
+          <text x="875" y="148" text-anchor="middle" font-size="9" fill="#64748b">SSD / HDD Nodes</text>
+          <rect x="830" y="160" width="90" height="24" rx="4" fill="#f5f3ff"/>
+          <text x="875" y="176" text-anchor="middle" font-size="8" fill="#5b21b6">Chunks: A1, B2, C3</text>
+        </g>
+
+        <g class="component" data-name="disk2">
+          <rect x="810" y="230" width="130" height="100" rx="8" fill="#fff" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="875" y="260" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">AZ-2 Storage</text>
+          <text x="875" y="278" text-anchor="middle" font-size="9" fill="#64748b">SSD / HDD Nodes</text>
+          <rect x="830" y="290" width="90" height="24" rx="4" fill="#f5f3ff"/>
+          <text x="875" y="306" text-anchor="middle" font-size="8" fill="#5b21b6">Chunks: A2, B1, C1</text>
+        </g>
+
+        <g class="component" data-name="disk3">
+          <rect x="810" y="360" width="130" height="100" rx="8" fill="#fff" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="875" y="390" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">AZ-3 Storage</text>
+          <text x="875" y="408" text-anchor="middle" font-size="9" fill="#64748b">SSD / HDD Nodes</text>
+          <rect x="830" y="420" width="90" height="24" rx="4" fill="#f5f3ff"/>
+          <text x="875" y="436" text-anchor="middle" font-size="8" fill="#5b21b6">Chunks: A3, B3, C2</text>
+        </g>
+
+        <!-- Connections -->
+        <line x1="190" y1="130" x2="330" y2="130" stroke="#94a3b8" stroke-width="1.5" class="conn-line"/>
+        <line x1="190" y1="230" x2="300" y2="230" stroke="#94a3b8" stroke-width="1.5" class="conn-line"/>
+        <line x1="370" y1="160" x2="370" y2="200" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="440" y1="235" x2="560" y2="130" stroke="#94a3b8" stroke-width="1.5" class="conn-line"/>
+        <line x1="440" y1="235" x2="560" y2="235" stroke="#94a3b8" stroke-width="1.5" class="conn-line"/>
+        <line x1="370" y1="270" x2="370" y2="320" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="370" y1="390" x2="370" y2="430" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="700" y1="130" x2="810" y2="150" stroke="#94a3b8" stroke-width="1.5" class="conn-line"/>
+        <line x1="700" y1="235" x2="810" y2="280" stroke="#94a3b8" stroke-width="1.5" class="conn-line"/>
+        <line x1="700" y1="350" x2="810" y2="410" stroke="#94a3b8" stroke-width="1.5" class="conn-line"/>
+        <line x1="630" y1="270" x2="630" y2="320" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="190" y1="410" x2="300" y2="355" stroke="#94a3b8" stroke-width="1.5" class="conn-line" stroke-dasharray="6 4"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- SECTION: S3 Deep Dive -->
+  <section id="s3-deep-dive">
+    <div class="section-header">
+      <h2>Amazon S3 — Deep Dive</h2>
+      <p>The pioneer and market leader in cloud blob storage, launched in 2006</p>
+    </div>
+
+    <div class="s3-grid">
+      <div class="s3-card">
+        <h4><span style="color:var(--accent);">&#9672;</span> Key Concepts</h4>
+        <ul>
+          <li><strong>Bucket</strong> — globally unique namespace</li>
+          <li><strong>Object</strong> — file + metadata (up to 5TB)</li>
+          <li><strong>Key</strong> — unique identifier within bucket</li>
+          <li><strong>Region</strong> — geographic location</li>
+          <li><strong>Versioning</strong> — keep all versions of objects</li>
+          <li><strong>Lifecycle rules</strong> — auto-transition/delete</li>
+        </ul>
+      </div>
+      <div class="s3-card">
+        <h4><span style="color:var(--blue);">&#9672;</span> Consistency Model</h4>
+        <p>Since Dec 2020, S3 offers <strong>strong read-after-write consistency</strong> for all operations:</p>
+        <ul>
+          <li>PUT new object → immediate GET returns it</li>
+          <li>Overwrite PUT → GET returns latest</li>
+          <li>DELETE → GET returns 404</li>
+          <li>LIST reflects all recent changes</li>
+        </ul>
+        <p style="margin-top:8px;font-size:0.82rem;color:var(--green);font-weight:600;">No more eventual consistency workarounds!</p>
+      </div>
+      <div class="s3-card">
+        <h4><span style="color:var(--green);">&#9672;</span> Access Control</h4>
+        <ul>
+          <li><strong>IAM Policies</strong> — user/role-based access</li>
+          <li><strong>Bucket Policies</strong> — resource-based JSON</li>
+          <li><strong>ACLs</strong> — legacy, per-object grants</li>
+          <li><strong>Pre-signed URLs</strong> — temp access tokens</li>
+          <li><strong>VPC Endpoints</strong> — private network access</li>
+          <li><strong>Block Public Access</strong> — account-wide safety</li>
+        </ul>
+      </div>
+      <div class="s3-card">
+        <h4><span style="color:var(--purple);">&#9672;</span> Performance</h4>
+        <ul>
+          <li>3,500 PUT/s per prefix</li>
+          <li>5,500 GET/s per prefix</li>
+          <li>Multipart upload for files &gt; 100MB</li>
+          <li>Transfer Acceleration via CloudFront</li>
+          <li>Byte-range fetches for parallel reads</li>
+          <li>S3 Select — query in place (CSV/JSON/Parquet)</li>
+        </ul>
+      </div>
+      <div class="s3-card">
+        <h4><span style="color:var(--cyan);">&#9672;</span> Data Protection</h4>
+        <ul>
+          <li><strong>Versioning</strong> — recover from accidental deletes</li>
+          <li><strong>MFA Delete</strong> — require MFA to delete versions</li>
+          <li><strong>Object Lock</strong> — WORM compliance</li>
+          <li><strong>Replication</strong> — cross-region / same-region</li>
+          <li><strong>Encryption</strong> — SSE-S3, SSE-KMS, SSE-C</li>
+        </ul>
+      </div>
+      <div class="s3-card">
+        <h4><span style="color:var(--red);">&#9672;</span> Pricing Model</h4>
+        <ul>
+          <li><strong>Storage:</strong> $0.023/GB/month (Standard)</li>
+          <li><strong>PUT/POST:</strong> $0.005 per 1,000 requests</li>
+          <li><strong>GET:</strong> $0.0004 per 1,000 requests</li>
+          <li><strong>Data out:</strong> $0.09/GB (first 10TB)</li>
+          <li><strong>Data in:</strong> FREE</li>
+          <li><strong>No minimum:</strong> pay only for what you use</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: Storage Classes -->
+  <section id="storage-classes">
+    <div class="section-header">
+      <h2>S3 Storage Classes</h2>
+      <p>Choose the right tier based on access frequency, retrieval time, and cost requirements</p>
+    </div>
+
+    <div class="storage-classes" id="storageClasses">
+      <div class="storage-class active" data-class="standard" onclick="selectClass('standard')">
+        <div class="class-name">Standard</div>
+        <div class="class-cost">$0.023/GB</div>
+        <div class="class-access">Frequent access</div>
+      </div>
+      <div class="storage-class" data-class="ia" onclick="selectClass('ia')">
+        <div class="class-name">Standard-IA</div>
+        <div class="class-cost">$0.0125/GB</div>
+        <div class="class-access">Infrequent access</div>
+      </div>
+      <div class="storage-class" data-class="onezone" onclick="selectClass('onezone')">
+        <div class="class-name">One Zone-IA</div>
+        <div class="class-cost">$0.01/GB</div>
+        <div class="class-access">Single AZ, infrequent</div>
+      </div>
+      <div class="storage-class" data-class="intelligent" onclick="selectClass('intelligent')">
+        <div class="class-name">Intelligent</div>
+        <div class="class-cost">$0.023/GB*</div>
+        <div class="class-access">Auto-tiering</div>
+      </div>
+      <div class="storage-class" data-class="glacier" onclick="selectClass('glacier')">
+        <div class="class-name">Glacier Instant</div>
+        <div class="class-cost">$0.004/GB</div>
+        <div class="class-access">Archive, ms retrieval</div>
+      </div>
+      <div class="storage-class" data-class="deep" onclick="selectClass('deep')">
+        <div class="class-name">Glacier Deep</div>
+        <div class="class-cost">$0.00099/GB</div>
+        <div class="class-access">12-48hr retrieval</div>
+      </div>
+    </div>
+
+    <div class="class-detail" id="classDetail">
+      <h4>S3 Standard</h4>
+      <p><strong>Best for:</strong> Frequently accessed data, websites, content distribution, data analytics, mobile/gaming applications.</p>
+      <p style="margin-top:8px;"><strong>Durability:</strong> 99.999999999% | <strong>Availability:</strong> 99.99% | <strong>AZs:</strong> ≥3</p>
+      <p style="margin-top:8px;"><strong>Retrieval:</strong> Instant (milliseconds) | <strong>Min storage duration:</strong> None | <strong>Min object size:</strong> None</p>
+    </div>
+  </section>
+
+  <!-- SECTION: Use Cases -->
+  <section id="usecases">
+    <div class="section-header">
+      <h2>Use Cases</h2>
+      <p>Blob storage powers a staggering variety of modern applications</p>
+    </div>
+
+    <div class="usecases-grid">
+      <div class="usecase-card">
+        <h4>&#127912; Static Asset Hosting</h4>
+        <p>Serve images, CSS, JS, fonts, and videos directly from blob storage behind a CDN. No web server needed.</p>
+        <div class="usecase-examples">
+          <span>S3 + CloudFront</span>
+          <span>GCS + Cloud CDN</span>
+          <span>Azure + Akamai</span>
+        </div>
+      </div>
+      <div class="usecase-card">
+        <h4>&#128190; Data Lake & Analytics</h4>
+        <p>Central repository for structured and unstructured data. Query in place with Athena, BigQuery, or Spark without ETL.</p>
+        <div class="usecase-examples">
+          <span>Parquet on S3</span>
+          <span>Delta Lake</span>
+          <span>Apache Iceberg</span>
+        </div>
+      </div>
+      <div class="usecase-card">
+        <h4>&#128274; Backup & Disaster Recovery</h4>
+        <p>Durable, cheap, geo-redundant storage for backups. Lifecycle policies auto-transition to cheaper tiers over time.</p>
+        <div class="usecase-examples">
+          <span>DB snapshots</span>
+          <span>VM images</span>
+          <span>Config archives</span>
+        </div>
+      </div>
+      <div class="usecase-card">
+        <h4>&#127909; Media Processing Pipelines</h4>
+        <p>Upload raw media, trigger serverless functions for transcoding, thumbnailing, and metadata extraction.</p>
+        <div class="usecase-examples">
+          <span>S3 → Lambda → MediaConvert</span>
+          <span>Event notifications</span>
+        </div>
+      </div>
+      <div class="usecase-card">
+        <h4>&#128640; Application State & Artifacts</h4>
+        <p>Store build artifacts, ML models, Terraform state, container images, and deployment packages.</p>
+        <div class="usecase-examples">
+          <span>ML model registry</span>
+          <span>CI/CD artifacts</span>
+          <span>tfstate</span>
+        </div>
+      </div>
+      <div class="usecase-card">
+        <h4>&#128218; Compliance & Archival</h4>
+        <p>WORM (Write Once Read Many) policies for regulatory compliance. Object Lock ensures data can't be deleted or modified.</p>
+        <div class="usecase-examples">
+          <span>HIPAA logs</span>
+          <span>Financial records</span>
+          <span>Legal holds</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: Request Flow -->
+  <section id="sequence">
+    <div class="section-header">
+      <h2>Request Flow Animation</h2>
+      <p>See how PUT and GET operations flow through the system</p>
+    </div>
+
+    <div class="sequence-container">
+      <div class="sequence-controls">
+        <button class="seq-btn seq-btn-primary" id="seqPlayBtn" onclick="toggleSequence()">&#9654; Play</button>
+        <button class="seq-btn seq-btn-secondary" onclick="stepSequence()">Step &#9654;|</button>
+        <button class="seq-btn seq-btn-secondary" onclick="resetSequence()">&#8634; Reset</button>
+        <div style="flex:1;"></div>
+        <button class="seq-btn seq-btn-secondary active" id="flowPut" onclick="setFlow('put')">PUT Object</button>
+        <button class="seq-btn seq-btn-secondary" id="flowGet" onclick="setFlow('get')">GET Object</button>
+        <button class="seq-btn seq-btn-secondary" id="flowMulti" onclick="setFlow('multipart')">Multipart Upload</button>
+      </div>
+
+      <svg class="sequence-svg" id="sequenceSvg" viewBox="0 0 900 380">
+        <!-- Lifelines -->
+        <g id="seqLifelines"></g>
+        <!-- Messages drawn dynamically -->
+        <g id="seqMessages"></g>
+      </svg>
+
+      <div class="seq-narration" id="seqNarration">
+        <span class="step-num">-</span>
+        <span>Press Play or Step to begin the animation</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: Alternatives Comparison -->
+  <section id="alternatives">
+    <div class="section-header">
+      <h2>S3 Alternatives — Comparison</h2>
+      <p>How other blob storage solutions compare across key dimensions</p>
+    </div>
+
+    <div class="comparison-container">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Provider</th>
+            <th>S3-Compatible API</th>
+            <th>Storage Cost (Std)</th>
+            <th>Egress Cost</th>
+            <th>Strengths</th>
+            <th>Best For</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="provider-name"><span class="provider-dot" style="background:#f97316;"></span>Amazon S3</span></td>
+            <td><span class="check">&#10004;</span> Native</td>
+            <td>$0.023/GB</td>
+            <td>$0.09/GB</td>
+            <td>Largest ecosystem, most features, strongest consistency</td>
+            <td>AWS-native workloads, maximum feature set</td>
+          </tr>
+          <tr>
+            <td><span class="provider-name"><span class="provider-dot" style="background:#3b82f6;"></span>Azure Blob Storage</span></td>
+            <td><span class="partial">&#9632;</span> Partial (via adapter)</td>
+            <td>$0.018/GB</td>
+            <td>$0.087/GB</td>
+            <td>Deep Azure integration, ADLS Gen2 for analytics, AD auth</td>
+            <td>Enterprise / Microsoft stack</td>
+          </tr>
+          <tr>
+            <td><span class="provider-name"><span class="provider-dot" style="background:#10b981;"></span>Google Cloud Storage</span></td>
+            <td><span class="partial">&#9632;</span> Interop mode</td>
+            <td>$0.020/GB</td>
+            <td>$0.12/GB</td>
+            <td>Strong analytics integration, Autoclass, global edge caching</td>
+            <td>ML/AI workloads, BigQuery ecosystem</td>
+          </tr>
+          <tr>
+            <td><span class="provider-name"><span class="provider-dot" style="background:#8b5cf6;"></span>MinIO</span></td>
+            <td><span class="check">&#10004;</span> Full</td>
+            <td>Self-hosted (HW cost)</td>
+            <td>FREE (self-hosted)</td>
+            <td>S3-compatible, open-source, runs anywhere, high performance</td>
+            <td>On-prem, hybrid, data sovereignty</td>
+          </tr>
+          <tr>
+            <td><span class="provider-name"><span class="provider-dot" style="background:#06b6d4;"></span>Cloudflare R2</span></td>
+            <td><span class="check">&#10004;</span> Full</td>
+            <td>$0.015/GB</td>
+            <td><strong style="color:var(--green);">FREE</strong></td>
+            <td>Zero egress fees, global edge, Workers integration</td>
+            <td>Egress-heavy workloads, CDN-first architecture</td>
+          </tr>
+          <tr>
+            <td><span class="provider-name"><span class="provider-dot" style="background:#ef4444;"></span>Backblaze B2</span></td>
+            <td><span class="check">&#10004;</span> Full</td>
+            <td>$0.006/GB</td>
+            <td>$0.01/GB</td>
+            <td>Cheapest storage, simple pricing, free egress to partners</td>
+            <td>Backup, archival, cost-sensitive workloads</td>
+          </tr>
+          <tr>
+            <td><span class="provider-name"><span class="provider-dot" style="background:#eab308;"></span>Wasabi</span></td>
+            <td><span class="check">&#10004;</span> Full</td>
+            <td>$0.0069/GB</td>
+            <td><strong style="color:var(--green);">FREE</strong></td>
+            <td>No egress/API fees, hot storage pricing for all data</td>
+            <td>Active archives, surveillance video, media</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:32px;">
+      <div class="section-header">
+        <h3 style="font-size:1.4rem;">Provider Deep-Dive</h3>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="showTab('azure')">Azure Blob</button>
+        <button class="tab" onclick="showTab('gcs')">Google Cloud Storage</button>
+        <button class="tab" onclick="showTab('minio')">MinIO</button>
+        <button class="tab" onclick="showTab('r2')">Cloudflare R2</button>
+      </div>
+
+      <div class="tab-content active" id="tab-azure">
+        <div class="internals-grid">
+          <div class="internal-card">
+            <h4>&#9729;&#65039; Azure Blob Storage</h4>
+            <p>Microsoft's answer to S3. Organized into Storage Accounts → Containers → Blobs. Three blob types:</p>
+            <ul style="color:var(--text-muted);font-size:0.9rem;padding-left:18px;margin-top:8px;">
+              <li><strong>Block Blobs</strong> — optimized for upload/download (like S3 objects)</li>
+              <li><strong>Append Blobs</strong> — optimized for append operations (logs)</li>
+              <li><strong>Page Blobs</strong> — optimized for random R/W (VM disks)</li>
+            </ul>
+            <p style="margin-top:12px;"><strong>Unique features:</strong> Azure AD integration, immutability policies, ADLS Gen2 hierarchical namespace, soft delete with point-in-time restore.</p>
+          </div>
+          <div class="internal-card">
+            <h4>&#128736; Azure Access Tiers</h4>
+            <div class="code-block">
+<span class="comment">// Azure blob tiers</span>
+Hot    → <span class="string">Frequent access, highest storage cost</span>
+Cool   → <span class="string">30-day min, lower storage, higher access</span>
+Cold   → <span class="string">90-day min, even lower storage cost</span>
+Archive → <span class="string">180-day min, hours to rehydrate</span>
+
+<span class="comment">// Unique: per-blob tiering</span>
+<span class="comment">// (S3 is per-object, but Azure allows</span>
+<span class="comment">//  mixing tiers in same container)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-gcs">
+        <div class="internals-grid">
+          <div class="internal-card">
+            <h4>&#9729;&#65039; Google Cloud Storage</h4>
+            <p>Google's unified object storage. Buckets → Objects. Single API for all storage classes.</p>
+            <ul style="color:var(--text-muted);font-size:0.9rem;padding-left:18px;margin-top:8px;">
+              <li><strong>Strong consistency</strong> — globally consistent, not just within region</li>
+              <li><strong>Autoclass</strong> — automatically moves objects between classes based on access</li>
+              <li><strong>Dual/Multi-region</strong> — built-in geo-redundancy options</li>
+              <li><strong>Turbo Replication</strong> — 15-min RPO for dual-region</li>
+            </ul>
+            <p style="margin-top:12px;"><strong>Integration:</strong> Native BigQuery external tables, Dataflow, Vertex AI training data.</p>
+          </div>
+          <div class="internal-card">
+            <h4>&#128736; GCS Classes</h4>
+            <div class="code-block">
+Standard  → <span class="string">$0.020/GB, no retrieval fee</span>
+Nearline  → <span class="string">$0.010/GB, 30-day min, $0.01/GB retrieval</span>
+Coldline  → <span class="string">$0.004/GB, 90-day min, $0.02/GB retrieval</span>
+Archive   → <span class="string">$0.0012/GB, 365-day min, $0.05/GB retrieval</span>
+
+<span class="comment">// Unique: Autoclass automatically tiers objects</span>
+<span class="comment">// No lifecycle rules needed — ML-based prediction</span>
+<span class="keyword">Autoclass</span> → <span class="string">Moves objects based on access patterns</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-minio">
+        <div class="internals-grid">
+          <div class="internal-card">
+            <h4>&#128230; MinIO — Self-Hosted S3</h4>
+            <p>High-performance, S3-compatible object store you run on your own infrastructure. Written in Go.</p>
+            <ul style="color:var(--text-muted);font-size:0.9rem;padding-left:18px;margin-top:8px;">
+              <li><strong>100% S3 API compatible</strong> — drop-in replacement for any S3 SDK</li>
+              <li><strong>Erasure coding</strong> — data protection without full replication overhead</li>
+              <li><strong>Runs anywhere</strong> — bare metal, VMs, Kubernetes, edge devices</li>
+              <li><strong>Performance</strong> — saturates NVMe drives, 300+ GB/s throughput</li>
+            </ul>
+            <p style="margin-top:12px;"><strong>When to choose:</strong> Data sovereignty requirements, air-gapped environments, egress cost avoidance, hybrid cloud.</p>
+          </div>
+          <div class="internal-card">
+            <h4>&#128736; MinIO Architecture</h4>
+            <div class="code-block">
+<span class="comment"># Single node (dev/test)</span>
+$ minio server /data
+
+<span class="comment"># Distributed (production)</span>
+$ minio server http://node{1...4}/disk{1...4}
+
+<span class="comment"># Features</span>
+- Erasure coding: N/2 parity (lose half your drives)
+- Bitrot protection: HighwayHash checksums
+- Encryption: SSE-S3, SSE-KMS (Vault, KES)
+- IAM: Built-in policy engine
+- Replication: Site-to-site, bucket-level
+- Tiering: Auto-tier cold data to S3/GCS/Azure
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-r2">
+        <div class="internals-grid">
+          <div class="internal-card">
+            <h4>&#9889; Cloudflare R2</h4>
+            <p>Cloudflare's S3-compatible store with zero egress fees. Data lives at the edge.</p>
+            <ul style="color:var(--text-muted);font-size:0.9rem;padding-left:18px;margin-top:8px;">
+              <li><strong>Zero egress</strong> — no bandwidth charges, ever</li>
+              <li><strong>S3-compatible API</strong> — use existing S3 SDKs</li>
+              <li><strong>Workers integration</strong> — compute at the edge next to your data</li>
+              <li><strong>Automatic geo-distribution</strong> — data cached at 300+ edge locations</li>
+              <li><strong>Jurisdictional restrictions</strong> — pin data to EU/US</li>
+            </ul>
+            <p style="margin-top:12px;"><strong>Pricing:</strong> $0.015/GB storage, $4.50/million Class A ops, $0.36/million Class B ops, <strong>$0 egress</strong>.</p>
+          </div>
+          <div class="internal-card">
+            <h4>&#128736; R2 vs S3 Cost Example</h4>
+            <div class="code-block">
+<span class="comment">// Scenario: 10TB stored, 50TB egress/month</span>
+
+<span class="keyword">S3:</span>
+  Storage: 10TB × $0.023  = <span class="string">$230</span>
+  Egress:  50TB × $0.09   = <span class="string">$4,500</span>
+  Total:                     <span class="string">$4,730/mo</span>
+
+<span class="keyword">R2:</span>
+  Storage: 10TB × $0.015  = <span class="string">$150</span>
+  Egress:  50TB × $0.00   = <span class="string">$0</span>
+  Total:                     <span class="string">$150/mo</span>
+
+<span class="comment">// Savings: $4,580/mo (96.8% reduction)</span>
+<span class="comment">// R2 wins massively for egress-heavy workloads</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: Tradeoffs -->
+  <section id="tradeoffs">
+    <div class="section-header">
+      <h2>Key Tradeoffs</h2>
+      <p>Every blob storage decision involves fundamental engineering tradeoffs</p>
+    </div>
+
+    <div class="tradeoffs-grid">
+      <div class="tradeoff-card">
+        <h4>&#9878;&#65039; Cost vs. Access Speed</h4>
+        <div class="tradeoff-spectrum">
+          <div class="spectrum-bar">
+            <div class="spectrum-marker" style="left:15%;" title="Glacier Deep ($0.001/GB, 12hr)"></div>
+            <div class="spectrum-marker" style="left:40%;" title="Standard-IA ($0.0125/GB, instant)"></div>
+            <div class="spectrum-marker" style="left:85%;" title="Standard ($0.023/GB, instant)"></div>
+          </div>
+          <div class="spectrum-labels">
+            <span>Cheapest (hours to retrieve)</span>
+            <span>Most expensive (instant)</span>
+          </div>
+        </div>
+        <p>Lower storage cost always means higher retrieval cost or latency. Lifecycle policies help but require accurate access prediction.</p>
+      </div>
+
+      <div class="tradeoff-card">
+        <h4>&#127760; Durability vs. Cost (Redundancy)</h4>
+        <div class="tradeoff-spectrum">
+          <div class="spectrum-bar">
+            <div class="spectrum-marker" style="left:20%;" title="One Zone-IA (single AZ)"></div>
+            <div class="spectrum-marker" style="left:60%;" title="Standard (3+ AZs)"></div>
+            <div class="spectrum-marker" style="left:90%;" title="Cross-Region Replication"></div>
+          </div>
+          <div class="spectrum-labels">
+            <span>Single AZ (cheaper, less durable)</span>
+            <span>Multi-region (expensive, most durable)</span>
+          </div>
+        </div>
+        <p>One Zone-IA is 20% cheaper but data is lost if an AZ is destroyed. Cross-region doubles cost but survives regional failures.</p>
+      </div>
+
+      <div class="tradeoff-card">
+        <h4>&#128274; Consistency vs. Performance</h4>
+        <div class="tradeoff-spectrum">
+          <div class="spectrum-bar">
+            <div class="spectrum-marker" style="left:25%;" title="Eventually consistent (faster writes)"></div>
+            <div class="spectrum-marker" style="left:75%;" title="Strongly consistent (slower writes)"></div>
+          </div>
+          <div class="spectrum-labels">
+            <span>Eventual (faster, stale reads possible)</span>
+            <span>Strong (slower, always current)</span>
+          </div>
+        </div>
+        <p>S3's strong consistency came at engineering cost (they rewrote their metadata layer). Some systems still choose eventual consistency for write throughput.</p>
+      </div>
+
+      <div class="tradeoff-card">
+        <h4>&#128176; Vendor Lock-in vs. Features</h4>
+        <div class="tradeoff-spectrum">
+          <div class="spectrum-bar">
+            <div class="spectrum-marker" style="left:15%;" title="MinIO (portable, fewer managed features)"></div>
+            <div class="spectrum-marker" style="left:50%;" title="R2/B2 (S3-compatible, some features)"></div>
+            <div class="spectrum-marker" style="left:90%;" title="S3 (most features, most lock-in)"></div>
+          </div>
+          <div class="spectrum-labels">
+            <span>Portable (fewer features)</span>
+            <span>Feature-rich (more lock-in)</span>
+          </div>
+        </div>
+        <p>S3 has 20+ integrations (Lambda triggers, Athena, Macie, etc.) that tie you to AWS. S3-compatible alternatives let you migrate but sacrifice ecosystem depth.</p>
+      </div>
+
+      <div class="tradeoff-card">
+        <h4>&#128229; Object Size: Small vs. Large</h4>
+        <p>Blob stores are optimized for large objects. Small objects (&lt;1KB) incur disproportionate metadata overhead and per-request costs.</p>
+        <ul style="color:var(--text-muted);font-size:0.88rem;padding-left:18px;margin-top:8px;">
+          <li><strong>Small objects:</strong> High request cost, metadata overhead, poor throughput</li>
+          <li><strong>Solution:</strong> Bundle small objects, use a database for tiny records</li>
+          <li><strong>Large objects:</strong> Use multipart upload, byte-range fetches</li>
+          <li><strong>Sweet spot:</strong> 1MB–5GB per object for optimal cost/performance</li>
+        </ul>
+      </div>
+
+      <div class="tradeoff-card">
+        <h4>&#128640; Latency: First Byte vs. Throughput</h4>
+        <p>Blob storage is optimized for throughput, not latency. First-byte latency is typically 50-200ms.</p>
+        <ul style="color:var(--text-muted);font-size:0.88rem;padding-left:18px;margin-top:8px;">
+          <li><strong>Need low latency?</strong> Put a CDN in front, or use a cache (Redis/ElastiCache)</li>
+          <li><strong>Need high throughput?</strong> Multipart + parallel connections, Transfer Acceleration</li>
+          <li><strong>Need both?</strong> S3 Express One Zone (single-digit ms, 10x throughput, 10x cost)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: Capacity Estimation -->
+  <section>
+    <div class="section-header">
+      <h2>Capacity Estimation — Photo Sharing App</h2>
+      <p>Back-of-envelope math for a mid-scale photo sharing application</p>
+    </div>
+
+    <div class="capacity-grid">
+      <div class="capacity-card">
+        <div class="value">50M</div>
+        <div class="label">Daily Active Users</div>
+      </div>
+      <div class="capacity-card">
+        <div class="value">2M</div>
+        <div class="label">Photos Uploaded/Day</div>
+        <div class="sublabel">~23 uploads/sec</div>
+      </div>
+      <div class="capacity-card">
+        <div class="value">6TB</div>
+        <div class="label">New Storage/Day</div>
+        <div class="sublabel">2M × 3MB avg</div>
+      </div>
+      <div class="capacity-card">
+        <div class="value">2.2PB</div>
+        <div class="label">Storage/Year</div>
+        <div class="sublabel">$50K/mo on S3 Std</div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <div class="concept-card">
+        <h3 style="font-size:1rem;">Cost Breakdown at Scale</h3>
+        <div class="code-block" style="margin-top:12px;">
+<span class="comment">// Monthly cost after 1 year (2.2PB stored)</span>
+Storage (S3 Standard):    2,200 TB × $23/TB   = <span class="string">$50,600</span>
+PUT requests:             60M × $5/M           = <span class="string">$300</span>
+GET requests:             3B × $0.40/M         = <span class="string">$1,200</span>
+Data transfer out:        500 TB × $90/TB      = <span class="string">$45,000</span>
+<span class="keyword">Total:</span>                                          <span class="string">$97,100/mo</span>
+
+<span class="comment">// With optimization:</span>
+- Move 80% to IA after 30 days:               <span class="string">-$26,000</span>
+- Use CloudFront (lower egress):               <span class="string">-$15,000</span>
+- Glacier Deep for >1yr old:                   <span class="string">-$8,000</span>
+<span class="keyword">Optimized:</span>                                      <span class="string">$48,100/mo</span>  (50% savings)
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: Decision Guide -->
+  <section id="decision">
+    <div class="section-header">
+      <h2>When to Choose What?</h2>
+      <p>A practical decision framework for selecting the right blob storage</p>
+    </div>
+
+    <div class="decision-container">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+        <div class="internal-card" style="border-left:4px solid var(--accent);">
+          <h4>Choose Amazon S3 when...</h4>
+          <ul style="color:var(--text-muted);font-size:0.9rem;padding-left:18px;">
+            <li>You're already on AWS and want deep integrations</li>
+            <li>You need the broadest feature set (Object Lock, S3 Select, Batch Ops)</li>
+            <li>Strong consistency matters (financial, transactional)</li>
+            <li>You need S3 Express One Zone for ultra-low latency</li>
+            <li>Compliance features matter (Macie, Access Analyzer)</li>
+          </ul>
+        </div>
+        <div class="internal-card" style="border-left:4px solid var(--blue);">
+          <h4>Choose Azure Blob when...</h4>
+          <ul style="color:var(--text-muted);font-size:0.9rem;padding-left:18px;">
+            <li>You're on Azure / Microsoft stack</li>
+            <li>You need ADLS Gen2 for Hadoop/Spark analytics</li>
+            <li>Azure AD is your identity provider</li>
+            <li>You want append-optimized blobs for logging</li>
+            <li>Enterprise compliance with Microsoft 365 integration</li>
+          </ul>
+        </div>
+        <div class="internal-card" style="border-left:4px solid var(--green);">
+          <h4>Choose Google Cloud Storage when...</h4>
+          <ul style="color:var(--text-muted);font-size:0.9rem;padding-left:18px;">
+            <li>You're on GCP or use BigQuery/Vertex AI</li>
+            <li>You want automatic storage class management (Autoclass)</li>
+            <li>You need global strong consistency across regions</li>
+            <li>Multi-region with Turbo Replication for low RPO</li>
+          </ul>
+        </div>
+        <div class="internal-card" style="border-left:4px solid var(--purple);">
+          <h4>Choose MinIO when...</h4>
+          <ul style="color:var(--text-muted);font-size:0.9rem;padding-left:18px;">
+            <li>Data sovereignty / on-prem requirement</li>
+            <li>Air-gapped environments (military, government)</li>
+            <li>You want to avoid cloud egress costs entirely</li>
+            <li>Kubernetes-native storage with S3 API</li>
+            <li>Hybrid cloud with S3-compatible tiering</li>
+          </ul>
+        </div>
+        <div class="internal-card" style="border-left:4px solid var(--cyan);">
+          <h4>Choose Cloudflare R2 when...</h4>
+          <ul style="color:var(--text-muted);font-size:0.9rem;padding-left:18px;">
+            <li>Egress costs are your #1 concern</li>
+            <li>You serve data globally and need edge performance</li>
+            <li>You use Cloudflare Workers for compute</li>
+            <li>You want S3 compatibility without AWS lock-in</li>
+            <li>CDN + storage in one (no separate CDN needed)</li>
+          </ul>
+        </div>
+        <div class="internal-card" style="border-left:4px solid var(--red);">
+          <h4>Choose Backblaze B2 when...</h4>
+          <ul style="color:var(--text-muted);font-size:0.9rem;padding-left:18px;">
+            <li>Budget is the #1 priority</li>
+            <li>Backup/archival is the primary use case</li>
+            <li>You pair with Cloudflare CDN (free egress between them)</li>
+            <li>Simple workloads that don't need advanced features</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: Internal Concepts -->
+  <section>
+    <div class="section-header">
+      <h2>How Blob Storage Works Internally</h2>
+      <p>The engineering principles that enable 11 nines of durability</p>
+    </div>
+
+    <div class="internals-grid">
+      <div class="internal-card">
+        <h4>&#128190; Erasure Coding</h4>
+        <p>Instead of storing 3 full copies (3x overhead), erasure coding splits data into <em>k</em> data chunks + <em>m</em> parity chunks. Any <em>k</em> of <em>k+m</em> chunks can reconstruct the original.</p>
+        <div class="code-block" style="margin-top:12px;">
+<span class="comment">// Example: Reed-Solomon (10,4) — 10 data + 4 parity</span>
+Original file: 10 MB
+Split into: 10 × 1MB data chunks
+Generate:    4 × 1MB parity chunks
+Total stored: 14 MB (1.4x overhead vs 3x for replication)
+
+<span class="comment">// Can lose ANY 4 of 14 chunks and still recover</span>
+<span class="comment">// S3 uses a variant of this for cold storage classes</span>
+        </div>
+      </div>
+      <div class="internal-card">
+        <h4>&#128736; Consistent Hashing</h4>
+        <p>Maps object keys to storage nodes in a way that minimizes data movement when nodes are added/removed.</p>
+        <div class="code-block" style="margin-top:12px;">
+<span class="comment">// Hash ring with virtual nodes</span>
+hash("object-key") → position on ring → node
+
+Node A: [0°, 90°)    ← owns 25% of keyspace
+Node B: [90°, 180°)
+Node C: [180°, 270°)
+Node D: [270°, 360°)
+
+<span class="comment">// Adding Node E: only ~20% of data moves</span>
+<span class="comment">// vs. naive hash: ~80% would move</span>
+        </div>
+      </div>
+      <div class="internal-card">
+        <h4>&#128200; Metadata Layer</h4>
+        <p>The metadata layer maps keys to physical locations. This is the hardest scaling challenge — S3 stores trillions of objects.</p>
+        <div class="code-block" style="margin-top:12px;">
+<span class="comment">// Metadata per object (simplified)</span>
+{
+  key: "photos/sunset.jpg",
+  version_id: "v3",
+  size: 3145728,
+  chunks: [
+    {node: "az1-r3-n7", offset: 0x4F200},
+    {node: "az2-r1-n2", offset: 0x8A100},
+    {node: "az3-r5-n4", offset: 0x1C800}
+  ],
+  checksum: "sha256:ab4f...",
+  storage_class: "STANDARD"
+}
+<span class="comment">// Stored in a distributed DB (like DynamoDB internally)</span>
+        </div>
+      </div>
+      <div class="internal-card">
+        <h4>&#128295; Multipart Upload</h4>
+        <p>Large objects are split into parts, uploaded in parallel, then assembled server-side. Enables resumable uploads and parallel throughput.</p>
+        <div class="code-block" style="margin-top:12px;">
+<span class="comment">// Multipart upload flow</span>
+1. <span class="method">CreateMultipartUpload</span> → uploadId
+2. <span class="method">UploadPart</span>(uploadId, partNum=1, data) → ETag1
+   <span class="method">UploadPart</span>(uploadId, partNum=2, data) → ETag2
+   ... <span class="comment">(parallel, up to 10,000 parts)</span>
+3. <span class="method">CompleteMultipartUpload</span>(uploadId, parts[])
+
+<span class="comment">// Part sizes: 5MB min, 5GB max</span>
+<span class="comment">// Max object: 5TB (10,000 × 5GB)</span>
+<span class="comment">// Failed part? Just re-upload that part</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// Storage class selector
+const classData = {
+  standard: {
+    title: 'S3 Standard',
+    desc: '<strong>Best for:</strong> Frequently accessed data, websites, content distribution, data analytics, mobile/gaming applications.<br><br><strong>Durability:</strong> 99.999999999% | <strong>Availability:</strong> 99.99% | <strong>AZs:</strong> ≥3<br><strong>Retrieval:</strong> Instant (milliseconds) | <strong>Min storage duration:</strong> None | <strong>Min object size:</strong> None'
+  },
+  ia: {
+    title: 'S3 Standard-IA (Infrequent Access)',
+    desc: '<strong>Best for:</strong> Data accessed less than once a month but needs instant access when requested. Backups, disaster recovery copies, long-tail content.<br><br><strong>Durability:</strong> 99.999999999% | <strong>Availability:</strong> 99.9% | <strong>AZs:</strong> ≥3<br><strong>Retrieval:</strong> Instant | <strong>Min storage:</strong> 30 days | <strong>Min size:</strong> 128KB<br><strong>Retrieval fee:</strong> $0.01/GB'
+  },
+  onezone: {
+    title: 'S3 One Zone-IA',
+    desc: '<strong>Best for:</strong> Infrequently accessed data that doesn\'t require multi-AZ resilience. Re-creatable data, secondary backups, thumbnails.<br><br><strong>Durability:</strong> 99.999999999% (within single AZ) | <strong>Availability:</strong> 99.5% | <strong>AZs:</strong> 1<br><strong>Risk:</strong> Data lost if AZ is destroyed | <strong>Savings:</strong> 20% cheaper than Standard-IA'
+  },
+  intelligent: {
+    title: 'S3 Intelligent-Tiering',
+    desc: '<strong>Best for:</strong> Data with unknown or changing access patterns. Automatically moves objects between tiers with zero retrieval fees.<br><br><strong>Tiers:</strong> Frequent → Infrequent (30 days) → Archive Instant (90 days) → Archive (optional) → Deep Archive (optional)<br><strong>Cost:</strong> Small monthly monitoring fee ($0.0025/1000 objects) + storage at the current tier rate<br><strong>No retrieval fees</strong> when auto-tiered'
+  },
+  glacier: {
+    title: 'S3 Glacier Instant Retrieval',
+    desc: '<strong>Best for:</strong> Archive data accessed ~once per quarter that needs millisecond retrieval. Medical images, news media assets, genomics data.<br><br><strong>Durability:</strong> 99.999999999% | <strong>Availability:</strong> 99.9% | <strong>AZs:</strong> ≥3<br><strong>Retrieval:</strong> Milliseconds (same as Standard) | <strong>Min storage:</strong> 90 days<br><strong>Savings:</strong> 68% cheaper than Standard | <strong>Retrieval fee:</strong> $0.03/GB'
+  },
+  deep: {
+    title: 'S3 Glacier Deep Archive',
+    desc: '<strong>Best for:</strong> Long-term archival, compliance records, tape replacement. Data accessed once or twice per year.<br><br><strong>Durability:</strong> 99.999999999% | <strong>AZs:</strong> ≥3<br><strong>Retrieval:</strong> Standard (12 hrs) or Bulk (48 hrs) | <strong>Min storage:</strong> 180 days<br><strong>Cheapest storage in AWS:</strong> $0.00099/GB/month<br><strong>Retrieval fee:</strong> $0.02/GB (Standard) or $0.0025/GB (Bulk)'
+  }
+};
+
+function selectClass(cls) {
+  document.querySelectorAll('.storage-class').forEach(el => el.classList.remove('active'));
+  document.querySelector(`[data-class="${cls}"]`).classList.add('active');
+  const detail = document.getElementById('classDetail');
+  detail.innerHTML = `<h4>${classData[cls].title}</h4><p>${classData[cls].desc}</p>`;
+}
+
+// Tabs
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Sequence diagram
+const flows = {
+  put: {
+    actors: ['Client', 'API Gateway', 'Metadata Svc', 'Placement', 'Storage AZ-1', 'Storage AZ-2'],
+    steps: [
+      { from: 0, to: 1, label: 'PUT /bucket/key', desc: 'Client sends PUT request with object data and metadata headers' },
+      { from: 1, to: 1, label: 'Auth + Rate Limit', desc: 'API Gateway validates IAM credentials, checks bucket policy, enforces rate limits' },
+      { from: 1, to: 2, label: 'Reserve key', desc: 'Metadata service checks if key exists (for versioning) and reserves the key slot' },
+      { from: 2, to: 3, label: 'Get placement', desc: 'Placement engine determines which storage nodes should hold this object based on hashing and load' },
+      { from: 3, to: 2, label: 'Nodes: [AZ1-n3, AZ2-n7]', desc: 'Placement returns target nodes across multiple availability zones for durability' },
+      { from: 1, to: 4, label: 'Write chunk (primary)', desc: 'API Gateway streams object data to primary storage node in AZ-1' },
+      { from: 4, to: 5, label: 'Replicate', desc: 'Primary node replicates data to AZ-2 synchronously (for strong consistency)' },
+      { from: 5, to: 4, label: 'ACK', desc: 'AZ-2 acknowledges successful write — data is now durable across 2 AZs' },
+      { from: 4, to: 1, label: 'Write confirmed', desc: 'Storage confirms write. A third async replica is created in the background.' },
+      { from: 1, to: 2, label: 'Commit metadata', desc: 'Metadata service commits the key→location mapping, making object visible to reads' },
+      { from: 1, to: 0, label: '200 OK + ETag', desc: 'Client receives success response with ETag (MD5 hash) for integrity verification' }
+    ]
+  },
+  get: {
+    actors: ['Client', 'CDN Edge', 'API Gateway', 'Metadata Svc', 'Storage Node'],
+    steps: [
+      { from: 0, to: 1, label: 'GET /bucket/key', desc: 'Client requests object — request hits nearest CDN edge location first' },
+      { from: 1, to: 1, label: 'Cache check', desc: 'CDN checks if object is cached and not expired (Cache-Control / TTL)' },
+      { from: 1, to: 2, label: 'Cache MISS → origin', desc: 'Object not in cache (or expired) — CDN forwards request to S3 origin' },
+      { from: 2, to: 2, label: 'Auth + ACL check', desc: 'API Gateway validates request signature and checks object ACL / bucket policy' },
+      { from: 2, to: 3, label: 'Lookup key', desc: 'Metadata service resolves object key to physical chunk locations' },
+      { from: 3, to: 2, label: 'Location: AZ1-n3, offset 0x4F2', desc: 'Returns the node and disk offset where the object data lives' },
+      { from: 2, to: 4, label: 'Read chunks', desc: 'API Gateway reads object data from the nearest/fastest storage node' },
+      { from: 4, to: 2, label: 'Stream data', desc: 'Storage node streams object bytes — checksum verified on read' },
+      { from: 2, to: 1, label: 'Response + cache headers', desc: 'Origin returns object with Cache-Control headers for CDN caching' },
+      { from: 1, to: 1, label: 'Cache store', desc: 'CDN caches the object at this edge location for future requests' },
+      { from: 1, to: 0, label: '200 OK + body', desc: 'Client receives the object data — subsequent requests hit CDN cache' }
+    ]
+  },
+  multipart: {
+    actors: ['Client', 'API Gateway', 'Metadata Svc', 'Storage (parallel)'],
+    steps: [
+      { from: 0, to: 1, label: 'CreateMultipartUpload', desc: 'Client initiates multipart upload — S3 returns an Upload ID for this session' },
+      { from: 1, to: 2, label: 'Reserve upload slot', desc: 'Metadata service creates a pending upload record, allocates Upload ID' },
+      { from: 2, to: 1, label: 'uploadId: abc123', desc: 'Upload ID returned — client will reference this for all subsequent parts' },
+      { from: 1, to: 0, label: 'uploadId: abc123', desc: 'Client now knows the upload ID and can begin uploading parts in parallel' },
+      { from: 0, to: 1, label: 'UploadPart #1 (5MB)', desc: 'Client uploads first 5MB chunk with part number 1 — parts can arrive in any order' },
+      { from: 0, to: 1, label: 'UploadPart #2 (5MB)', desc: 'In parallel, client uploads part 2 — SDK typically uses 4-8 concurrent connections' },
+      { from: 1, to: 3, label: 'Write parts parallel', desc: 'Each part is independently written to storage nodes and replicated' },
+      { from: 3, to: 1, label: 'ETag per part', desc: 'Storage returns ETag (checksum) for each part — client must track these' },
+      { from: 1, to: 0, label: 'ETags: [e1, e2, ...]', desc: 'Client collects all part ETags — needed for the final completion call' },
+      { from: 0, to: 1, label: 'CompleteMultipartUpload', desc: 'Client sends final request with ordered list of (partNum, ETag) pairs' },
+      { from: 1, to: 2, label: 'Assemble + commit', desc: 'S3 validates all parts, assembles logical object, commits metadata — object now visible' },
+      { from: 1, to: 0, label: '200 OK + final ETag', desc: 'Upload complete! Object is now a single entity. Incomplete uploads can be aborted or auto-expire.' }
+    ]
+  }
+};
+
+let currentFlow = 'put';
+let currentStep = -1;
+let playing = false;
+let playInterval = null;
+
+function setFlow(flow) {
+  currentFlow = flow;
+  currentStep = -1;
+  playing = false;
+  clearInterval(playInterval);
+  document.getElementById('seqPlayBtn').innerHTML = '&#9654; Play';
+  document.querySelectorAll('.sequence-controls .seq-btn-secondary:nth-child(n+5)').forEach(b => b.classList.remove('active'));
+  document.getElementById('flow' + flow.charAt(0).toUpperCase() + flow.slice(1)).classList.add('active');
+  renderSequence();
+  document.getElementById('seqNarration').innerHTML = '<span class="step-num">-</span><span>Press Play or Step to begin the animation</span>';
+}
+
+function renderSequence() {
+  const flow = flows[currentFlow];
+  const svg = document.getElementById('sequenceSvg');
+  const actors = flow.actors;
+  const numActors = actors.length;
+  const spacing = 850 / (numActors - 1);
+  const startX = 40;
+  const startY = 40;
+  const lineHeight = (flow.steps.length + 1) > 10 ? 28 : 30;
+  const totalHeight = startY + 40 + flow.steps.length * lineHeight + 30;
+  svg.setAttribute('viewBox', `0 0 900 ${Math.max(380, totalHeight)}`);
+  svg.style.minHeight = Math.max(380, totalHeight) + 'px';
+
+  let lifelinesHTML = '';
+  actors.forEach((actor, i) => {
+    const x = startX + i * spacing;
+    lifelinesHTML += `<rect x="${x - 50}" y="10" width="100" height="30" rx="6" fill="${i === 0 ? '#fff7ed' : i === actors.length - 1 ? '#f5f3ff' : '#eff6ff'}" stroke="${i === 0 ? '#f97316' : i === actors.length - 1 ? '#8b5cf6' : '#3b82f6'}" stroke-width="1.5"/>`;
+    lifelinesHTML += `<text x="${x}" y="30" text-anchor="middle" font-size="10" font-weight="600" fill="#1a202c">${actor}</text>`;
+    lifelinesHTML += `<line x1="${x}" y1="40" x2="${x}" y2="${totalHeight - 10}" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 3"/>`;
+  });
+  document.getElementById('seqLifelines').innerHTML = lifelinesHTML;
+
+  renderMessages();
+}
+
+function renderMessages() {
+  const flow = flows[currentFlow];
+  const actors = flow.actors;
+  const spacing = 850 / (actors.length - 1);
+  const startX = 40;
+  const startY = 60;
+  const lineHeight = flow.steps.length > 10 ? 28 : 30;
+
+  let html = '';
+  flow.steps.forEach((step, i) => {
+    if (i > currentStep) return;
+    const fromX = startX + step.from * spacing;
+    const toX = startX + step.to * spacing;
+    const y = startY + i * lineHeight;
+    const isActive = i === currentStep;
+    const opacity = isActive ? 1 : 0.5;
+    const color = isActive ? '#f97316' : '#64748b';
+
+    if (step.from === step.to) {
+      html += `<g opacity="${opacity}">`;
+      html += `<rect x="${fromX - 40}" y="${y - 8}" width="80" height="16" rx="4" fill="${isActive ? '#fff7ed' : '#f8fafc'}" stroke="${color}" stroke-width="1"/>`;
+      html += `<text x="${fromX}" y="${y + 3}" text-anchor="middle" font-size="7.5" fill="${color}" font-weight="${isActive ? '600' : '400'}">${step.label}</text>`;
+      html += `</g>`;
+    } else {
+      const midX = (fromX + toX) / 2;
+      const dir = toX > fromX ? 1 : -1;
+      html += `<g opacity="${opacity}">`;
+      html += `<line x1="${fromX}" y1="${y}" x2="${toX}" y2="${y}" stroke="${color}" stroke-width="${isActive ? 2 : 1.2}" marker-end="url(#arrow${isActive ? 'Active' : ''})"/>`;
+      html += `<text x="${midX}" y="${y - 5}" text-anchor="middle" font-size="7.5" fill="${color}" font-weight="${isActive ? '600' : '400'}">${step.label}</text>`;
+      html += `</g>`;
+    }
+  });
+
+  html += `<defs>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#64748b"/></marker>
+    <marker id="arrowActive" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#f97316"/></marker>
+  </defs>`;
+
+  document.getElementById('seqMessages').innerHTML = html;
+}
+
+function stepSequence() {
+  const flow = flows[currentFlow];
+  if (currentStep < flow.steps.length - 1) {
+    currentStep++;
+    renderMessages();
+    const step = flow.steps[currentStep];
+    document.getElementById('seqNarration').innerHTML = `<span class="step-num">${currentStep + 1}</span><span>${step.desc}</span>`;
+  } else {
+    if (playing) {
+      playing = false;
+      clearInterval(playInterval);
+      document.getElementById('seqPlayBtn').innerHTML = '&#9654; Play';
+    }
+  }
+}
+
+function toggleSequence() {
+  if (playing) {
+    playing = false;
+    clearInterval(playInterval);
+    document.getElementById('seqPlayBtn').innerHTML = '&#9654; Play';
+  } else {
+    playing = true;
+    document.getElementById('seqPlayBtn').innerHTML = '&#10074;&#10074; Pause';
+    if (currentStep >= flows[currentFlow].steps.length - 1) {
+      currentStep = -1;
+      renderMessages();
+    }
+    playInterval = setInterval(() => {
+      stepSequence();
+      if (currentStep >= flows[currentFlow].steps.length - 1) {
+        playing = false;
+        clearInterval(playInterval);
+        document.getElementById('seqPlayBtn').innerHTML = '&#9654; Play';
+      }
+    }, 1200);
+  }
+}
+
+function resetSequence() {
+  playing = false;
+  clearInterval(playInterval);
+  currentStep = -1;
+  document.getElementById('seqPlayBtn').innerHTML = '&#9654; Play';
+  renderMessages();
+  document.getElementById('seqNarration').innerHTML = '<span class="step-num">-</span><span>Press Play or Step to begin the animation</span>';
+}
+
+// Navigation
+function scrollToSection(id) {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Active nav dot on scroll
+const sections = ['overview', 'architecture', 's3-deep-dive', 'storage-classes', 'usecases', 'sequence', 'alternatives', 'tradeoffs', 'decision'];
+const navDots = document.querySelectorAll('.nav-dot');
+
+window.addEventListener('scroll', () => {
+  let current = 0;
+  sections.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top < window.innerHeight / 3) {
+      current = i;
+    }
+  });
+  navDots.forEach((dot, i) => {
+    dot.classList.toggle('active', i === current);
+  });
+});
+
+// Keyboard controls for sequence
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
+    e.preventDefault();
+    toggleSequence();
+  } else if (e.code === 'ArrowRight') {
+    stepSequence();
+  } else if (e.code === 'KeyR') {
+    resetSequence();
+  }
+});
+
+// Initial render
+renderSequence();
+</script>
+
+</body>
+</html>
