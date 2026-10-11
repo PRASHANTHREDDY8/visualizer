@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microservices Patterns — Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f4f6f9;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --accent: #3b82f6;
+      --accent-light: #dbeafe;
+      --accent-dark: #1d4ed8;
+      --green: #10b981;
+      --green-light: #d1fae5;
+      --amber: #f59e0b;
+      --amber-light: #fef3c7;
+      --red: #ef4444;
+      --red-light: #fee2e2;
+      --purple: #8b5cf6;
+      --purple-light: #ede9fe;
+      --teal: #14b8a6;
+      --teal-light: #ccfbf1;
+      --orange: #f97316;
+      --orange-light: #ffedd5;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 10px 25px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.04);
+      --radius: 12px;
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* Navigation */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      overflow-x: auto;
+    }
+
+    .nav-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--accent-dark);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .nav a {
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .nav a:hover, .nav a.active {
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    /* Header */
+    .hero {
+      text-align: center;
+      padding: 4rem 2rem 3rem;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #7c3aed 100%);
+      color: white;
+    }
+
+    .hero h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      opacity: 0.9;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Sections */
+    .section {
+      padding: 4rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      margin-bottom: 2.5rem;
+    }
+
+    .section-header h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    /* Architecture Diagram */
+    .arch-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+
+    .arch-svg {
+      width: 100%;
+      min-width: 900px;
+      height: 620px;
+    }
+
+    .arch-svg text {
+      font-family: var(--font);
+    }
+
+    .arch-svg .component {
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .arch-svg .component:hover rect,
+    .arch-svg .component:hover ellipse,
+    .arch-svg .component:hover polygon,
+    .arch-svg .component:hover path {
+      filter: brightness(1.1);
+      stroke-width: 2.5;
+    }
+
+    .tooltip {
+      position: fixed;
+      background: var(--text);
+      color: white;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      max-width: 280px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 200;
+    }
+
+    .tooltip.show { opacity: 1; }
+
+    /* Pattern Cards */
+    .patterns-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .pattern-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: var(--shadow);
+      transition: all 0.3s;
+    }
+
+    .pattern-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    .pattern-card .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .pattern-card .icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .pattern-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .pattern-card .category {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .pattern-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    .pattern-card .tech-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .pill {
+      padding: 0.25rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .pill-blue { background: var(--accent-light); color: var(--accent-dark); }
+    .pill-green { background: var(--green-light); color: #065f46; }
+    .pill-purple { background: var(--purple-light); color: #5b21b6; }
+    .pill-amber { background: var(--amber-light); color: #92400e; }
+    .pill-teal { background: var(--teal-light); color: #134e4a; }
+
+    /* Sequence Diagram */
+    .sequence-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+    }
+
+    .seq-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .seq-controls button {
+      padding: 0.5rem 1.2rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .seq-controls button:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .seq-controls button.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .seq-controls select {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      background: var(--surface);
+    }
+
+    .seq-narration {
+      background: var(--surface-alt);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+    }
+
+    .seq-narration .step-num {
+      background: var(--accent);
+      color: white;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.75rem;
+      margin-right: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .seq-svg {
+      width: 100%;
+      min-width: 800px;
+      overflow-x: auto;
+    }
+
+    /* Comparison Table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 0.85rem 1rem;
+      text-align: left;
+      font-weight: 700;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr:hover td {
+      background: var(--accent-light);
+    }
+
+    .comparison-table .chosen td {
+      background: #f0f9ff;
+    }
+
+    .chosen-badge {
+      display: inline-block;
+      background: var(--green);
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+      margin-left: 0.5rem;
+    }
+
+    /* Pitfalls */
+    .pitfall-card {
+      background: var(--surface);
+      border: 1px solid #fde68a;
+      border-left: 4px solid var(--amber);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .pitfall-header {
+      padding: 1rem 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .pitfall-header:hover { background: var(--amber-light); }
+
+    .pitfall-header .arrow {
+      transition: transform 0.3s;
+      color: var(--amber);
+    }
+
+    .pitfall-header.open .arrow { transform: rotate(90deg); }
+
+    .pitfall-body {
+      padding: 0 1.25rem 1.25rem;
+      display: none;
+      font-size: 0.9rem;
+    }
+
+    .pitfall-body.open { display: block; }
+
+    .pitfall-body h4 {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .pitfall-body h4:first-child { margin-top: 0; }
+
+    /* Best Practices */
+    .bp-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--green);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .bp-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: #065f46;
+    }
+
+    .bp-section ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .bp-section li {
+      padding: 0.4rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .bp-section li::before {
+      content: "\2713";
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    /* Scaling */
+    .scaling-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .scaling-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .scaling-card h3 {
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .scaling-card p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    /* Playground */
+    .playground-container {
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+    }
+
+    .playground-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .playground-tabs button {
+      padding: 0.5rem 1.2rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .playground-tabs button.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .pg-panel { display: none; }
+    .pg-panel.active { display: block; }
+
+    .pg-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .pg-control label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.3rem;
+    }
+
+    .pg-control input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .pg-control .value {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .pg-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+      background: var(--surface-alt);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .metric-card .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .metric-card .metric-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .pg-visual {
+      background: var(--surface-alt);
+      border-radius: 8px;
+      padding: 1.5rem;
+      min-height: 300px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pg-narration {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-top: 1rem;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    .preset-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-buttons button {
+      padding: 0.35rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: white;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .preset-buttons button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Use cases */
+    .usecase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .usecase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .usecase-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .usecase-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .anti-usecase {
+      border-color: #fecaca;
+      background: #fff5f5;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      .section { padding: 2rem 1rem; }
+      .patterns-grid { grid-template-columns: 1fr; }
+      .nav { padding: 0.5rem 1rem; }
+    }
+
+    /* Request visualization in playground */
+    .request-dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+
+    .svc-box {
+      position: absolute;
+      border-radius: 8px;
+      padding: 0.5rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-align: center;
+      border: 2px solid;
+    }
+
+    .circuit-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 0.3rem;
+      vertical-align: middle;
+    }
+
+    .circuit-closed { background: var(--green); }
+    .circuit-open { background: var(--red); }
+    .circuit-half { background: var(--amber); }
+  </style>
+</head>
+<body>
+
+<div class="tooltip" id="tooltip"></div>
+
+<nav class="nav">
+  <span class="nav-title">Microservices Patterns</span>
+  <a href="#architecture">Architecture</a>
+  <a href="#patterns">Patterns</a>
+  <a href="#sequence">Request Flow</a>
+  <a href="#comparisons">Comparisons</a>
+  <a href="#usecases">Use Cases</a>
+  <a href="#pitfalls">Pitfalls</a>
+  <a href="#best-practices">Best Practices</a>
+  <a href="#scaling">Scaling</a>
+  <a href="#playground">Playground</a>
+</nav>
+
+<header class="hero">
+  <h1>Microservices Patterns</h1>
+  <p>An interactive guide to the architectural patterns that make distributed systems resilient, scalable, and maintainable.</p>
+</header>
+
+<!-- Section 1: Architecture Diagram -->
+<section class="section" id="architecture">
+  <div class="section-header">
+    <h2>Architecture Overview</h2>
+    <p>A typical microservices architecture with patterns labeled. Hover on components for details, click to scroll to their pattern.</p>
+  </div>
+  <div class="arch-container">
+    <svg class="arch-svg" viewBox="0 0 1100 620">
+      <!-- Background groups -->
+      <rect x="20" y="10" width="1060" height="90" rx="8" fill="#f0f9ff" stroke="#bfdbfe" stroke-dasharray="4"/>
+      <text x="40" y="35" font-size="11" fill="#3b82f6" font-weight="700">CLIENT LAYER</text>
+
+      <rect x="20" y="115" width="1060" height="130" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-dasharray="4"/>
+      <text x="40" y="140" font-size="11" fill="#16a34a" font-weight="700">EDGE / GATEWAY LAYER</text>
+
+      <rect x="20" y="260" width="1060" height="170" rx="8" fill="#fefce8" stroke="#fef08a" stroke-dasharray="4"/>
+      <text x="40" y="285" font-size="11" fill="#ca8a04" font-weight="700">SERVICE LAYER</text>
+
+      <rect x="20" y="445" width="1060" height="160" rx="8" fill="#faf5ff" stroke="#e9d5ff" stroke-dasharray="4"/>
+      <text x="40" y="470" font-size="11" fill="#7c3aed" font-weight="700">DATA & INFRASTRUCTURE LAYER</text>
+
+      <!-- Client -->
+      <g class="component" data-tip="Web/Mobile clients send requests through the API Gateway" data-pattern="api-gateway">
+        <rect x="450" y="40" width="200" height="48" rx="8" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="550" y="68" text-anchor="middle" fill="white" font-size="13" font-weight="600">Web / Mobile Clients</text>
+      </g>
+
+      <!-- API Gateway -->
+      <g class="component" data-tip="API Gateway: Single entry point. Routes, rate-limits, authenticates, and aggregates. Pattern: API Gateway / BFF" data-pattern="api-gateway">
+        <polygon points="410,160 690,160 720,195 690,230 410,230 380,195" fill="#10b981" stroke="#059669" stroke-width="1.5"/>
+        <text x="550" y="200" text-anchor="middle" fill="white" font-size="13" font-weight="700">API Gateway</text>
+        <text x="550" y="216" text-anchor="middle" fill="white" font-size="9" opacity="0.8">Rate Limit | Auth | Route</text>
+      </g>
+
+      <!-- Service Discovery -->
+      <g class="component" data-tip="Service Discovery: Services register and discover each other dynamically (Consul, Eureka, K8s DNS)" data-pattern="service-discovery">
+        <rect x="800" y="150" width="160" height="45" rx="22" fill="#8b5cf6" stroke="#6d28d9" stroke-width="1.5"/>
+        <text x="880" y="177" text-anchor="middle" fill="white" font-size="11" font-weight="600">Service Discovery</text>
+      </g>
+
+      <!-- Services -->
+      <g class="component" data-tip="Order Service: Handles order lifecycle. Uses Saga pattern for distributed transactions." data-pattern="saga">
+        <rect x="80" y="300" width="170" height="55" rx="8" fill="#f59e0b" stroke="#d97706" stroke-width="1.5"/>
+        <text x="165" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="600">Order Service</text>
+        <text x="165" y="342" text-anchor="middle" fill="white" font-size="9" opacity="0.8">Saga Orchestrator</text>
+      </g>
+
+      <g class="component" data-tip="Payment Service: Processes payments with Circuit Breaker for external API calls." data-pattern="circuit-breaker">
+        <rect x="290" y="300" width="170" height="55" rx="8" fill="#ef4444" stroke="#dc2626" stroke-width="1.5"/>
+        <text x="375" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="600">Payment Service</text>
+        <text x="375" y="342" text-anchor="middle" fill="white" font-size="9" opacity="0.8">Circuit Breaker</text>
+      </g>
+
+      <g class="component" data-tip="Inventory Service: Manages stock. Uses Event Sourcing to track all state changes." data-pattern="event-sourcing">
+        <rect x="500" y="300" width="170" height="55" rx="8" fill="#14b8a6" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="585" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="600">Inventory Service</text>
+        <text x="585" y="342" text-anchor="middle" fill="white" font-size="9" opacity="0.8">Event Sourcing</text>
+      </g>
+
+      <g class="component" data-tip="Notification Service: Sends alerts via email/SMS/push. Consumes events asynchronously." data-pattern="event-driven">
+        <rect x="710" y="300" width="170" height="55" rx="8" fill="#6366f1" stroke="#4f46e5" stroke-width="1.5"/>
+        <text x="795" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="600">Notification Service</text>
+        <text x="795" y="342" text-anchor="middle" fill="white" font-size="9" opacity="0.8">Event Consumer</text>
+      </g>
+
+      <g class="component" data-tip="User Service: CQRS pattern separates read and write models for user data." data-pattern="cqrs">
+        <rect x="920" y="300" width="150" height="55" rx="8" fill="#ec4899" stroke="#db2777" stroke-width="1.5"/>
+        <text x="995" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="600">User Service</text>
+        <text x="995" y="342" text-anchor="middle" fill="white" font-size="9" opacity="0.8">CQRS</text>
+      </g>
+
+      <!-- Sidecar -->
+      <g class="component" data-tip="Sidecar Proxy: Handles service mesh concerns (mTLS, retries, observability). Pattern: Sidecar" data-pattern="sidecar">
+        <rect x="80" y="370" width="80" height="30" rx="4" fill="#78716c" stroke="#57534e" stroke-width="1"/>
+        <text x="120" y="389" text-anchor="middle" fill="white" font-size="9" font-weight="600">Sidecar</text>
+      </g>
+
+      <!-- Message Bus -->
+      <g class="component" data-tip="Event Bus / Message Broker: Kafka/RabbitMQ for async communication. Enables event-driven architecture." data-pattern="event-driven">
+        <path d="M 250 395 L 250 410 Q 250 420 260 420 L 840 420 Q 850 420 850 410 L 850 395 Q 850 385 840 385 L 260 385 Q 250 385 250 395 Z" fill="#f97316" stroke="#ea580c" stroke-width="1.5"/>
+        <text x="550" y="407" text-anchor="middle" fill="white" font-size="11" font-weight="700">Event Bus (Kafka / RabbitMQ)</text>
+      </g>
+
+      <!-- Data stores -->
+      <g class="component" data-tip="Database per Service: Each microservice owns its data store (Polyglot Persistence)." data-pattern="db-per-service">
+        <ellipse cx="130" cy="510" rx="60" ry="30" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="130" y="514" text-anchor="middle" fill="white" font-size="10" font-weight="600">Order DB</text>
+      </g>
+
+      <g class="component" data-tip="Payment service uses its own dedicated data store." data-pattern="db-per-service">
+        <ellipse cx="310" cy="510" rx="60" ry="30" fill="#ef4444" stroke="#dc2626" stroke-width="1.5"/>
+        <text x="310" y="514" text-anchor="middle" fill="white" font-size="10" font-weight="600">Payment DB</text>
+      </g>
+
+      <g class="component" data-tip="Event Store for Inventory - stores all events rather than current state." data-pattern="event-sourcing">
+        <ellipse cx="500" cy="510" rx="65" ry="30" fill="#14b8a6" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="500" y="514" text-anchor="middle" fill="white" font-size="10" font-weight="600">Event Store</text>
+      </g>
+
+      <g class="component" data-tip="Redis Cache: Distributed cache for read-heavy data and rate limiting." data-pattern="cqrs">
+        <ellipse cx="670" cy="510" rx="55" ry="30" fill="#f59e0b" stroke="#d97706" stroke-width="1.5"/>
+        <text x="670" y="514" text-anchor="middle" fill="white" font-size="10" font-weight="600">Redis</text>
+      </g>
+
+      <g class="component" data-tip="Config Server: Centralized configuration management (Spring Cloud Config, Consul KV)." data-pattern="externalized-config">
+        <rect x="790" y="485" width="130" height="45" rx="6" fill="#64748b" stroke="#475569" stroke-width="1.5"/>
+        <text x="855" y="510" text-anchor="middle" fill="white" font-size="10" font-weight="600">Config Server</text>
+        <text x="855" y="524" text-anchor="middle" fill="white" font-size="8" opacity="0.8">Centralized Config</text>
+      </g>
+
+      <g class="component" data-tip="Distributed Tracing & Monitoring: Jaeger/Zipkin for tracing, Prometheus+Grafana for metrics." data-pattern="observability">
+        <rect x="940" y="485" width="130" height="45" rx="6" fill="#7c3aed" stroke="#6d28d9" stroke-width="1.5"/>
+        <text x="1005" y="510" text-anchor="middle" fill="white" font-size="10" font-weight="600">Observability</text>
+        <text x="1005" y="524" text-anchor="middle" fill="white" font-size="8" opacity="0.8">Tracing + Metrics</text>
+      </g>
+
+      <!-- Connections -->
+      <line x1="550" y1="88" x2="550" y2="160" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="450" y1="195" x2="165" y2="300" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4" marker-end="url(#arrowhead)"/>
+      <line x1="500" y1="230" x2="375" y2="300" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4" marker-end="url(#arrowhead)"/>
+      <line x1="580" y1="230" x2="585" y2="300" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4" marker-end="url(#arrowhead)"/>
+      <line x1="640" y1="230" x2="795" y2="300" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4" marker-end="url(#arrowhead)"/>
+      <line x1="690" y1="195" x2="800" y2="172" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3" marker-end="url(#arrowhead)"/>
+      <line x1="165" y1="355" x2="165" y2="480" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrowhead)"/>
+      <line x1="375" y1="355" x2="310" y2="480" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrowhead)"/>
+      <line x1="585" y1="355" x2="500" y2="480" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrowhead)"/>
+
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+</section>
+
+<!-- Section 2: Pattern Breakdown -->
+<section class="section" id="patterns">
+  <div class="section-header">
+    <h2>Core Microservices Patterns</h2>
+    <p>The foundational patterns that solve recurring problems in distributed architectures.</p>
+  </div>
+  <div class="patterns-grid">
+
+    <div class="pattern-card" id="api-gateway">
+      <div class="card-header">
+        <div class="icon" style="background: var(--green-light); color: var(--green);">&#x26A1;</div>
+        <div><h3>API Gateway</h3><span class="category">Communication</span></div>
+      </div>
+      <p>Single entry point for all client requests. Routes to appropriate services, handles cross-cutting concerns like auth, rate limiting, and response aggregation.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">Kong</span>
+        <span class="pill pill-blue">NGINX</span>
+        <span class="pill pill-green">AWS API Gateway</span>
+        <span class="pill pill-purple">Spring Cloud Gateway</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="circuit-breaker">
+      <div class="card-header">
+        <div class="icon" style="background: var(--red-light); color: var(--red);">&#x26D4;</div>
+        <div><h3>Circuit Breaker</h3><span class="category">Resilience</span></div>
+      </div>
+      <p>Prevents cascading failures by monitoring calls to external services. Opens the circuit after a failure threshold, returning fast failures instead of waiting for timeouts.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">Resilience4j</span>
+        <span class="pill pill-purple">Hystrix</span>
+        <span class="pill pill-green">Polly (.NET)</span>
+        <span class="pill pill-teal">Envoy</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="saga">
+      <div class="card-header">
+        <div class="icon" style="background: var(--amber-light); color: var(--amber);">&#x1F504;</div>
+        <div><h3>Saga Pattern</h3><span class="category">Data Consistency</span></div>
+      </div>
+      <p>Manages distributed transactions as a sequence of local transactions. Each step has a compensating action for rollback. Can be orchestrated (central coordinator) or choreographed (event-driven).</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">Orchestration</span>
+        <span class="pill pill-amber">Choreography</span>
+        <span class="pill pill-green">Temporal</span>
+        <span class="pill pill-purple">Axon Framework</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="event-sourcing">
+      <div class="card-header">
+        <div class="icon" style="background: var(--teal-light); color: var(--teal);">&#x1F4DC;</div>
+        <div><h3>Event Sourcing</h3><span class="category">Data Management</span></div>
+      </div>
+      <p>Stores state as a sequence of immutable events rather than current state. Enables full audit trails, temporal queries, and event replay for debugging or rebuilding projections.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">EventStoreDB</span>
+        <span class="pill pill-green">Kafka</span>
+        <span class="pill pill-purple">Axon</span>
+        <span class="pill pill-amber">DynamoDB Streams</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="cqrs">
+      <div class="card-header">
+        <div class="icon" style="background: var(--purple-light); color: var(--purple);">&#x2194;</div>
+        <div><h3>CQRS</h3><span class="category">Data Management</span></div>
+      </div>
+      <p>Command Query Responsibility Segregation — separate models for reads and writes. Write model optimized for consistency, read model optimized for queries. Often paired with Event Sourcing.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">Write: PostgreSQL</span>
+        <span class="pill pill-green">Read: Elasticsearch</span>
+        <span class="pill pill-purple">Projections</span>
+        <span class="pill pill-teal">Materialized Views</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="service-discovery">
+      <div class="card-header">
+        <div class="icon" style="background: var(--purple-light); color: var(--purple);">&#x1F50D;</div>
+        <div><h3>Service Discovery</h3><span class="category">Communication</span></div>
+      </div>
+      <p>Dynamic registration and lookup of service instances. Client-side or server-side discovery allows services to find each other without hard-coded addresses.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">Consul</span>
+        <span class="pill pill-green">Eureka</span>
+        <span class="pill pill-purple">K8s DNS</span>
+        <span class="pill pill-amber">etcd</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="event-driven">
+      <div class="card-header">
+        <div class="icon" style="background: var(--orange-light); color: var(--orange);">&#x1F4E8;</div>
+        <div><h3>Event-Driven / Async Messaging</h3><span class="category">Communication</span></div>
+      </div>
+      <p>Services communicate through events published to a message broker. Decouples producers from consumers, enables eventual consistency, and absorbs traffic spikes.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">Kafka</span>
+        <span class="pill pill-green">RabbitMQ</span>
+        <span class="pill pill-amber">AWS SNS/SQS</span>
+        <span class="pill pill-purple">NATS</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="db-per-service">
+      <div class="card-header">
+        <div class="icon" style="background: var(--accent-light); color: var(--accent);">&#x1F5C4;</div>
+        <div><h3>Database per Service</h3><span class="category">Data Management</span></div>
+      </div>
+      <p>Each service owns its data store exclusively. Ensures loose coupling — services can choose the best storage technology (polyglot persistence) and evolve schemas independently.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">PostgreSQL</span>
+        <span class="pill pill-green">MongoDB</span>
+        <span class="pill pill-purple">DynamoDB</span>
+        <span class="pill pill-amber">Redis</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="sidecar">
+      <div class="card-header">
+        <div class="icon" style="background: var(--surface-alt); color: var(--text-muted);">&#x1F6E1;</div>
+        <div><h3>Sidecar / Service Mesh</h3><span class="category">Infrastructure</span></div>
+      </div>
+      <p>Deploys a proxy alongside each service to handle cross-cutting concerns: mTLS, retries, circuit breaking, load balancing, and distributed tracing without modifying application code.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">Istio</span>
+        <span class="pill pill-green">Linkerd</span>
+        <span class="pill pill-purple">Envoy</span>
+        <span class="pill pill-teal">Consul Connect</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="strangler-fig">
+      <div class="card-header">
+        <div class="icon" style="background: var(--green-light); color: #065f46;">&#x1F333;</div>
+        <div><h3>Strangler Fig</h3><span class="category">Migration</span></div>
+      </div>
+      <p>Incrementally migrate from a monolith by routing specific requests to new microservices while the rest still hit the monolith. Over time, the monolith shrinks and is eventually decommissioned.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">Proxy Routing</span>
+        <span class="pill pill-green">Feature Flags</span>
+        <span class="pill pill-amber">Canary Releases</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="bulkhead">
+      <div class="card-header">
+        <div class="icon" style="background: var(--amber-light); color: #92400e;">&#x1F6A2;</div>
+        <div><h3>Bulkhead</h3><span class="category">Resilience</span></div>
+      </div>
+      <p>Isolates components so that a failure in one doesn't cascade. Uses separate thread pools, connection pools, or resource limits per dependency — like watertight compartments in a ship.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">Thread Pool Isolation</span>
+        <span class="pill pill-green">Semaphore Isolation</span>
+        <span class="pill pill-purple">K8s Resource Limits</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="externalized-config">
+      <div class="card-header">
+        <div class="icon" style="background: var(--surface-alt); color: var(--text-muted);">&#x2699;</div>
+        <div><h3>Externalized Configuration</h3><span class="category">Infrastructure</span></div>
+      </div>
+      <p>Store configuration outside the service (environment variables, config server, key-value store). Enables changing behavior without redeployment and managing environment-specific settings.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">Spring Cloud Config</span>
+        <span class="pill pill-green">Consul KV</span>
+        <span class="pill pill-purple">AWS Parameter Store</span>
+        <span class="pill pill-amber">Vault</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="observability">
+      <div class="card-header">
+        <div class="icon" style="background: var(--purple-light); color: var(--purple);">&#x1F4CA;</div>
+        <div><h3>Observability (3 Pillars)</h3><span class="category">Infrastructure</span></div>
+      </div>
+      <p>Distributed tracing, structured logging, and metrics collection. Correlates requests across services with trace IDs, enabling debugging of latency issues and understanding system behavior.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">Jaeger / Zipkin</span>
+        <span class="pill pill-green">Prometheus</span>
+        <span class="pill pill-purple">Grafana</span>
+        <span class="pill pill-amber">OpenTelemetry</span>
+      </div>
+    </div>
+
+    <div class="pattern-card" id="backends-for-frontends">
+      <div class="card-header">
+        <div class="icon" style="background: var(--teal-light); color: var(--teal);">&#x1F4F1;</div>
+        <div><h3>Backends for Frontends (BFF)</h3><span class="category">Communication</span></div>
+      </div>
+      <p>A dedicated backend per frontend type (web, mobile, IoT). Each BFF aggregates and transforms data specifically for its client's needs, avoiding a one-size-fits-all API.</p>
+      <div class="tech-list">
+        <span class="pill pill-blue">GraphQL BFF</span>
+        <span class="pill pill-green">REST BFF</span>
+        <span class="pill pill-purple">gRPC Internal</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Section 3: Sequence Diagram -->
+<section class="section" id="sequence">
+  <div class="section-header">
+    <h2>Request Flow</h2>
+    <p>Animated sequence showing how patterns interact during a real request.</p>
+  </div>
+  <div class="sequence-container">
+    <div class="seq-controls">
+      <select id="flowSelect">
+        <option value="order">Create Order (Saga)</option>
+        <option value="circuit">Payment Failure (Circuit Breaker)</option>
+        <option value="event">Event-Driven Notification</option>
+      </select>
+      <button id="seqPlay">&#9654; Play</button>
+      <button id="seqStep">&#9197; Step</button>
+      <button id="seqReset">&#8634; Reset</button>
+      <label style="font-size:0.82rem;color:var(--text-muted);display:flex;align-items:center;gap:0.5rem;">
+        Speed: <input type="range" id="seqSpeed" min="1" max="5" value="3" style="width:100px;">
+      </label>
+    </div>
+    <div class="seq-narration" id="seqNarration">
+      <span class="step-num" id="seqStepNum">-</span>
+      <span id="seqText">Select a flow and press Play to begin.</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <svg class="seq-svg" id="seqSvg" viewBox="0 0 900 380" height="380">
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- Section 4: Comparisons -->
+<section class="section" id="comparisons">
+  <div class="section-header">
+    <h2>Comparisons with Alternatives</h2>
+    <p>How microservices patterns compare to alternative approaches.</p>
+  </div>
+  <div style="overflow-x:auto;margin-bottom:2rem;">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Approach</th>
+          <th>Communication</th>
+          <th>Pros</th>
+          <th>Cons</th>
+          <th>Best For</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Microservices</strong> <span class="chosen-badge">FOCUS</span></td>
+          <td>API Gateway + Async Events</td>
+          <td>Independent deployment, tech diversity, team autonomy, fine-grained scaling</td>
+          <td>Network complexity, eventual consistency, operational overhead</td>
+          <td>Large teams, high scale, rapid iteration</td>
+        </tr>
+        <tr>
+          <td><strong>Monolith</strong></td>
+          <td>In-process function calls</td>
+          <td>Simple deployment, easy debugging, ACID transactions, lower latency</td>
+          <td>Scaling is all-or-nothing, tech lock-in, slow deployments</td>
+          <td>Small teams, MVPs, low complexity domains</td>
+        </tr>
+        <tr>
+          <td><strong>Modular Monolith</strong></td>
+          <td>In-process with module boundaries</td>
+          <td>Clean architecture without network overhead, easier refactoring path</td>
+          <td>Still single deployment, module boundaries can erode</td>
+          <td>Medium teams wanting structure without distributed cost</td>
+        </tr>
+        <tr>
+          <td><strong>Service-Oriented (SOA)</strong></td>
+          <td>ESB / SOAP</td>
+          <td>Shared services reduce duplication, enterprise governance</td>
+          <td>ESB becomes bottleneck, tightly coupled via shared schemas</td>
+          <td>Legacy enterprise integration</td>
+        </tr>
+        <tr>
+          <td><strong>Serverless Functions</strong></td>
+          <td>Event triggers, HTTP</td>
+          <td>Zero ops, pay-per-use, infinite scale, fast to deploy</td>
+          <td>Cold starts, vendor lock-in, limited execution time, hard to test locally</td>
+          <td>Event processing, sporadic workloads, glue code</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Transaction Pattern</th>
+          <th>Mechanism</th>
+          <th>Consistency</th>
+          <th>Complexity</th>
+          <th>When to Use</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="chosen">
+          <td><strong>Saga (Orchestration)</strong> <span class="chosen-badge">RECOMMENDED</span></td>
+          <td>Central coordinator calls services sequentially</td>
+          <td>Eventual</td>
+          <td>Medium</td>
+          <td>Complex workflows with clear ordering</td>
+        </tr>
+        <tr>
+          <td><strong>Saga (Choreography)</strong></td>
+          <td>Services react to events autonomously</td>
+          <td>Eventual</td>
+          <td>High (hard to trace)</td>
+          <td>Simple flows, few participants</td>
+        </tr>
+        <tr>
+          <td><strong>2PC (Two-Phase Commit)</strong></td>
+          <td>Distributed lock via coordinator</td>
+          <td>Strong</td>
+          <td>High</td>
+          <td>Rarely in microservices — performance penalty is too high</td>
+        </tr>
+        <tr>
+          <td><strong>Outbox Pattern</strong></td>
+          <td>Write event to DB table, poll and publish</td>
+          <td>Eventual (guaranteed delivery)</td>
+          <td>Low</td>
+          <td>Reliable event publishing without dual-write problems</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Section 5: Use Cases & Pitfalls -->
+<section class="section" id="usecases">
+  <div class="section-header">
+    <h2>Use Cases</h2>
+    <p>When microservices patterns shine — and when they don't.</p>
+  </div>
+  <div class="usecase-grid">
+    <div class="usecase-card">
+      <h4>E-Commerce Platform</h4>
+      <p>Order, inventory, payment, shipping as separate services. Saga for checkout flow. Event-driven for notifications. Scale payment service independently during flash sales.</p>
+    </div>
+    <div class="usecase-card">
+      <h4>Streaming Platform</h4>
+      <p>Content ingestion, recommendation engine, user profiles, billing as services. CQRS for read-heavy catalog queries. Circuit breaker for third-party CDN calls.</p>
+    </div>
+    <div class="usecase-card">
+      <h4>Banking / Fintech</h4>
+      <p>Account service, transaction service, fraud detection, KYC. Event sourcing for immutable audit trail. Saga for fund transfers. Bulkhead to isolate critical payment paths.</p>
+    </div>
+    <div class="usecase-card">
+      <h4>SaaS Multi-Tenant</h4>
+      <p>Tenant isolation via service-per-tenant or shard-per-tenant. API Gateway handles tenant routing. Externalized config per tenant. BFF for web vs mobile dashboards.</p>
+    </div>
+    <div class="usecase-card anti-usecase">
+      <h4>DON'T: Simple CRUD App</h4>
+      <p>A basic admin panel with 2 developers doesn't need microservices. The network overhead, deployment complexity, and operational cost far outweigh any benefit.</p>
+    </div>
+    <div class="usecase-card anti-usecase">
+      <h4>DON'T: Early-Stage Startup</h4>
+      <p>When domain boundaries are unclear and requirements change weekly, microservices cement the wrong boundaries. Start with a modular monolith, extract services when pain is proven.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="pitfalls">
+  <div class="section-header">
+    <h2>Common Pitfalls</h2>
+    <p>Mistakes engineers commonly make when adopting microservices.</p>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span class="arrow">&#x25B6;</span>
+      <span>Distributed Monolith — Services that must deploy together</span>
+    </div>
+    <div class="pitfall-body">
+      <h4>The Mistake</h4>
+      <p>Splitting into services that share databases, require synchronized deployments, or have tightly coupled APIs. You get the complexity of distributed systems with none of the benefits.</p>
+      <h4>Why It Happens</h4>
+      <p>Teams split by technical layers (API, business logic, data) instead of business domains. Or they share a single database "for convenience."</p>
+      <h4>The Consequence</h4>
+      <p>Changes to one service break others. Deployments require coordination across teams. You can't scale independently.</p>
+      <h4>The Fix</h4>
+      <p>Follow Domain-Driven Design (DDD) bounded contexts. Each service owns its data. Define clear contracts (API schemas). If two services always change together, merge them.</p>
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span class="arrow">&#x25B6;</span>
+      <span>No Circuit Breakers — Cascading failure across services</span>
+    </div>
+    <div class="pitfall-body">
+      <h4>The Mistake</h4>
+      <p>Service A calls Service B synchronously without timeout or fallback. When B is slow, A's thread pool fills up, then A becomes slow, and everything upstream cascades.</p>
+      <h4>Why It Happens</h4>
+      <p>In a monolith, calls are in-process and effectively instant. Developers carry that assumption into distributed calls.</p>
+      <h4>The Consequence</h4>
+      <p>One slow database query in a leaf service can take down the entire platform.</p>
+      <h4>The Fix</h4>
+      <p>Implement circuit breakers on all inter-service calls. Set aggressive timeouts. Use bulkheads to isolate thread pools. Have graceful degradation (return cached/default data when circuit opens).</p>
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span class="arrow">&#x25B6;</span>
+      <span>Shared Database — Coupling through the data layer</span>
+    </div>
+    <div class="pitfall-body">
+      <h4>The Mistake</h4>
+      <p>Multiple services read/write the same database tables directly. Schema changes become coordination nightmares.</p>
+      <h4>Why It Happens</h4>
+      <p>It's the quickest way to share data. Feels pragmatic in the short term.</p>
+      <h4>The Consequence</h4>
+      <p>Services can't evolve their schemas independently. Performance issues in one service's queries affect all others. No clear data ownership.</p>
+      <h4>The Fix</h4>
+      <p>Database per service. Synchronize data via events or API calls. Use the outbox pattern for reliable event publishing.</p>
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span class="arrow">&#x25B6;</span>
+      <span>Missing Observability — Can't debug distributed failures</span>
+    </div>
+    <div class="pitfall-body">
+      <h4>The Mistake</h4>
+      <p>Adopting microservices without investing in distributed tracing, centralized logging, and metrics. When something breaks, no one can trace the request across services.</p>
+      <h4>Why It Happens</h4>
+      <p>Observability tooling feels like overhead when starting out. Teams defer it as "nice to have."</p>
+      <h4>The Consequence</h4>
+      <p>Mean Time to Recovery (MTTR) skyrockets. Debugging requires correlating logs from 10+ services manually. Intermittent failures become unsolvable mysteries.</p>
+      <h4>The Fix</h4>
+      <p>Instrument from day one. Use OpenTelemetry for vendor-neutral traces. Propagate correlation/trace IDs in all requests. Set up dashboards for the golden signals (latency, traffic, errors, saturation).</p>
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span class="arrow">&#x25B6;</span>
+      <span>Too Many Services Too Early — Premature decomposition</span>
+    </div>
+    <div class="pitfall-body">
+      <h4>The Mistake</h4>
+      <p>Starting with 20+ microservices from day one before understanding domain boundaries.</p>
+      <h4>Why It Happens</h4>
+      <p>Excitement about microservices architecture. Desire to "do it right" from the start.</p>
+      <h4>The Consequence</h4>
+      <p>Wrong service boundaries that need expensive refactoring. Operational overhead that slows a small team to a crawl. Distributed debugging for simple features.</p>
+      <h4>The Fix</h4>
+      <p>Start with a well-structured monolith or 3-5 services along clear domain boundaries. Extract new services only when you have proven pain (scaling bottleneck, team contention, deployment frequency needs).</p>
+    </div>
+  </div>
+</section>
+
+<!-- Section 6: Best Practices -->
+<section class="section" id="best-practices">
+  <div class="section-header">
+    <h2>Best Practices</h2>
+    <p>Proven guidelines for building robust microservices systems.</p>
+  </div>
+
+  <div class="bp-section">
+    <h3>Design Phase</h3>
+    <ul>
+      <li>Use Domain-Driven Design (DDD) to identify bounded contexts — these become your service boundaries</li>
+      <li>Define service contracts (OpenAPI, Protobuf) before implementation — design by contract</li>
+      <li>Prefer asynchronous communication (events) over synchronous calls for decoupling</li>
+      <li>Design for failure: every inter-service call can fail, timeout, or return stale data</li>
+      <li>Each service should be independently deployable — if it can't be, it's not a separate service</li>
+    </ul>
+  </div>
+
+  <div class="bp-section">
+    <h3>Implementation</h3>
+    <ul>
+      <li>Implement the Outbox Pattern for reliable event publishing (avoids dual-write problem)</li>
+      <li>Use idempotency keys for all write operations to handle retries safely</li>
+      <li>Keep services stateless — store state in the database or external cache</li>
+      <li>Version your APIs from day one (URL versioning or header-based)</li>
+      <li>Implement health check endpoints (/health, /ready) for orchestrator integration</li>
+      <li>Use correlation IDs propagated through all service calls for end-to-end tracing</li>
+    </ul>
+  </div>
+
+  <div class="bp-section">
+    <h3>Operations</h3>
+    <ul>
+      <li>Containerize everything (Docker) and orchestrate with Kubernetes for consistent deployments</li>
+      <li>Implement CI/CD per service — independent pipelines, independent release cycles</li>
+      <li>Monitor the Four Golden Signals: latency, traffic, errors, saturation (per service)</li>
+      <li>Set up alerting on SLO violations, not just raw metrics</li>
+      <li>Use canary deployments or blue-green for zero-downtime releases</li>
+      <li>Run chaos engineering experiments (Chaos Monkey) to validate resilience patterns</li>
+    </ul>
+  </div>
+
+  <div class="bp-section">
+    <h3>Data Management</h3>
+    <ul>
+      <li>One database per service — never share a database between services</li>
+      <li>Accept eventual consistency as the default; use sagas for distributed transactions</li>
+      <li>Use event-driven data replication instead of shared databases for cross-service queries</li>
+      <li>Implement the CQRS pattern when read and write workloads have different scaling needs</li>
+      <li>Use change data capture (CDC) with Debezium for reliable database event streaming</li>
+    </ul>
+  </div>
+</section>
+
+<!-- Section 7: Scaling -->
+<section class="section" id="scaling">
+  <div class="section-header">
+    <h2>Scaling & Trade-offs</h2>
+    <p>How microservices patterns handle growth and the fundamental trade-offs.</p>
+  </div>
+  <div class="scaling-grid">
+    <div class="scaling-card">
+      <h3>&#x1F4C8; Capacity Estimation</h3>
+      <p><strong>100K DAU example:</strong><br>
+      Peak QPS: ~1,000/s (10x average)<br>
+      Each service: 3 replicas minimum<br>
+      Database: Read replicas + connection pooling<br>
+      Message queue: 5,000 events/s throughput<br>
+      Storage: grows linearly with event sourcing</p>
+    </div>
+    <div class="scaling-card">
+      <h3>&#x1F680; 10x Growth Strategy</h3>
+      <p>Scale hot services independently (payment during sales). Add read replicas and caches. Partition event bus topics. Use auto-scaling rules per service based on CPU/queue-depth.</p>
+    </div>
+    <div class="scaling-card">
+      <h3>&#x2696; CAP Trade-offs</h3>
+      <p><strong>Consistency vs. Availability:</strong> Most microservices choose AP (available + partition-tolerant). Sagas provide eventual consistency. Only use strong consistency where business requires it (payments).</p>
+    </div>
+    <div class="scaling-card">
+      <h3>&#x1F4A5; Failure Scenarios</h3>
+      <p><strong>If the event bus dies:</strong> Services buffer locally (outbox), retry when bus recovers.<br>
+      <strong>If a service dies:</strong> Circuit breaker opens, fallback to cached data.<br>
+      <strong>If API Gateway dies:</strong> DNS failover to standby; all traffic halts briefly.</p>
+    </div>
+    <div class="scaling-card">
+      <h3>&#x23F1; Latency vs. Throughput</h3>
+      <p>Synchronous calls minimize latency but limit throughput. Async events maximize throughput but add latency. Use sync for user-facing reads, async for writes and processing.</p>
+    </div>
+    <div class="scaling-card">
+      <h3>&#x1F527; Operational Cost</h3>
+      <p>Each service adds: CI/CD pipeline, monitoring dashboard, on-call rotation, infrastructure cost. Only split when the benefit (autonomy, scaling, isolation) exceeds this cost.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Section 8: Playground -->
+<section class="section" id="playground">
+  <div class="section-header">
+    <h2>Interactive Playground</h2>
+    <p>Experiment with microservices patterns in action.</p>
+  </div>
+  <div class="playground-container">
+    <div class="playground-tabs">
+      <button class="active" onclick="switchPlayground('circuit')">Circuit Breaker Sim</button>
+      <button onclick="switchPlayground('saga')">Saga Orchestrator</button>
+      <button onclick="switchPlayground('loadbalancer')">Service Discovery + LB</button>
+    </div>
+
+    <!-- Circuit Breaker Playground -->
+    <div class="pg-panel active" id="pg-circuit">
+      <div class="preset-buttons">
+        <button onclick="setCircuitPreset('normal')">Normal Traffic</button>
+        <button onclick="setCircuitPreset('degraded')">Degraded Service</button>
+        <button onclick="setCircuitPreset('failure')">Complete Failure</button>
+        <button onclick="setCircuitPreset('recovery')">Recovery</button>
+      </div>
+      <div class="pg-controls">
+        <div class="pg-control">
+          <label>Request Rate (req/s)</label>
+          <input type="range" id="cb-rate" min="1" max="50" value="10" oninput="updateCircuit()">
+          <span class="value" id="cb-rate-val">10</span>
+        </div>
+        <div class="pg-control">
+          <label>Failure Rate (%)</label>
+          <input type="range" id="cb-failure" min="0" max="100" value="10" oninput="updateCircuit()">
+          <span class="value" id="cb-failure-val">10%</span>
+        </div>
+        <div class="pg-control">
+          <label>Failure Threshold</label>
+          <input type="range" id="cb-threshold" min="1" max="10" value="5" oninput="updateCircuit()">
+          <span class="value" id="cb-threshold-val">5</span>
+        </div>
+        <div class="pg-control">
+          <label>Recovery Timeout (s)</label>
+          <input type="range" id="cb-timeout" min="1" max="15" value="5" oninput="updateCircuit()">
+          <span class="value" id="cb-timeout-val">5s</span>
+        </div>
+      </div>
+      <div class="pg-metrics" id="cb-metrics">
+        <div class="metric-card"><div class="metric-value" id="cb-m-state">CLOSED</div><div class="metric-label">Circuit State</div></div>
+        <div class="metric-card"><div class="metric-value" id="cb-m-success">0</div><div class="metric-label">Successful</div></div>
+        <div class="metric-card"><div class="metric-value" id="cb-m-failed">0</div><div class="metric-label">Failed</div></div>
+        <div class="metric-card"><div class="metric-value" id="cb-m-rejected">0</div><div class="metric-label">Rejected (Open)</div></div>
+        <div class="metric-card"><div class="metric-value" id="cb-m-consec">0</div><div class="metric-label">Consecutive Failures</div></div>
+      </div>
+      <div class="pg-visual" id="cb-visual">
+        <canvas id="cb-canvas" width="800" height="250"></canvas>
+      </div>
+      <div class="pg-narration" id="cb-narration">Adjust parameters and watch the circuit breaker respond to failures in real-time.</div>
+    </div>
+
+    <!-- Saga Playground -->
+    <div class="pg-panel" id="pg-saga">
+      <div class="preset-buttons">
+        <button onclick="runSaga('success')">Success Flow</button>
+        <button onclick="runSaga('payment-fail')">Payment Fails (Compensate)</button>
+        <button onclick="runSaga('inventory-fail')">Inventory Fails (Compensate)</button>
+      </div>
+      <div class="pg-visual" id="saga-visual" style="min-height:350px;display:flex;flex-direction:column;justify-content:center;">
+        <div id="saga-steps" style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;"></div>
+      </div>
+      <div class="pg-narration" id="saga-narration">Click a scenario to see the saga orchestration pattern in action.</div>
+    </div>
+
+    <!-- Service Discovery + LB Playground -->
+    <div class="pg-panel" id="pg-loadbalancer">
+      <div class="preset-buttons">
+        <button onclick="lbAction('add')">Add Instance</button>
+        <button onclick="lbAction('remove')">Remove Instance</button>
+        <button onclick="lbAction('send')">Send 10 Requests</button>
+        <button onclick="lbAction('kill')">Kill Random Instance</button>
+      </div>
+      <div class="pg-controls">
+        <div class="pg-control">
+          <label>LB Algorithm</label>
+          <select id="lb-algo" onchange="updateLB()" style="width:100%;padding:0.4rem;border-radius:6px;border:1px solid var(--border);">
+            <option value="round-robin">Round Robin</option>
+            <option value="least-conn">Least Connections</option>
+            <option value="random">Random</option>
+          </select>
+        </div>
+      </div>
+      <div class="pg-metrics" id="lb-metrics">
+        <div class="metric-card"><div class="metric-value" id="lb-m-instances">3</div><div class="metric-label">Active Instances</div></div>
+        <div class="metric-card"><div class="metric-value" id="lb-m-total">0</div><div class="metric-label">Total Requests</div></div>
+        <div class="metric-card"><div class="metric-value" id="lb-m-healthy">3</div><div class="metric-label">Healthy</div></div>
+        <div class="metric-card"><div class="metric-value" id="lb-m-unhealthy">0</div><div class="metric-label">Unhealthy</div></div>
+      </div>
+      <div class="pg-visual" id="lb-visual" style="min-height:250px;">
+        <div id="lb-instances" style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;padding:1rem;"></div>
+      </div>
+      <div class="pg-narration" id="lb-narration">Add/remove instances and send requests to see load balancing and service discovery in action.</div>
+    </div>
+  </div>
+</section>
+
+<script>
+// ===== TOOLTIP =====
+const tooltip = document.getElementById('tooltip');
+document.querySelectorAll('.component').forEach(el => {
+  el.addEventListener('mouseenter', e => {
+    tooltip.textContent = el.dataset.tip;
+    tooltip.classList.add('show');
+  });
+  el.addEventListener('mousemove', e => {
+    tooltip.style.left = e.clientX + 12 + 'px';
+    tooltip.style.top = e.clientY + 12 + 'px';
+  });
+  el.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+  el.addEventListener('click', () => {
+    const target = document.getElementById(el.dataset.pattern);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+});
+
+// ===== PITFALL TOGGLE =====
+function togglePitfall(header) {
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+
+// ===== SEQUENCE DIAGRAM =====
+const flows = {
+  order: {
+    participants: ['Client', 'API GW', 'Order Svc', 'Payment Svc', 'Inventory Svc', 'Event Bus'],
+    steps: [
+      { from: 0, to: 1, label: 'POST /orders', desc: 'Client sends create order request to API Gateway' },
+      { from: 1, to: 2, label: 'Route + Auth', desc: 'API Gateway authenticates, rate-checks, and routes to Order Service' },
+      { from: 2, to: 2, label: 'Create Order (PENDING)', desc: 'Order Service creates order in PENDING state (local transaction)' },
+      { from: 2, to: 3, label: 'Reserve Payment', desc: 'Saga Step 1: Order Service calls Payment Service to reserve funds' },
+      { from: 3, to: 2, label: 'Payment Reserved', desc: 'Payment Service confirms funds are held' },
+      { from: 2, to: 4, label: 'Reserve Stock', desc: 'Saga Step 2: Order Service calls Inventory to reserve items' },
+      { from: 4, to: 2, label: 'Stock Reserved', desc: 'Inventory confirms stock is reserved' },
+      { from: 2, to: 2, label: 'Order CONFIRMED', desc: 'All saga steps succeeded — Order Service marks order as CONFIRMED' },
+      { from: 2, to: 5, label: 'OrderConfirmed Event', desc: 'Order Service publishes OrderConfirmed event to message bus' },
+      { from: 2, to: 1, label: '201 Created', desc: 'Order Service returns success to gateway' },
+      { from: 1, to: 0, label: 'Response', desc: 'Client receives order confirmation' },
+    ]
+  },
+  circuit: {
+    participants: ['Client', 'API GW', 'Order Svc', 'Payment Svc', 'Fallback'],
+    steps: [
+      { from: 0, to: 1, label: 'POST /orders', desc: 'Client sends order request' },
+      { from: 1, to: 2, label: 'Route', desc: 'Gateway routes to Order Service' },
+      { from: 2, to: 3, label: 'Charge Card', desc: 'Order Service calls Payment Service (which is degraded)' },
+      { from: 3, to: 2, label: 'TIMEOUT (5s)', desc: 'Payment Service does not respond — request times out after 5 seconds', error: true },
+      { from: 2, to: 3, label: 'Retry #1', desc: 'Circuit breaker allows retry (failure count: 4/5 threshold)' },
+      { from: 3, to: 2, label: 'TIMEOUT', desc: 'Second timeout — failure count reaches threshold (5/5)', error: true },
+      { from: 2, to: 2, label: 'CIRCUIT OPENS', desc: 'Circuit breaker OPENS — subsequent calls will be rejected immediately', error: true },
+      { from: 2, to: 4, label: 'Fallback', desc: 'Order Service uses fallback: queues payment for async retry, returns "payment pending"' },
+      { from: 2, to: 1, label: '202 Accepted', desc: 'Returns 202 (accepted but payment pending) instead of 500' },
+      { from: 1, to: 0, label: 'Graceful degradation', desc: 'Client receives partial success — order created, payment will be retried' },
+    ]
+  },
+  event: {
+    participants: ['Order Svc', 'Event Bus', 'Notification', 'Email Svc', 'Analytics'],
+    steps: [
+      { from: 0, to: 0, label: 'Order Confirmed', desc: 'Order Service completes the order saga successfully' },
+      { from: 0, to: 1, label: 'Publish Event', desc: 'Order Service publishes OrderConfirmed event to Kafka topic' },
+      { from: 1, to: 2, label: 'Consume', desc: 'Notification Service consumes the event from its consumer group' },
+      { from: 1, to: 4, label: 'Consume', desc: 'Analytics Service also consumes the same event (separate consumer group)' },
+      { from: 2, to: 3, label: 'Send Email', desc: 'Notification Service triggers confirmation email via Email Service' },
+      { from: 3, to: 2, label: 'Sent OK', desc: 'Email delivered successfully' },
+      { from: 4, to: 4, label: 'Record Metrics', desc: 'Analytics Service records order metrics for dashboards' },
+      { from: 2, to: 1, label: 'ACK', desc: 'Notification Service acknowledges the event (offset committed)' },
+    ]
+  }
+};
+
+let seqState = { currentStep: -1, playing: false, interval: null };
+
+function renderSequence(flowKey) {
+  const flow = flows[flowKey];
+  const svg = document.getElementById('seqSvg');
+  const n = flow.participants.length;
+  const spacing = 850 / (n + 1);
+  let html = '';
+
+  flow.participants.forEach((p, i) => {
+    const x = spacing * (i + 1);
+    html += `<rect x="${x-45}" y="10" width="90" height="32" rx="6" fill="#1e293b"/>`;
+    html += `<text x="${x}" y="31" text-anchor="middle" fill="white" font-size="10" font-weight="600">${p}</text>`;
+    html += `<line x1="${x}" y1="42" x2="${x}" y2="370" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4"/>`;
+  });
+
+  flow.steps.forEach((step, i) => {
+    const y = 65 + i * 28;
+    const fromX = spacing * (step.from + 1);
+    const toX = spacing * (step.to + 1);
+    const color = step.error ? '#ef4444' : '#3b82f6';
+    html += `<g class="seq-arrow" id="seq-step-${i}" opacity="0.2">`;
+    if (fromX === toX) {
+      html += `<path d="M${fromX+5} ${y} C${fromX+35} ${y-8} ${fromX+35} ${y+8} ${fromX+5} ${y}" fill="none" stroke="${color}" stroke-width="1.5" marker-end="url(#arrowSeq${step.error?'Err':''})"/>`;
+    } else {
+      html += `<line x1="${fromX}" y1="${y}" x2="${toX}" y2="${y}" stroke="${color}" stroke-width="1.5" marker-end="url(#arrowSeq${step.error?'Err':''})"/>`;
+    }
+    const midX = fromX === toX ? fromX + 40 : (fromX + toX) / 2;
+    html += `<text x="${midX}" y="${y-5}" text-anchor="middle" font-size="8" fill="${color}" font-weight="500">${step.label}</text>`;
+    html += `</g>`;
+  });
+
+  html += `<defs><marker id="arrowSeq" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0, 6 2.5, 0 5" fill="#3b82f6"/></marker>`;
+  html += `<marker id="arrowSeqErr" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0, 6 2.5, 0 5" fill="#ef4444"/></marker></defs>`;
+
+  svg.innerHTML = html;
+  seqState.currentStep = -1;
+  updateSeqNarration(-1, flowKey);
+}
+
+function updateSeqNarration(step, flowKey) {
+  const flow = flows[flowKey];
+  const numEl = document.getElementById('seqStepNum');
+  const textEl = document.getElementById('seqText');
+  if (step < 0 || step >= flow.steps.length) {
+    numEl.textContent = '-';
+    textEl.textContent = step >= flow.steps.length ? 'Flow complete!' : 'Press Play or Step to begin.';
+    return;
+  }
+  numEl.textContent = step + 1;
+  textEl.textContent = flow.steps[step].desc;
+}
+
+function highlightStep(step, flowKey) {
+  const flow = flows[flowKey];
+  document.querySelectorAll('.seq-arrow').forEach((el, i) => {
+    el.setAttribute('opacity', i <= step ? '1' : '0.2');
+  });
+  updateSeqNarration(step, flowKey);
+}
+
+function seqPlayStep() {
+  const flowKey = document.getElementById('flowSelect').value;
+  const flow = flows[flowKey];
+  seqState.currentStep++;
+  if (seqState.currentStep >= flow.steps.length) {
+    stopSeq();
+    updateSeqNarration(flow.steps.length, flowKey);
+    return;
+  }
+  highlightStep(seqState.currentStep, flowKey);
+}
+
+function stopSeq() {
+  seqState.playing = false;
+  clearInterval(seqState.interval);
+  document.getElementById('seqPlay').textContent = '▶ Play';
+}
+
+document.getElementById('seqPlay').addEventListener('click', () => {
+  if (seqState.playing) { stopSeq(); return; }
+  seqState.playing = true;
+  document.getElementById('seqPlay').textContent = '⏸ Pause';
+  const speed = 6 - document.getElementById('seqSpeed').value;
+  seqState.interval = setInterval(seqPlayStep, speed * 400);
+});
+
+document.getElementById('seqStep').addEventListener('click', () => {
+  stopSeq();
+  seqPlayStep();
+});
+
+document.getElementById('seqReset').addEventListener('click', () => {
+  stopSeq();
+  const flowKey = document.getElementById('flowSelect').value;
+  renderSequence(flowKey);
+});
+
+document.getElementById('flowSelect').addEventListener('change', (e) => {
+  stopSeq();
+  renderSequence(e.target.value);
+});
+
+renderSequence('order');
+
+// ===== CIRCUIT BREAKER PLAYGROUND =====
+let cbState = { state: 'CLOSED', success: 0, failed: 0, rejected: 0, consecutiveFailures: 0, history: [], interval: null, openedAt: null };
+
+function updateCircuit() {
+  document.getElementById('cb-rate-val').textContent = document.getElementById('cb-rate').value;
+  document.getElementById('cb-failure-val').textContent = document.getElementById('cb-failure').value + '%';
+  document.getElementById('cb-threshold-val').textContent = document.getElementById('cb-threshold').value;
+  document.getElementById('cb-timeout-val').textContent = document.getElementById('cb-timeout').value + 's';
+}
+
+function setCircuitPreset(preset) {
+  const rate = document.getElementById('cb-rate');
+  const failure = document.getElementById('cb-failure');
+  const presets = { normal: [15, 5], degraded: [20, 40], failure: [30, 90], recovery: [10, 15] };
+  rate.value = presets[preset][0];
+  failure.value = presets[preset][1];
+  updateCircuit();
+}
+
+function startCircuitSim() {
+  if (cbState.interval) clearInterval(cbState.interval);
+  cbState = { state: 'CLOSED', success: 0, failed: 0, rejected: 0, consecutiveFailures: 0, history: [], interval: null, openedAt: null };
+  cbState.interval = setInterval(circuitTick, 200);
+}
+
+function circuitTick() {
+  const failRate = parseInt(document.getElementById('cb-failure').value) / 100;
+  const threshold = parseInt(document.getElementById('cb-threshold').value);
+  const timeout = parseInt(document.getElementById('cb-timeout').value) * 1000;
+  const now = Date.now();
+
+  if (cbState.state === 'OPEN') {
+    if (now - cbState.openedAt > timeout) {
+      cbState.state = 'HALF-OPEN';
+    } else {
+      cbState.rejected++;
+      cbState.history.push({ time: now, type: 'rejected' });
+      updateCircuitUI();
+      return;
+    }
+  }
+
+  if (cbState.state === 'HALF-OPEN') {
+    const fails = Math.random() < failRate;
+    if (fails) {
+      cbState.state = 'OPEN';
+      cbState.openedAt = now;
+      cbState.failed++;
+      cbState.consecutiveFailures++;
+      cbState.history.push({ time: now, type: 'failed' });
+    } else {
+      cbState.state = 'CLOSED';
+      cbState.consecutiveFailures = 0;
+      cbState.success++;
+      cbState.history.push({ time: now, type: 'success' });
+    }
+    updateCircuitUI();
+    return;
+  }
+
+  const fails = Math.random() < failRate;
+  if (fails) {
+    cbState.consecutiveFailures++;
+    cbState.failed++;
+    cbState.history.push({ time: now, type: 'failed' });
+    if (cbState.consecutiveFailures >= threshold) {
+      cbState.state = 'OPEN';
+      cbState.openedAt = now;
+    }
+  } else {
+    cbState.consecutiveFailures = 0;
+    cbState.success++;
+    cbState.history.push({ time: now, type: 'success' });
+  }
+  updateCircuitUI();
+}
+
+function updateCircuitUI() {
+  const stateEl = document.getElementById('cb-m-state');
+  stateEl.textContent = cbState.state;
+  stateEl.style.color = cbState.state === 'CLOSED' ? 'var(--green)' : cbState.state === 'OPEN' ? 'var(--red)' : 'var(--amber)';
+  document.getElementById('cb-m-success').textContent = cbState.success;
+  document.getElementById('cb-m-failed').textContent = cbState.failed;
+  document.getElementById('cb-m-rejected').textContent = cbState.rejected;
+  document.getElementById('cb-m-consec').textContent = cbState.consecutiveFailures;
+
+  const narration = document.getElementById('cb-narration');
+  if (cbState.state === 'OPEN') narration.textContent = 'Circuit is OPEN — all requests are immediately rejected without calling the downstream service. Waiting for recovery timeout...';
+  else if (cbState.state === 'HALF-OPEN') narration.textContent = 'Circuit is HALF-OPEN — allowing one test request through to check if the service has recovered.';
+  else narration.textContent = 'Circuit is CLOSED — requests flow normally. Monitoring for consecutive failures.';
+
+  drawCircuitChart();
+}
+
+function drawCircuitChart() {
+  const canvas = document.getElementById('cb-canvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const recent = cbState.history.slice(-100);
+  if (recent.length < 2) return;
+
+  const barW = w / 100;
+  recent.forEach((entry, i) => {
+    const x = i * barW;
+    ctx.fillStyle = entry.type === 'success' ? '#10b981' : entry.type === 'failed' ? '#ef4444' : '#94a3b8';
+    ctx.fillRect(x, entry.type === 'rejected' ? h * 0.3 : 0, barW - 1, entry.type === 'success' ? h * 0.6 : entry.type === 'failed' ? h * 0.8 : h * 0.4);
+  });
+
+  ctx.fillStyle = '#64748b';
+  ctx.font = '11px sans-serif';
+  ctx.fillText('Green=Success  Red=Failed  Gray=Rejected', 10, h - 8);
+}
+
+startCircuitSim();
+
+// ===== SAGA PLAYGROUND =====
+function runSaga(scenario) {
+  const container = document.getElementById('saga-steps');
+  const narration = document.getElementById('saga-narration');
+  container.innerHTML = '';
+
+  const steps = [
+    { name: 'Validate Order', compensate: 'Cancel Order' },
+    { name: 'Reserve Inventory', compensate: 'Release Inventory' },
+    { name: 'Process Payment', compensate: 'Refund Payment' },
+    { name: 'Confirm Order', compensate: null },
+  ];
+
+  const failAt = scenario === 'payment-fail' ? 2 : scenario === 'inventory-fail' ? 1 : -1;
+
+  steps.forEach((step, i) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:1rem 1.25rem;min-width:140px;text-align:center;transition:all 0.5s;';
+    div.innerHTML = `<div style="font-weight:700;font-size:0.85rem;margin-bottom:0.3rem;">${step.name}</div><div style="font-size:0.7rem;color:var(--text-muted);" class="step-status">Pending</div>`;
+    div.id = `saga-step-${i}`;
+    container.appendChild(div);
+  });
+
+  let current = 0;
+  narration.textContent = 'Starting saga orchestration...';
+
+  const interval = setInterval(() => {
+    if (current < steps.length) {
+      const el = document.getElementById(`saga-step-${current}`);
+      if (current === failAt) {
+        el.style.borderColor = 'var(--red)';
+        el.style.background = 'var(--red-light)';
+        el.querySelector('.step-status').textContent = 'FAILED';
+        narration.textContent = `${steps[current].name} FAILED! Initiating compensating transactions...`;
+        clearInterval(interval);
+        setTimeout(() => compensateSaga(steps, current, narration), 800);
+        return;
+      }
+      el.style.borderColor = 'var(--green)';
+      el.style.background = 'var(--green-light)';
+      el.querySelector('.step-status').textContent = 'Completed';
+      narration.textContent = `Step ${current + 1}: ${steps[current].name} succeeded.`;
+      current++;
+    } else {
+      clearInterval(interval);
+      narration.textContent = 'Saga completed successfully! All steps finished.';
+    }
+  }, 900);
+}
+
+function compensateSaga(steps, failedAt, narration) {
+  let compIdx = failedAt - 1;
+  const interval = setInterval(() => {
+    if (compIdx < 0) {
+      clearInterval(interval);
+      narration.textContent = 'All compensating transactions complete. System is back to consistent state.';
+      return;
+    }
+    const el = document.getElementById(`saga-step-${compIdx}`);
+    el.style.borderColor = 'var(--amber)';
+    el.style.background = 'var(--amber-light)';
+    el.querySelector('.step-status').textContent = `Compensated: ${steps[compIdx].compensate}`;
+    narration.textContent = `Compensating: ${steps[compIdx].compensate}`;
+    compIdx--;
+  }, 800);
+}
+
+// ===== LOAD BALANCER PLAYGROUND =====
+let lbState = { instances: [{id:1,healthy:true,conns:0},{id:2,healthy:true,conns:0},{id:3,healthy:true,conns:0}], nextId:4, totalReqs:0, rrIndex:0 };
+
+function renderLB() {
+  const container = document.getElementById('lb-instances');
+  container.innerHTML = '';
+  lbState.instances.forEach(inst => {
+    const div = document.createElement('div');
+    div.style.cssText = `background:${inst.healthy?'var(--green-light)':'var(--red-light)'};border:2px solid ${inst.healthy?'var(--green)':'var(--red)'};border-radius:10px;padding:1rem;min-width:120px;text-align:center;transition:all 0.3s;`;
+    div.innerHTML = `<div style="font-weight:700;font-size:0.9rem;">Instance ${inst.id}</div>
+      <div style="font-size:0.75rem;color:var(--text-muted);">${inst.healthy?'Healthy':'Unhealthy'}</div>
+      <div style="font-size:1.3rem;font-weight:800;color:${inst.healthy?'var(--green)':'var(--red)'};">${inst.conns}</div>
+      <div style="font-size:0.7rem;color:var(--text-muted);">requests served</div>`;
+    container.appendChild(div);
+  });
+  document.getElementById('lb-m-instances').textContent = lbState.instances.length;
+  document.getElementById('lb-m-total').textContent = lbState.totalReqs;
+  document.getElementById('lb-m-healthy').textContent = lbState.instances.filter(i=>i.healthy).length;
+  document.getElementById('lb-m-unhealthy').textContent = lbState.instances.filter(i=>!i.healthy).length;
+}
+
+function lbAction(action) {
+  const narration = document.getElementById('lb-narration');
+  if (action === 'add') {
+    lbState.instances.push({id: lbState.nextId++, healthy: true, conns: 0});
+    narration.textContent = `New instance registered with Service Discovery. Load balancer updated.`;
+  } else if (action === 'remove' && lbState.instances.length > 1) {
+    const removed = lbState.instances.pop();
+    narration.textContent = `Instance ${removed.id} deregistered. Traffic redistributed.`;
+  } else if (action === 'send') {
+    const algo = document.getElementById('lb-algo').value;
+    const healthy = lbState.instances.filter(i => i.healthy);
+    if (healthy.length === 0) { narration.textContent = 'No healthy instances available!'; renderLB(); return; }
+    for (let i = 0; i < 10; i++) {
+      let target;
+      if (algo === 'round-robin') {
+        target = healthy[lbState.rrIndex % healthy.length];
+        lbState.rrIndex++;
+      } else if (algo === 'least-conn') {
+        target = healthy.reduce((a, b) => a.conns <= b.conns ? a : b);
+      } else {
+        target = healthy[Math.floor(Math.random() * healthy.length)];
+      }
+      target.conns++;
+      lbState.totalReqs++;
+    }
+    narration.textContent = `10 requests distributed using ${algo}. Service Discovery routes only to healthy instances.`;
+  } else if (action === 'kill') {
+    const healthy = lbState.instances.filter(i => i.healthy);
+    if (healthy.length > 0) {
+      const victim = healthy[Math.floor(Math.random() * healthy.length)];
+      victim.healthy = false;
+      narration.textContent = `Instance ${victim.id} failed health check! Removed from load balancer pool.`;
+    }
+  }
+  renderLB();
+}
+
+renderLB();
+
+// ===== PLAYGROUND SWITCHER =====
+function switchPlayground(tab) {
+  document.querySelectorAll('.pg-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.playground-tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById(`pg-${tab}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ===== NAV ACTIVE STATE =====
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav a');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 100) current = s.id;
+  });
+  navLinks.forEach(link => {
+    link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+  });
+});
+</script>
+
+</body>
+</html>

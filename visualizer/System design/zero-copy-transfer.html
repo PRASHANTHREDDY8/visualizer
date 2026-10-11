@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zero-Copy Transfer — System Design Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f4f6f8;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --primary-light: #dbeafe;
+      --secondary: #7c3aed;
+      --secondary-light: #ede9fe;
+      --accent: #059669;
+      --accent-light: #d1fae5;
+      --warning: #d97706;
+      --warning-light: #fef3c7;
+      --danger: #dc2626;
+      --danger-light: #fee2e2;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+      --shadow-lg: 0 4px 20px rgba(0,0,0,0.1);
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Navigation */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+
+    nav .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      height: 56px;
+      overflow-x: auto;
+    }
+
+    nav .nav-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      color: var(--primary);
+      margin-right: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    nav a:hover, nav a.active {
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    /* Sections */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    section {
+      padding: 4rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    section:last-child { border-bottom: none; }
+
+    .section-header {
+      margin-bottom: 2.5rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      max-width: 700px;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 5rem 0 3rem;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1rem;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .badge-blue { background: var(--primary-light); color: var(--primary); }
+    .badge-purple { background: var(--secondary-light); color: var(--secondary); }
+    .badge-green { background: var(--accent-light); color: var(--accent); }
+    .badge-amber { background: var(--warning-light); color: var(--warning); }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.2s;
+    }
+
+    .card:hover { box-shadow: var(--shadow-lg); }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .card p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    /* Architecture Diagram */
+    .arch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .arch-diagram svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .diagram-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .diagram-tab {
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+
+    .diagram-tab.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .diagram-tab:hover:not(.active) {
+      background: var(--surface-alt);
+    }
+
+    /* Sequence diagram */
+    .sequence-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+    }
+
+    .seq-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .seq-controls button {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+
+    .seq-controls button:hover { background: var(--surface-alt); }
+    .seq-controls button.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .seq-narration {
+      background: var(--surface-alt);
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      font-size: 0.88rem;
+      color: var(--text);
+      min-height: 50px;
+      margin-top: 1rem;
+      border-left: 3px solid var(--primary);
+    }
+
+    /* Comparison table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 0.9rem 1rem;
+      text-align: left;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--text-muted);
+    }
+
+    .comparison-table td {
+      padding: 0.9rem 1rem;
+      border-top: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr.chosen { background: var(--primary-light); }
+
+    .comparison-table .pros { color: var(--accent); }
+    .comparison-table .cons { color: var(--danger); }
+
+    /* Pitfall cards */
+    .pitfall-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--warning);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .pitfall-header {
+      padding: 1rem 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .pitfall-header:hover { background: var(--surface-alt); }
+
+    .pitfall-body {
+      padding: 0 1.2rem 1.2rem;
+      display: none;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .pitfall-body.open { display: block; }
+
+    .pitfall-body strong { color: var(--text); }
+
+    /* Best practices */
+    .practice-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .practice-card h4 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--accent);
+    }
+
+    .practice-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .practice-card li {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 0.3rem 0;
+      padding-left: 1.2rem;
+      position: relative;
+    }
+
+    .practice-card li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* Playground */
+    .playground {
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+    }
+
+    .playground-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .control-group label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .control-group input[type="range"] {
+      width: 180px;
+      accent-color: var(--primary);
+    }
+
+    .control-group select, .control-group input[type="number"] {
+      padding: 0.4rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      background: var(--surface);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+      text-align: center;
+      padding: 1rem;
+      background: var(--surface-alt);
+      border-radius: 8px;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    .btn {
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover { background: #1d4ed8; }
+
+    .btn-secondary {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover { background: var(--border); }
+
+    /* Animation canvas */
+    .anim-canvas {
+      background: var(--surface-alt);
+      border-radius: 8px;
+      padding: 1.5rem;
+      min-height: 300px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Scaling section */
+    .estimation-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .estimation-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .estimation-card h4 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .estimation-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0;
+      font-size: 0.83rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .estimation-row:last-child { border-bottom: none; }
+
+    .estimation-row .val {
+      font-weight: 700;
+      font-family: var(--mono);
+      color: var(--primary);
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      background: var(--text);
+      color: white;
+      padding: 0.5rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      pointer-events: none;
+      z-index: 200;
+      max-width: 250px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .tooltip.visible { opacity: 1; }
+
+    /* Code blocks */
+    code {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      background: var(--surface-alt);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+    }
+
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1.2rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.8rem;
+      line-height: 1.6;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      .container { padding: 0 1rem; }
+      nav { padding: 0 1rem; }
+      .playground-controls { flex-direction: column; }
+    }
+
+    /* Animation helpers */
+    .fade-in {
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .data-packet {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--primary);
+      transition: all 0.3s ease;
+    }
+
+    /* Flow comparison */
+    .flow-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .flow-compare { grid-template-columns: 1fr; }
+    }
+
+    .flow-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .flow-panel h3 {
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .copy-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    .copy-count.bad { background: var(--danger-light); color: var(--danger); }
+    .copy-count.good { background: var(--accent-light); color: var(--accent); }
+
+    .presets {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .preset-btn:hover { background: var(--primary-light); color: var(--primary); }
+    .preset-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <span class="nav-title">Zero-Copy Transfer</span>
+      <a href="#architecture" class="active">Architecture</a>
+      <a href="#components">Components</a>
+      <a href="#sequence">Request Flow</a>
+      <a href="#comparisons">Comparisons</a>
+      <a href="#usecases">Use Cases</a>
+      <a href="#bestpractices">Best Practices</a>
+      <a href="#scaling">Scaling</a>
+      <a href="#playground">Playground</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Hero -->
+    <section class="hero">
+      <h1>Zero-Copy Transfer</h1>
+      <p>Eliminate redundant CPU-mediated data copies between kernel and user space to achieve maximum I/O throughput. The technique behind Kafka, Nginx, and modern network stacks.</p>
+      <div class="badge-row">
+        <span class="badge badge-blue">Kernel Optimization</span>
+        <span class="badge badge-purple">sendfile() / splice()</span>
+        <span class="badge badge-green">DMA Transfer</span>
+        <span class="badge badge-amber">Linux / Windows / BSD</span>
+      </div>
+    </section>
+
+    <!-- Section 1: Architecture Diagram -->
+    <section id="architecture">
+      <div class="section-header">
+        <h2>Architecture Diagram</h2>
+        <p>Compare the data path in traditional I/O vs zero-copy. Click components for details.</p>
+      </div>
+
+      <div class="diagram-tabs">
+        <button class="diagram-tab active" onclick="switchDiagram('traditional')">Traditional Copy (4 copies)</button>
+        <button class="diagram-tab" onclick="switchDiagram('zerocopy')">Zero-Copy with sendfile() (0 CPU copies)</button>
+        <button class="diagram-tab" onclick="switchDiagram('splice')">splice() / tee()</button>
+      </div>
+
+      <div class="arch-diagram">
+        <svg id="arch-svg" viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg">
+        </svg>
+      </div>
+
+      <div class="flow-compare" style="margin-top: 2rem;">
+        <div class="flow-panel">
+          <h3><span class="copy-count bad">4</span> Traditional: read() + write()</h3>
+          <div style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.8;">
+            <div>1. <strong>DMA copy</strong>: Disk → Kernel Read Buffer</div>
+            <div>2. <strong>CPU copy</strong>: Kernel Read Buffer → User Buffer</div>
+            <div>3. <strong>CPU copy</strong>: User Buffer → Kernel Socket Buffer</div>
+            <div>4. <strong>DMA copy</strong>: Kernel Socket Buffer → NIC</div>
+            <div style="margin-top: 0.8rem; padding: 0.6rem; background: var(--danger-light); border-radius: 6px; color: var(--danger); font-weight: 600; font-size: 0.8rem;">
+              4 context switches + 2 CPU copies + 2 DMA copies
+            </div>
+          </div>
+        </div>
+        <div class="flow-panel">
+          <h3><span class="copy-count good">0</span> Zero-Copy: sendfile()</h3>
+          <div style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.8;">
+            <div>1. <strong>DMA copy</strong>: Disk → Kernel Read Buffer</div>
+            <div>2. <strong>DMA gather</strong>: Kernel Buffer → NIC (descriptor only)</div>
+            <div style="margin-top: 0.8rem; padding: 0.6rem; background: var(--accent-light); border-radius: 6px; color: var(--accent); font-weight: 600; font-size: 0.8rem;">
+              2 context switches + 0 CPU copies + 2 DMA copies
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Component Breakdown -->
+    <section id="components">
+      <div class="section-header">
+        <h2>Component Breakdown</h2>
+        <p>The key hardware and software components that enable zero-copy data transfer.</p>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>DMA Engine (Direct Memory Access)</h3>
+          <p><strong>Purpose:</strong> Transfer data between device and memory without CPU involvement.</p>
+          <p style="margin-top: 0.5rem;"><strong>Key detail:</strong> Modern NICs with scatter/gather DMA can assemble packets from non-contiguous memory regions, eliminating the need for a single contiguous socket buffer.</p>
+          <div class="badge badge-green" style="margin-top: 0.75rem;">Hardware</div>
+        </div>
+        <div class="card">
+          <h3>Page Cache (Kernel Buffer)</h3>
+          <p><strong>Purpose:</strong> Cache disk data in memory. In zero-copy, data stays here — never copied to user space.</p>
+          <p style="margin-top: 0.5rem;"><strong>Key detail:</strong> sendfile() tells the kernel to stream directly from page cache to the socket. The page cache becomes the single source of truth for the transfer.</p>
+          <div class="badge badge-blue" style="margin-top: 0.75rem;">Kernel Space</div>
+        </div>
+        <div class="card">
+          <h3>sendfile() System Call</h3>
+          <p><strong>Purpose:</strong> Transfer data between file descriptors entirely within kernel space.</p>
+          <p style="margin-top: 0.5rem;"><strong>Signature:</strong> <code>sendfile(out_fd, in_fd, offset, count)</code>. Available on Linux 2.2+. On Linux 2.6.33+ with scatter-gather NIC, achieves true zero CPU-copy.</p>
+          <div class="badge badge-purple" style="margin-top: 0.75rem;">System Call</div>
+        </div>
+        <div class="card">
+          <h3>splice() / tee() System Calls</h3>
+          <p><strong>Purpose:</strong> Move data between two file descriptors where one is a pipe, without user-space transit.</p>
+          <p style="margin-top: 0.5rem;"><strong>Key detail:</strong> More flexible than sendfile() — works with pipes, sockets, and arbitrary FDs. Used by Nginx for proxied responses.</p>
+          <div class="badge badge-purple" style="margin-top: 0.75rem;">System Call</div>
+        </div>
+        <div class="card">
+          <h3>Memory-Mapped I/O (mmap)</h3>
+          <p><strong>Purpose:</strong> Map file contents directly into process address space, sharing pages with kernel cache.</p>
+          <p style="margin-top: 0.5rem;"><strong>Key detail:</strong> Eliminates one copy (kernel→user) but still requires CPU copy to socket buffer. Semi-zero-copy — good when you need to inspect/transform data.</p>
+          <div class="badge badge-amber" style="margin-top: 0.75rem;">Hybrid</div>
+        </div>
+        <div class="card">
+          <h3>NIC with Scatter-Gather</h3>
+          <p><strong>Purpose:</strong> Assemble outgoing packets from multiple non-contiguous memory buffers in a single DMA operation.</p>
+          <p style="margin-top: 0.5rem;"><strong>Key detail:</strong> Required for true zero-copy sendfile(). Without SG support, the kernel still copies to a contiguous socket buffer before DMA.</p>
+          <div class="badge badge-green" style="margin-top: 0.75rem;">Hardware</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Sequence Diagram -->
+    <section id="sequence">
+      <div class="section-header">
+        <h2>Request Flow</h2>
+        <p>Animated sequence diagrams showing data movement through the system.</p>
+      </div>
+
+      <div class="sequence-container">
+        <div class="seq-controls">
+          <button class="btn btn-primary" id="seq-play">&#9654; Play</button>
+          <button class="btn btn-secondary" id="seq-step">Step &#9654;|</button>
+          <button class="btn btn-secondary" id="seq-reset">Reset</button>
+          <div class="control-group" style="flex-direction: row; align-items: center; gap: 0.5rem;">
+            <label>Speed:</label>
+            <input type="range" id="seq-speed" min="1" max="5" value="3" style="width: 100px;">
+          </div>
+          <div style="margin-left: auto; display: flex; gap: 0.5rem;">
+            <button class="diagram-tab active" onclick="switchFlow('sendfile')">sendfile() flow</button>
+            <button class="diagram-tab" onclick="switchFlow('traditional')">Traditional flow</button>
+          </div>
+        </div>
+
+        <svg id="seq-svg" viewBox="0 0 900 350" xmlns="http://www.w3.org/2000/svg" style="width: 100%; background: var(--surface-alt); border-radius: 8px;">
+        </svg>
+
+        <div class="seq-narration" id="seq-narration">
+          Press Play to see the data transfer sequence animated step by step.
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Comparisons -->
+    <section id="comparisons">
+      <div class="section-header">
+        <h2>Comparisons with Alternatives</h2>
+        <p>Different approaches to high-performance I/O and when to choose each.</p>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Approach</th>
+              <th>Mechanism</th>
+              <th>CPU Copies</th>
+              <th>Ctx Switches</th>
+              <th>Pros</th>
+              <th>Cons</th>
+              <th>Best For</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>read() + write()</strong></td>
+              <td>User-space buffer relay</td>
+              <td><span style="color:var(--danger); font-weight:700">2</span></td>
+              <td>4</td>
+              <td class="pros">Simple, portable, allows data inspection</td>
+              <td class="cons">Maximum overhead, CPU-bound at high throughput</td>
+              <td>When you need to transform data</td>
+            </tr>
+            <tr>
+              <td><strong>mmap() + write()</strong></td>
+              <td>Shared page mapping</td>
+              <td><span style="color:var(--warning); font-weight:700">1</span></td>
+              <td>4</td>
+              <td class="pros">Read without kernel→user copy, random access</td>
+              <td class="cons">TLB shootdowns, page faults, still one CPU copy to socket</td>
+              <td>Random access patterns, partial reads</td>
+            </tr>
+            <tr class="chosen">
+              <td><strong>sendfile()</strong></td>
+              <td>Kernel-internal FD transfer</td>
+              <td><span style="color:var(--accent); font-weight:700">0*</span></td>
+              <td>2</td>
+              <td class="pros">True zero-copy with SG, minimal syscalls</td>
+              <td class="cons">Can't inspect/modify data, file→socket only</td>
+              <td>Static file serving, log shipping, Kafka</td>
+            </tr>
+            <tr>
+              <td><strong>splice() + pipe</strong></td>
+              <td>Kernel pipe buffer relay</td>
+              <td><span style="color:var(--accent); font-weight:700">0</span></td>
+              <td>2</td>
+              <td class="pros">Flexible FD pairs, works with pipes</td>
+              <td class="cons">Requires pipe intermediary, two syscalls</td>
+              <td>Proxying, socket→socket transfer</td>
+            </tr>
+            <tr>
+              <td><strong>io_uring + fixed buffers</strong></td>
+              <td>Async ring buffer, shared memory</td>
+              <td><span style="color:var(--accent); font-weight:700">0</span></td>
+              <td>0*</td>
+              <td class="pros">Zero syscall overhead, batching, true async</td>
+              <td class="cons">Complex API, Linux 5.1+ only, learning curve</td>
+              <td>High-QPS servers, database engines</td>
+            </tr>
+            <tr>
+              <td><strong>DPDK / kernel bypass</strong></td>
+              <td>User-space network stack</td>
+              <td><span style="color:var(--accent); font-weight:700">0</span></td>
+              <td>0</td>
+              <td class="pros">Ultimate performance, no kernel involvement</td>
+              <td class="cons">No kernel protection, dedicated cores, complex</td>
+              <td>Network appliances, HFT, 100Gbps+</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.75rem;">* With scatter-gather DMA support on NIC. Without SG, sendfile still does 1 CPU copy (kernel buffer → socket buffer).</p>
+
+      <div class="card-grid" style="margin-top: 2rem;">
+        <div class="card">
+          <h3>When to pick sendfile()</h3>
+          <p>You're serving static content (files, logs, pre-computed data) over a network socket and don't need to inspect or modify the data in user space. The canonical use case.</p>
+        </div>
+        <div class="card">
+          <h3>When to pick splice()</h3>
+          <p>You're proxying data between two sockets (reverse proxy) or piping between arbitrary FDs. More flexible than sendfile but requires a pipe as intermediary.</p>
+        </div>
+        <div class="card">
+          <h3>When to pick io_uring</h3>
+          <p>You need async I/O with minimal syscall overhead at scale — database engines, high-QPS web servers. Worth the complexity only above ~100k ops/sec.</p>
+        </div>
+        <div class="card">
+          <h3>When to stick with read()/write()</h3>
+          <p>You need to transform, compress, encrypt, or inspect data before sending. Zero-copy is impossible when the CPU must touch every byte. Use pipelining instead.</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 2rem;">
+        <h3>Real-World Examples</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
+          <div>
+            <strong>Apache Kafka</strong>
+            <p style="font-size: 0.83rem; color: var(--text-muted);">Uses sendfile() to transfer log segments directly from disk to consumer sockets. Key reason Kafka achieves GB/s throughput per broker.</p>
+          </div>
+          <div>
+            <strong>Nginx</strong>
+            <p style="font-size: 0.83rem; color: var(--text-muted);">Uses sendfile for static files, splice() for proxied responses. Configurable via <code>sendfile on;</code> directive.</p>
+          </div>
+          <div>
+            <strong>PostgreSQL (WAL shipping)</strong>
+            <p style="font-size: 0.83rem; color: var(--text-muted);">Streams WAL segments to replicas using zero-copy when available. Reduces replication lag under heavy write load.</p>
+          </div>
+          <div>
+            <strong>Netty / Java NIO</strong>
+            <p style="font-size: 0.83rem; color: var(--text-muted);">FileChannel.transferTo() maps to sendfile() on Linux. Used by Cassandra, Elasticsearch, and Spark shuffle.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Use Cases & Pitfalls -->
+    <section id="usecases">
+      <div class="section-header">
+        <h2>Use Cases & Common Pitfalls</h2>
+        <p>Where zero-copy shines, where it doesn't, and mistakes to avoid.</p>
+      </div>
+
+      <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Primary Use Cases</h3>
+      <div class="card-grid" style="margin-bottom: 2.5rem;">
+        <div class="card">
+          <h3>Static File Serving</h3>
+          <p>Web servers delivering images, JS bundles, CSS, videos. Files don't change between disk and wire — perfect for sendfile().</p>
+          <div class="badge badge-blue" style="margin-top: 0.5rem;">~10-50% throughput improvement</div>
+        </div>
+        <div class="card">
+          <h3>Message Broker / Log Streaming</h3>
+          <p>Kafka, Pulsar, and log shippers transfer immutable log segments. Data is appended once, read many times — zero-copy reads are a massive multiplier.</p>
+          <div class="badge badge-green" style="margin-top: 0.5rem;">GB/s per broker</div>
+        </div>
+        <div class="card">
+          <h3>Database Replication</h3>
+          <p>Shipping WAL/binlog segments from primary to replicas. The data must arrive bit-for-bit identical — no transformation needed.</p>
+          <div class="badge badge-purple" style="margin-top: 0.5rem;">Lower replication lag</div>
+        </div>
+        <div class="card">
+          <h3>CDN Edge Delivery</h3>
+          <p>Edge nodes serve cached content to thousands of concurrent clients. Zero-copy + epoll = massive fan-out without CPU saturation.</p>
+          <div class="badge badge-amber" style="margin-top: 0.5rem;">High concurrency</div>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom: 1rem; font-size: 1.1rem; color: var(--danger);">Anti-Use-Cases</h3>
+      <div class="card-grid" style="margin-bottom: 2.5rem;">
+        <div class="card" style="border-left: 3px solid var(--danger);">
+          <h3>TLS/SSL Encrypted Transfer</h3>
+          <p>Encryption requires reading and transforming every byte. Can't skip user-space. Use kTLS (kernel TLS) for partial zero-copy with encryption.</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--danger);">
+          <h3>Compression On-The-Fly</h3>
+          <p>gzip/brotli compression must process the data. Pre-compress files and then use sendfile() on the compressed version instead.</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--danger);">
+          <h3>Small Payloads (&lt; 16KB)</h3>
+          <p>For tiny transfers, the syscall overhead of sendfile() vs read()+write() is negligible. The extra complexity isn't justified.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom: 1rem; font-size: 1.1rem; color: var(--warning);">Common Pitfalls</h3>
+
+      <div class="pitfall-card">
+        <div class="pitfall-header" onclick="togglePitfall(this)">
+          <span>Assuming sendfile() always means zero CPU copies</span>
+          <span>&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <p><strong>The mistake:</strong> Using sendfile() and assuming you get zero-copy benefits regardless of hardware.</p>
+          <p><strong>Why it happens:</strong> The man page says "zero-copy" but doesn't emphasize the NIC scatter-gather requirement.</p>
+          <p><strong>The consequence:</strong> Without SG DMA, the kernel still copies from page cache to a contiguous socket buffer — you get 1 CPU copy instead of 0.</p>
+          <p><strong>The fix:</strong> Check NIC capabilities with <code>ethtool -k eth0 | grep scatter-gather</code>. Most modern NICs (10GbE+) support it.</p>
+        </div>
+      </div>
+
+      <div class="pitfall-card">
+        <div class="pitfall-header" onclick="togglePitfall(this)">
+          <span>Using sendfile() when the file is being modified concurrently</span>
+          <span>&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <p><strong>The mistake:</strong> Calling sendfile() on a file that another process is actively writing to.</p>
+          <p><strong>Why it happens:</strong> Developers assume the kernel snapshots the file or provides isolation.</p>
+          <p><strong>The consequence:</strong> Torn reads — the client receives a mix of old and new data. No atomicity guarantees.</p>
+          <p><strong>The fix:</strong> Use immutable files (append-only logs with segment rotation like Kafka), or copy-on-write semantics, or take a read lock.</p>
+        </div>
+      </div>
+
+      <div class="pitfall-card">
+        <div class="pitfall-header" onclick="togglePitfall(this)">
+          <span>Forgetting that sendfile() doesn't work with all FD types</span>
+          <span>&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <p><strong>The mistake:</strong> Trying to use sendfile() between two sockets or from a pipe.</p>
+          <p><strong>Why it happens:</strong> The name "sendfile" implies any FD, but the input must be a file (or something with mmap support).</p>
+          <p><strong>The consequence:</strong> EINVAL error at runtime, fallback to slow path.</p>
+          <p><strong>The fix:</strong> Use splice() for socket→socket or pipe scenarios. On Linux, splice() is the generalized zero-copy primitive.</p>
+        </div>
+      </div>
+
+      <div class="pitfall-card">
+        <div class="pitfall-header" onclick="togglePitfall(this)">
+          <span>Not handling partial sendfile() returns</span>
+          <span>&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <p><strong>The mistake:</strong> Assuming sendfile() transfers the entire requested count in one call.</p>
+          <p><strong>Why it happens:</strong> With blocking sockets and small files, it usually does complete in one call.</p>
+          <p><strong>The consequence:</strong> Under load or with non-blocking sockets, short writes cause data truncation.</p>
+          <p><strong>The fix:</strong> Always loop on sendfile(), tracking the offset. Same pattern as write() — check return value, advance offset, retry.</p>
+        </div>
+      </div>
+
+      <div class="pitfall-card">
+        <div class="pitfall-header" onclick="togglePitfall(this)">
+          <span>Using mmap for sequential streaming (thinking it's zero-copy)</span>
+          <span>&#9660;</span>
+        </div>
+        <div class="pitfall-body">
+          <p><strong>The mistake:</strong> Using mmap + write() for streaming because "mmap avoids copies."</p>
+          <p><strong>Why it happens:</strong> mmap does eliminate the read() copy, but people forget write() still copies to the socket buffer.</p>
+          <p><strong>The consequence:</strong> Worse than sendfile() due to TLB shootdowns, page fault overhead, and the remaining CPU copy. Plus double the memory pressure.</p>
+          <p><strong>The fix:</strong> For sequential streaming, always prefer sendfile(). Reserve mmap for random-access patterns where you read scattered portions of a large file.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: Best Practices -->
+    <section id="bestpractices">
+      <div class="section-header">
+        <h2>Best Practices</h2>
+        <p>Proven guidelines for implementing zero-copy transfer correctly and efficiently.</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem;">
+        <div class="practice-card">
+          <h4>Design Phase</h4>
+          <ul>
+            <li>Separate data paths that need transformation from those that don't — only the untouched paths benefit from zero-copy</li>
+            <li>Design immutable data segments (like Kafka log segments) so sendfile() can operate without coordination</li>
+            <li>Verify NIC scatter-gather support in your target deployment environment before committing to the approach</li>
+            <li>Consider kTLS if you need both zero-copy and encryption — available on Linux 4.13+ with supported ciphers</li>
+          </ul>
+        </div>
+
+        <div class="practice-card">
+          <h4>Implementation</h4>
+          <ul>
+            <li>Always loop on sendfile()/splice() — handle short writes the same way you handle write()</li>
+            <li>Set TCP_CORK or TCP_NOPUSH before sendfile() to coalesce headers + file data into full-sized TCP segments</li>
+            <li>Use sendfile with offset tracking for resume/range-request support in HTTP servers</li>
+            <li>Benchmark against read()+write() baseline — zero-copy wins diminish below ~64KB transfers</li>
+            <li>For Java: use FileChannel.transferTo(), for Go: use io.Copy with *net.TCPConn (triggers splice), for Rust: use std::io::copy with appropriate types</li>
+          </ul>
+        </div>
+
+        <div class="practice-card">
+          <h4>Operations</h4>
+          <ul>
+            <li>Monitor <code>/proc/vmstat</code> for pgpgin/pgpgout — high values with low CPU indicate zero-copy is working</li>
+            <li>Watch for page cache pressure: <code>cat /proc/meminfo | grep -i cache</code> — sendfile() relies on warm page cache</li>
+            <li>Use <code>perf stat</code> to confirm CPU cycles aren't spent in copy_to_user/copy_from_user</li>
+            <li>Set appropriate readahead with <code>blockdev --setra</code> for sequential sendfile() workloads</li>
+          </ul>
+        </div>
+
+        <div class="practice-card">
+          <h4>Scaling</h4>
+          <ul>
+            <li>Combine with epoll/io_uring for high-concurrency: zero-copy handles throughput, async I/O handles connection count</li>
+            <li>Page cache size is your effective "zero-copy budget" — files that fit in cache benefit most</li>
+            <li>For files larger than RAM: use fadvise(SEQUENTIAL) + sendfile() in chunks to manage page cache pollution</li>
+            <li>On NUMA systems: pin threads to the NUMA node closest to the NIC for best DMA performance</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 2rem;">
+        <h3>Platform Support Reference</h3>
+        <div style="overflow-x: auto; margin-top: 1rem;">
+          <table class="comparison-table">
+            <thead>
+              <tr><th>Platform</th><th>sendfile()</th><th>splice()</th><th>io_uring</th><th>kTLS</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Linux 2.6+</td><td class="pros">Yes</td><td class="pros">Yes</td><td>5.1+</td><td>4.13+</td></tr>
+              <tr><td>FreeBSD</td><td class="pros">Yes (different API)</td><td>No</td><td>No</td><td>13.0+</td></tr>
+              <tr><td>macOS</td><td class="pros">Yes (different API)</td><td>No</td><td>No</td><td>No</td></tr>
+              <tr><td>Windows</td><td>TransmitFile()</td><td>No</td><td>IOCP (similar)</td><td>No</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 7: Scaling & Trade-offs -->
+    <section id="scaling">
+      <div class="section-header">
+        <h2>Scaling & Trade-offs</h2>
+        <p>Capacity estimation, growth strategies, and fundamental trade-offs.</p>
+      </div>
+
+      <div class="estimation-grid">
+        <div class="estimation-card">
+          <h4>Throughput Comparison (10GbE NIC)</h4>
+          <div class="estimation-row"><span>Traditional read()+write()</span><span class="val">~3-5 GB/s</span></div>
+          <div class="estimation-row"><span>mmap()+write()</span><span class="val">~5-7 GB/s</span></div>
+          <div class="estimation-row"><span>sendfile() (with SG)</span><span class="val">~9-10 GB/s</span></div>
+          <div class="estimation-row"><span>DPDK (kernel bypass)</span><span class="val">~10+ GB/s</span></div>
+        </div>
+        <div class="estimation-card">
+          <h4>CPU Utilization @ 5 GB/s</h4>
+          <div class="estimation-row"><span>Traditional</span><span class="val">~70-90%</span></div>
+          <div class="estimation-row"><span>sendfile()</span><span class="val">~15-25%</span></div>
+          <div class="estimation-row"><span>Savings</span><span class="val">3-4x less CPU</span></div>
+          <div class="estimation-row"><span>Freed cores for app logic</span><span class="val">~6 cores</span></div>
+        </div>
+        <div class="estimation-card">
+          <h4>Latency Impact (per transfer)</h4>
+          <div class="estimation-row"><span>Context switch cost</span><span class="val">~5-10 μs each</span></div>
+          <div class="estimation-row"><span>CPU copy (1MB)</span><span class="val">~200-500 μs</span></div>
+          <div class="estimation-row"><span>Saved per sendfile() (1MB)</span><span class="val">~400-1000 μs</span></div>
+          <div class="estimation-row"><span>DMA transfer (1MB)</span><span class="val">~50-100 μs</span></div>
+        </div>
+        <div class="estimation-card">
+          <h4>When Zero-Copy Pays Off</h4>
+          <div class="estimation-row"><span>Transfer size threshold</span><span class="val">&gt; 64 KB</span></div>
+          <div class="estimation-row"><span>Concurrency threshold</span><span class="val">&gt; 100 conns</span></div>
+          <div class="estimation-row"><span>Throughput threshold</span><span class="val">&gt; 1 GB/s</span></div>
+          <div class="estimation-row"><span>Break-even point</span><span class="val">~16-32 KB</span></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 2rem;">
+        <h3>Fundamental Trade-offs</h3>
+        <div class="card-grid" style="margin-top: 1rem;">
+          <div>
+            <strong>Throughput vs. Flexibility</strong>
+            <p style="font-size: 0.83rem; color: var(--text-muted); margin-top: 0.3rem;">Zero-copy gives maximum throughput but you can't inspect, transform, or encrypt data in transit. If you need any processing, you lose zero-copy benefits.</p>
+          </div>
+          <div>
+            <strong>Simplicity vs. Performance</strong>
+            <p style="font-size: 0.83rem; color: var(--text-muted); margin-top: 0.3rem;">read()+write() is trivial to implement and debug. sendfile() adds edge cases (partial writes, offset management, FD type restrictions). splice() adds pipe management.</p>
+          </div>
+          <div>
+            <strong>Page Cache Dependency</strong>
+            <p style="font-size: 0.83rem; color: var(--text-muted); margin-top: 0.3rem;">Zero-copy relies on page cache. If your working set exceeds RAM, you get page faults that negate the benefit. Traditional buffered I/O gives more predictable performance for cold data.</p>
+          </div>
+          <div>
+            <strong>Portability vs. Optimization</strong>
+            <p style="font-size: 0.83rem; color: var(--text-muted); margin-top: 0.3rem;">sendfile() semantics differ across Linux/BSD/macOS/Windows. splice() is Linux-only. io_uring is very new. Abstractions (like Java NIO) help but can't expose all features.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 1.5rem;">
+        <h3>Failure Scenarios</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
+          <div style="padding: 1rem; background: var(--danger-light); border-radius: 8px;">
+            <strong style="color: var(--danger);">Page cache eviction under memory pressure</strong>
+            <p style="font-size: 0.82rem; margin-top: 0.3rem;">If the system runs low on memory, page cache entries get evicted. Next sendfile() triggers disk I/O (page fault), dramatically increasing latency. Mitigation: monitor cache hit ratios, reserve memory for page cache.</p>
+          </div>
+          <div style="padding: 1rem; background: var(--danger-light); border-radius: 8px;">
+            <strong style="color: var(--danger);">NIC hardware failure / fallback to software path</strong>
+            <p style="font-size: 0.82rem; margin-top: 0.3rem;">If the NIC's SG engine fails or firmware bugs trigger a fallback, the kernel silently reverts to CPU copying. Performance drops without errors. Mitigation: monitor NIC stats, set performance alerts.</p>
+          </div>
+          <div style="padding: 1rem; background: var(--danger-light); border-radius: 8px;">
+            <strong style="color: var(--danger);">File truncation during sendfile()</strong>
+            <p style="font-size: 0.82rem; margin-top: 0.3rem;">If another process truncates the file mid-transfer, sendfile() may return short or signal an error depending on timing. Mitigation: use immutable segments or flock().</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 8: Interactive Playground -->
+    <section id="playground">
+      <div class="section-header">
+        <h2>Interactive Playground</h2>
+        <p>Simulate traditional vs zero-copy transfer and see the difference in real time.</p>
+      </div>
+
+      <div class="playground">
+        <div class="presets">
+          <button class="preset-btn active" onclick="applyPreset('small')">Small File (64KB)</button>
+          <button class="preset-btn" onclick="applyPreset('medium')">Medium File (10MB)</button>
+          <button class="preset-btn" onclick="applyPreset('large')">Large File (1GB)</button>
+          <button class="preset-btn" onclick="applyPreset('kafka')">Kafka Segment (1GB, 50 consumers)</button>
+        </div>
+
+        <div class="playground-controls">
+          <div class="control-group">
+            <label>File Size</label>
+            <input type="range" id="pg-filesize" min="1" max="2048" value="64" oninput="updatePlayground()">
+            <span id="pg-filesize-val" style="font-size: 0.8rem; font-weight: 600;">64 KB</span>
+          </div>
+          <div class="control-group">
+            <label>Concurrent Connections</label>
+            <input type="range" id="pg-conns" min="1" max="200" value="10" oninput="updatePlayground()">
+            <span id="pg-conns-val" style="font-size: 0.8rem; font-weight: 600;">10</span>
+          </div>
+          <div class="control-group">
+            <label>NIC Speed</label>
+            <select id="pg-nic" onchange="updatePlayground()">
+              <option value="1">1 GbE</option>
+              <option value="10" selected>10 GbE</option>
+              <option value="25">25 GbE</option>
+              <option value="100">100 GbE</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Page Cache Hit Rate</label>
+            <input type="range" id="pg-cache" min="0" max="100" value="95" oninput="updatePlayground()">
+            <span id="pg-cache-val" style="font-size: 0.8rem; font-weight: 600;">95%</span>
+          </div>
+          <div class="control-group" style="align-self: flex-end;">
+            <button class="btn btn-secondary" onclick="resetPlayground()">Reset</button>
+          </div>
+        </div>
+
+        <div class="metric-grid" id="pg-metrics">
+          <div class="metric-card">
+            <div class="metric-value" id="m-trad-tput">—</div>
+            <div class="metric-label">Traditional Throughput</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="m-zc-tput" style="color: var(--accent);">—</div>
+            <div class="metric-label">Zero-Copy Throughput</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="m-trad-cpu">—</div>
+            <div class="metric-label">Traditional CPU %</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="m-zc-cpu" style="color: var(--accent);">—</div>
+            <div class="metric-label">Zero-Copy CPU %</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="m-trad-lat">—</div>
+            <div class="metric-label">Traditional Latency</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="m-zc-lat" style="color: var(--accent);">—</div>
+            <div class="metric-label">Zero-Copy Latency</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="m-speedup" style="color: var(--secondary);">—</div>
+            <div class="metric-label">Speedup Factor</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="m-savings" style="color: var(--secondary);">—</div>
+            <div class="metric-label">CPU Savings</div>
+          </div>
+        </div>
+
+        <div class="anim-canvas" id="pg-canvas">
+          <svg id="pg-svg" width="100%" height="280" viewBox="0 0 800 280">
+          </svg>
+        </div>
+
+        <div style="margin-top: 1rem; padding: 1rem; background: var(--surface-alt); border-radius: 8px; font-size: 0.83rem; color: var(--text-muted);" id="pg-explanation">
+          Adjust parameters above to compare traditional I/O vs zero-copy performance. The visualization shows data movement through the system stack.
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    // ============ NAVIGATION ============
+    document.querySelectorAll('nav a').forEach(link => {
+      link.addEventListener('click', function(e) {
+        document.querySelectorAll('nav a').forEach(l => l.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+
+    // Intersection observer for nav highlighting
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('nav a');
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          navLinks.forEach(l => l.classList.remove('active'));
+          const link = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+          if (link) link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-100px 0px -60% 0px' });
+    sections.forEach(s => observer.observe(s));
+
+    // ============ ARCHITECTURE DIAGRAM ============
+    let currentDiagram = 'traditional';
+
+    function switchDiagram(type) {
+      currentDiagram = type;
+      document.querySelectorAll('.diagram-tab').forEach((t, i) => {
+        t.classList.toggle('active',
+          (type === 'traditional' && i === 0) ||
+          (type === 'zerocopy' && i === 1) ||
+          (type === 'splice' && i === 2)
+        );
+      });
+      renderArchDiagram();
+    }
+
+    function renderArchDiagram() {
+      const svg = document.getElementById('arch-svg');
+      if (currentDiagram === 'traditional') {
+        svg.innerHTML = `
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#64748b"/>
+            </marker>
+            <marker id="arr-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#dc2626"/>
+            </marker>
+            <marker id="arr-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#2563eb"/>
+            </marker>
+          </defs>
+
+          <!-- Background zones -->
+          <rect x="30" y="20" width="840" height="120" rx="8" fill="#fee2e2" opacity="0.3"/>
+          <text x="50" y="45" font-size="11" fill="#dc2626" font-weight="700">USER SPACE</text>
+
+          <rect x="30" y="155" width="840" height="120" rx="8" fill="#dbeafe" opacity="0.3"/>
+          <text x="50" y="180" font-size="11" fill="#2563eb" font-weight="700">KERNEL SPACE</text>
+
+          <rect x="30" y="290" width="840" height="110" rx="8" fill="#d1fae5" opacity="0.3"/>
+          <text x="50" y="315" font-size="11" fill="#059669" font-weight="700">HARDWARE</text>
+
+          <!-- Components -->
+          <!-- Application -->
+          <rect x="330" y="55" width="240" height="65" rx="10" fill="white" stroke="#dc2626" stroke-width="2"/>
+          <text x="450" y="85" text-anchor="middle" font-size="13" font-weight="700" fill="#1a202c">Application Process</text>
+          <text x="450" y="103" text-anchor="middle" font-size="10" fill="#64748b">User Buffer (malloc'd memory)</text>
+
+          <!-- Kernel Read Buffer -->
+          <rect x="130" y="185" width="200" height="60" rx="10" fill="white" stroke="#2563eb" stroke-width="2"/>
+          <text x="230" y="212" text-anchor="middle" font-size="12" font-weight="700" fill="#1a202c">Kernel Read Buffer</text>
+          <text x="230" y="228" text-anchor="middle" font-size="10" fill="#64748b">(Page Cache)</text>
+
+          <!-- Kernel Socket Buffer -->
+          <rect x="570" y="185" width="200" height="60" rx="10" fill="white" stroke="#2563eb" stroke-width="2"/>
+          <text x="670" y="212" text-anchor="middle" font-size="12" font-weight="700" fill="#1a202c">Socket Buffer</text>
+          <text x="670" y="228" text-anchor="middle" font-size="10" fill="#64748b">(sk_buff)</text>
+
+          <!-- Disk -->
+          <rect x="130" y="320" width="200" height="55" rx="10" fill="white" stroke="#059669" stroke-width="2"/>
+          <text x="230" y="348" text-anchor="middle" font-size="12" font-weight="700" fill="#1a202c">Disk / SSD</text>
+          <text x="230" y="364" text-anchor="middle" font-size="10" fill="#64748b">Storage Device</text>
+
+          <!-- NIC -->
+          <rect x="570" y="320" width="200" height="55" rx="10" fill="white" stroke="#059669" stroke-width="2"/>
+          <text x="670" y="348" text-anchor="middle" font-size="12" font-weight="700" fill="#1a202c">Network Card (NIC)</text>
+          <text x="670" y="364" text-anchor="middle" font-size="10" fill="#64748b">Ethernet / TCP/IP</text>
+
+          <!-- Arrows with labels -->
+          <!-- 1: Disk → Kernel Read Buffer (DMA) -->
+          <line x1="230" y1="320" x2="230" y2="250" stroke="#059669" stroke-width="2.5" marker-end="url(#arr)"/>
+          <rect x="155" y="275" width="100" height="20" rx="4" fill="#d1fae5"/>
+          <text x="205" y="289" text-anchor="middle" font-size="9" font-weight="600" fill="#059669">① DMA Copy</text>
+
+          <!-- 2: Kernel Read Buffer → User Buffer (CPU copy) -->
+          <path d="M 290 185 Q 350 150 370 120" stroke="#dc2626" stroke-width="2.5" fill="none" marker-end="url(#arr-red)"/>
+          <rect x="280" y="140" width="100" height="20" rx="4" fill="#fee2e2"/>
+          <text x="330" y="154" text-anchor="middle" font-size="9" font-weight="600" fill="#dc2626">② CPU Copy</text>
+
+          <!-- 3: User Buffer → Socket Buffer (CPU copy) -->
+          <path d="M 530 120 Q 580 150 610 185" stroke="#dc2626" stroke-width="2.5" fill="none" marker-end="url(#arr-red)"/>
+          <rect x="530" y="140" width="100" height="20" rx="4" fill="#fee2e2"/>
+          <text x="580" y="154" text-anchor="middle" font-size="9" font-weight="600" fill="#dc2626">③ CPU Copy</text>
+
+          <!-- 4: Socket Buffer → NIC (DMA) -->
+          <line x1="670" y1="250" x2="670" y2="320" stroke="#059669" stroke-width="2.5" marker-end="url(#arr)"/>
+          <rect x="620" y="275" width="100" height="20" rx="4" fill="#d1fae5"/>
+          <text x="670" y="289" text-anchor="middle" font-size="9" font-weight="600" fill="#059669">④ DMA Copy</text>
+
+          <!-- Context switch indicators -->
+          <text x="160" y="147" font-size="9" fill="#64748b" font-style="italic">ctx switch 1,2</text>
+          <text x="620" y="147" font-size="9" fill="#64748b" font-style="italic">ctx switch 3,4</text>
+        `;
+      } else if (currentDiagram === 'zerocopy') {
+        svg.innerHTML = `
+          <defs>
+            <marker id="arr-g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#059669"/>
+            </marker>
+          </defs>
+
+          <!-- Background zones -->
+          <rect x="30" y="20" width="840" height="100" rx="8" fill="#fee2e2" opacity="0.15"/>
+          <text x="50" y="45" font-size="11" fill="#dc2626" font-weight="700" opacity="0.5">USER SPACE (not used)</text>
+
+          <rect x="30" y="135" width="840" height="140" rx="8" fill="#dbeafe" opacity="0.3"/>
+          <text x="50" y="160" font-size="11" fill="#2563eb" font-weight="700">KERNEL SPACE</text>
+
+          <rect x="30" y="290" width="840" height="110" rx="8" fill="#d1fae5" opacity="0.3"/>
+          <text x="50" y="315" font-size="11" fill="#059669" font-weight="700">HARDWARE</text>
+
+          <!-- Application (grayed out) -->
+          <rect x="330" y="45" width="240" height="60" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="5,5"/>
+          <text x="450" y="72" text-anchor="middle" font-size="12" fill="#94a3b8">Application Process</text>
+          <text x="450" y="90" text-anchor="middle" font-size="10" fill="#94a3b8">sendfile(socket_fd, file_fd, ...)</text>
+
+          <!-- Kernel Page Cache -->
+          <rect x="130" y="175" width="240" height="70" rx="10" fill="white" stroke="#2563eb" stroke-width="2.5"/>
+          <text x="250" y="205" text-anchor="middle" font-size="13" font-weight="700" fill="#1a202c">Page Cache</text>
+          <text x="250" y="223" text-anchor="middle" font-size="10" fill="#64748b">File data stays here — never leaves kernel</text>
+
+          <!-- Socket descriptor (small) -->
+          <rect x="530" y="185" width="220" height="50" rx="10" fill="white" stroke="#2563eb" stroke-width="2"/>
+          <text x="640" y="208" text-anchor="middle" font-size="11" font-weight="700" fill="#1a202c">Socket (descriptor + length only)</text>
+          <text x="640" y="222" text-anchor="middle" font-size="9" fill="#64748b">Points back to page cache pages</text>
+
+          <!-- Disk -->
+          <rect x="130" y="320" width="200" height="55" rx="10" fill="white" stroke="#059669" stroke-width="2"/>
+          <text x="230" y="348" text-anchor="middle" font-size="12" font-weight="700" fill="#1a202c">Disk / SSD</text>
+
+          <!-- NIC -->
+          <rect x="570" y="320" width="200" height="55" rx="10" fill="white" stroke="#059669" stroke-width="2"/>
+          <text x="670" y="348" text-anchor="middle" font-size="12" font-weight="700" fill="#1a202c">NIC (Scatter-Gather DMA)</text>
+
+          <!-- Arrow 1: Disk → Page Cache (DMA) -->
+          <line x1="230" y1="320" x2="230" y2="250" stroke="#059669" stroke-width="2.5" marker-end="url(#arr-g)"/>
+          <rect x="155" y="278" width="100" height="20" rx="4" fill="#d1fae5"/>
+          <text x="205" y="292" text-anchor="middle" font-size="9" font-weight="600" fill="#059669">① DMA Copy</text>
+
+          <!-- Arrow 2: Page Cache → Socket (descriptor passing, no data copy) -->
+          <line x1="370" y1="210" x2="525" y2="210" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arr)"/>
+          <rect x="400" y="192" width="110" height="18" rx="4" fill="#ede9fe"/>
+          <text x="455" y="204" text-anchor="middle" font-size="9" font-weight="600" fill="#7c3aed">Descriptor only</text>
+
+          <!-- Arrow 3: Page Cache → NIC directly (SG DMA gather) -->
+          <path d="M 320 245 Q 450 290 590 330" stroke="#059669" stroke-width="3" fill="none" marker-end="url(#arr-g)"/>
+          <rect x="390" y="290" width="140" height="20" rx="4" fill="#d1fae5"/>
+          <text x="460" y="304" text-anchor="middle" font-size="9" font-weight="600" fill="#059669">② DMA Gather (from page cache)</text>
+
+          <!-- No CPU copy indicator -->
+          <rect x="580" y="130" width="180" height="35" rx="8" fill="#d1fae5" stroke="#059669" stroke-width="1.5"/>
+          <text x="670" y="147" text-anchor="middle" font-size="10" font-weight="800" fill="#059669">ZERO CPU COPIES</text>
+          <text x="670" y="159" text-anchor="middle" font-size="8" fill="#059669">Only 2 context switches</text>
+
+          <!-- Syscall arrow from app to kernel -->
+          <path d="M 450 105 L 450 135" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arr)"/>
+          <text x="480" y="125" font-size="8" fill="#94a3b8">sendfile()</text>
+        `;
+      } else {
+        svg.innerHTML = `
+          <defs>
+            <marker id="arr-p" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#7c3aed"/>
+            </marker>
+          </defs>
+
+          <!-- Background zones -->
+          <rect x="30" y="20" width="840" height="80" rx="8" fill="#fee2e2" opacity="0.15"/>
+          <text x="50" y="45" font-size="11" fill="#dc2626" font-weight="700" opacity="0.5">USER SPACE</text>
+
+          <rect x="30" y="115" width="840" height="185" rx="8" fill="#dbeafe" opacity="0.3"/>
+          <text x="50" y="140" font-size="11" fill="#2563eb" font-weight="700">KERNEL SPACE</text>
+
+          <rect x="30" y="315" width="840" height="85" rx="8" fill="#d1fae5" opacity="0.3"/>
+          <text x="50" y="340" font-size="11" fill="#059669" font-weight="700">HARDWARE</text>
+
+          <!-- Application -->
+          <rect x="320" y="35" width="260" height="50" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="5,5"/>
+          <text x="450" y="58" text-anchor="middle" font-size="11" fill="#94a3b8">Proxy Application</text>
+          <text x="450" y="73" text-anchor="middle" font-size="9" fill="#94a3b8">splice(socket_in, pipe) + splice(pipe, socket_out)</text>
+
+          <!-- Source Socket Buffer -->
+          <rect x="80" y="155" width="180" height="55" rx="10" fill="white" stroke="#2563eb" stroke-width="2"/>
+          <text x="170" y="180" text-anchor="middle" font-size="11" font-weight="700" fill="#1a202c">Source Socket</text>
+          <text x="170" y="195" text-anchor="middle" font-size="9" fill="#64748b">Incoming data</text>
+
+          <!-- Pipe Buffer -->
+          <rect x="350" y="155" width="200" height="55" rx="10" fill="white" stroke="#7c3aed" stroke-width="2.5"/>
+          <text x="450" y="180" text-anchor="middle" font-size="11" font-weight="700" fill="#1a202c">Pipe Buffer</text>
+          <text x="450" y="195" text-anchor="middle" font-size="9" fill="#64748b">Reference only — no data copy</text>
+
+          <!-- Dest Socket Buffer -->
+          <rect x="640" y="155" width="180" height="55" rx="10" fill="white" stroke="#2563eb" stroke-width="2"/>
+          <text x="730" y="180" text-anchor="middle" font-size="11" font-weight="700" fill="#1a202c">Dest Socket</text>
+          <text x="730" y="195" text-anchor="middle" font-size="9" fill="#64748b">Outgoing data</text>
+
+          <!-- Page references -->
+          <rect x="250" y="240" width="400" height="45" rx="10" fill="white" stroke="#059669" stroke-width="1.5"/>
+          <text x="450" y="260" text-anchor="middle" font-size="11" font-weight="700" fill="#1a202c">Shared Page References</text>
+          <text x="450" y="275" text-anchor="middle" font-size="9" fill="#64748b">Pages are reference-counted, not copied between buffers</text>
+
+          <!-- Arrows -->
+          <line x1="265" y1="182" x2="345" y2="182" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#arr-p)"/>
+          <text x="305" y="172" text-anchor="middle" font-size="9" font-weight="600" fill="#7c3aed">splice()</text>
+
+          <line x1="555" y1="182" x2="635" y2="182" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#arr-p)"/>
+          <text x="595" y="172" text-anchor="middle" font-size="9" font-weight="600" fill="#7c3aed">splice()</text>
+
+          <!-- Page ref arrows -->
+          <line x1="170" y1="215" x2="300" y2="240" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+          <line x1="450" y1="215" x2="450" y2="240" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+          <line x1="730" y1="215" x2="600" y2="240" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+
+          <!-- Zero copy badge -->
+          <rect x="340" y="115" width="220" height="28" rx="6" fill="#d1fae5" stroke="#059669" stroke-width="1.5"/>
+          <text x="450" y="133" text-anchor="middle" font-size="10" font-weight="800" fill="#059669">ZERO CPU COPIES (page ref passing)</text>
+
+          <!-- Use case -->
+          <rect x="250" y="345" width="400" height="35" rx="8" fill="white" stroke="#059669" stroke-width="1.5"/>
+          <text x="450" y="367" text-anchor="middle" font-size="10" fill="#1a202c">Use case: Nginx reverse proxy, HAProxy, socket-to-socket relay</text>
+        `;
+      }
+    }
+
+    renderArchDiagram();
+
+    // ============ SEQUENCE DIAGRAM ============
+    let seqFlow = 'sendfile';
+    let seqSteps = [];
+    let seqCurrentStep = -1;
+    let seqPlaying = false;
+    let seqTimer = null;
+
+    function switchFlow(type) {
+      seqFlow = type;
+      document.querySelectorAll('#sequence .diagram-tab').forEach((t, i) => {
+        t.classList.toggle('active', (type === 'sendfile' && i === 0) || (type === 'traditional' && i === 1));
+      });
+      resetSequence();
+      renderSequence();
+    }
+
+    function getSeqSteps() {
+      if (seqFlow === 'sendfile') {
+        return [
+          { desc: "Application calls sendfile(socket_fd, file_fd, offset, count)", active: [0], arrow: null },
+          { desc: "Context switch: User space → Kernel space", active: [0, 1], arrow: { from: 0, to: 1, label: "syscall" } },
+          { desc: "Kernel initiates DMA read from disk into page cache", active: [1, 2], arrow: { from: 2, to: 1, label: "DMA read" } },
+          { desc: "DMA engine transfers data directly to page cache — no CPU involvement", active: [1, 2], arrow: null },
+          { desc: "Kernel passes buffer descriptors (pointers + length) to the socket", active: [1, 3], arrow: { from: 1, to: 3, label: "descriptors" } },
+          { desc: "NIC uses scatter-gather DMA to read directly from page cache pages", active: [3, 4], arrow: { from: 1, to: 4, label: "SG DMA gather" } },
+          { desc: "Data is on the wire. Context switch back to user space. Done!", active: [0], arrow: { from: 1, to: 0, label: "return" } },
+        ];
+      } else {
+        return [
+          { desc: "Application calls read(file_fd, user_buf, count)", active: [0], arrow: null },
+          { desc: "Context switch #1: User → Kernel", active: [0, 1], arrow: { from: 0, to: 1, label: "syscall" } },
+          { desc: "Kernel initiates DMA read from disk into kernel read buffer", active: [1, 2], arrow: { from: 2, to: 1, label: "DMA copy ①" } },
+          { desc: "CPU copies data from kernel read buffer to user buffer", active: [0, 1], arrow: { from: 1, to: 0, label: "CPU copy ②" } },
+          { desc: "Context switch #2: Kernel → User (read returns)", active: [0], arrow: null },
+          { desc: "Application calls write(socket_fd, user_buf, count)", active: [0], arrow: null },
+          { desc: "Context switch #3: User → Kernel", active: [0, 1], arrow: { from: 0, to: 1, label: "syscall" } },
+          { desc: "CPU copies data from user buffer to kernel socket buffer", active: [0, 3], arrow: { from: 0, to: 3, label: "CPU copy ③" } },
+          { desc: "DMA engine transfers from socket buffer to NIC", active: [3, 4], arrow: { from: 3, to: 4, label: "DMA copy ④" } },
+          { desc: "Context switch #4: Kernel → User (write returns). 4 copies total!", active: [0], arrow: { from: 1, to: 0, label: "return" } },
+        ];
+      }
+    }
+
+    function renderSequence() {
+      const svg = document.getElementById('seq-svg');
+      const steps = getSeqSteps();
+      const entities = ['App', 'Kernel', 'Disk', 'Socket Buf', 'NIC'];
+      const colors = ['#dc2626', '#2563eb', '#059669', '#7c3aed', '#059669'];
+      const xPositions = [100, 260, 420, 580, 720];
+
+      let html = '';
+
+      // Lifelines
+      entities.forEach((e, i) => {
+        const x = xPositions[i];
+        const isActive = seqCurrentStep >= 0 && steps[seqCurrentStep].active.includes(i);
+        html += `<rect x="${x-40}" y="10" width="80" height="30" rx="6" fill="${isActive ? colors[i] : '#e2e8f0'}" />`;
+        html += `<text x="${x}" y="30" text-anchor="middle" font-size="10" font-weight="700" fill="${isActive ? 'white' : '#475569'}">${e}</text>`;
+        html += `<line x1="${x}" y1="45" x2="${x}" y2="340" stroke="${colors[i]}" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.4"/>`;
+      });
+
+      // Show arrows up to current step
+      for (let s = 0; s <= seqCurrentStep && s < steps.length; s++) {
+        const step = steps[s];
+        if (step.arrow) {
+          const fromX = xPositions[step.arrow.from];
+          const toX = xPositions[step.arrow.to];
+          const y = 70 + s * 32;
+          const isCurrent = s === seqCurrentStep;
+          const opacity = isCurrent ? 1 : 0.5;
+          const strokeW = isCurrent ? 2.5 : 1.5;
+          const color = isCurrent ? '#2563eb' : '#94a3b8';
+
+          html += `<line x1="${fromX}" y1="${y}" x2="${toX}" y2="${y}" stroke="${color}" stroke-width="${strokeW}" opacity="${opacity}" marker-end="url(#arr)"/>`;
+          html += `<text x="${(fromX + toX) / 2}" y="${y - 6}" text-anchor="middle" font-size="8" fill="${color}" font-weight="${isCurrent ? '700' : '500'}">${step.arrow.label}</text>`;
+
+          if (isCurrent) {
+            const packetX = toX > fromX ? toX - 10 : toX + 10;
+            html += `<circle cx="${packetX}" cy="${y}" r="5" fill="${color}"><animate attributeName="opacity" values="1;0.3;1" dur="1s" repeatCount="indefinite"/></circle>`;
+          }
+        }
+      }
+
+      svg.innerHTML = `<defs><marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#64748b"/></marker></defs>` + html;
+    }
+
+    function resetSequence() {
+      seqCurrentStep = -1;
+      seqPlaying = false;
+      clearInterval(seqTimer);
+      document.getElementById('seq-play').innerHTML = '&#9654; Play';
+      document.getElementById('seq-narration').textContent = 'Press Play to see the data transfer sequence animated step by step.';
+      renderSequence();
+    }
+
+    function stepSequence() {
+      const steps = getSeqSteps();
+      if (seqCurrentStep < steps.length - 1) {
+        seqCurrentStep++;
+        document.getElementById('seq-narration').textContent = `Step ${seqCurrentStep + 1}/${steps.length}: ${steps[seqCurrentStep].desc}`;
+        renderSequence();
+      } else {
+        seqPlaying = false;
+        clearInterval(seqTimer);
+        document.getElementById('seq-play').innerHTML = '&#9654; Play';
+      }
+    }
+
+    document.getElementById('seq-play').addEventListener('click', () => {
+      if (seqPlaying) {
+        seqPlaying = false;
+        clearInterval(seqTimer);
+        document.getElementById('seq-play').innerHTML = '&#9654; Play';
+      } else {
+        const steps = getSeqSteps();
+        if (seqCurrentStep >= steps.length - 1) resetSequence();
+        seqPlaying = true;
+        document.getElementById('seq-play').innerHTML = '&#10074;&#10074; Pause';
+        const speed = 6 - document.getElementById('seq-speed').value;
+        seqTimer = setInterval(stepSequence, speed * 400);
+      }
+    });
+
+    document.getElementById('seq-step').addEventListener('click', stepSequence);
+    document.getElementById('seq-reset').addEventListener('click', resetSequence);
+
+    renderSequence();
+
+    // ============ PITFALL TOGGLE ============
+    function togglePitfall(header) {
+      const body = header.nextElementSibling;
+      body.classList.toggle('open');
+      header.querySelector('span:last-child').textContent = body.classList.contains('open') ? '▲' : '▼';
+    }
+
+    // ============ PLAYGROUND ============
+    function updatePlayground() {
+      const fileSize = parseInt(document.getElementById('pg-filesize').value);
+      const conns = parseInt(document.getElementById('pg-conns').value);
+      const nicSpeed = parseInt(document.getElementById('pg-nic').value);
+      const cacheHit = parseInt(document.getElementById('pg-cache').value);
+
+      // Display values
+      let sizeLabel = fileSize < 1024 ? `${fileSize} KB` : `${(fileSize / 1024).toFixed(1)} MB`;
+      if (fileSize >= 1024) sizeLabel = `${(fileSize / 1024).toFixed(fileSize >= 10240 ? 0 : 1)} MB`;
+      document.getElementById('pg-filesize-val').textContent = sizeLabel;
+      document.getElementById('pg-conns-val').textContent = conns;
+      document.getElementById('pg-cache-val').textContent = `${cacheHit}%`;
+
+      // Calculate metrics
+      const fileSizeBytes = fileSize * 1024;
+      const nicBytesPerSec = nicSpeed * 125000000; // GB/s to B/s
+
+      // Traditional: limited by CPU copy speed (~6 GB/s memcpy) and context switches
+      const cpuCopySpeed = 6 * 1e9; // 6 GB/s memcpy
+      const ctxSwitchCost = 0.000008; // 8 microseconds
+      const tradCopyTime = (fileSizeBytes * 2) / cpuCopySpeed; // 2 CPU copies
+      const tradCtxTime = 4 * ctxSwitchCost;
+      const tradDmaTime = fileSizeBytes / nicBytesPerSec;
+      const diskLatency = (1 - cacheHit / 100) * 0.002; // 2ms avg disk seek if cache miss
+      const tradTimePerReq = tradCopyTime + tradCtxTime + tradDmaTime + diskLatency;
+      const tradTput = Math.min(fileSizeBytes * conns / tradTimePerReq / conns, nicBytesPerSec * 0.7) / (1024 * 1024);
+
+      // Zero-copy: no CPU copies, only DMA + minimal ctx switch
+      const zcCtxTime = 2 * ctxSwitchCost;
+      const zcDmaTime = fileSizeBytes / nicBytesPerSec;
+      const zcTimePerReq = zcCtxTime + zcDmaTime + diskLatency * 0.8;
+      const zcTput = Math.min(fileSizeBytes * conns / zcTimePerReq / conns, nicBytesPerSec * 0.95) / (1024 * 1024);
+
+      // CPU usage
+      const tradCpu = Math.min(95, (conns * fileSizeBytes * 2 / cpuCopySpeed) * 100 / 0.001 * 0.01 + 15 + conns * 0.3);
+      const zcCpu = Math.min(95, tradCpu * 0.25);
+
+      // Latency
+      const tradLat = (tradTimePerReq * 1000000).toFixed(0); // microseconds
+      const zcLat = (zcTimePerReq * 1000000).toFixed(0);
+
+      const speedup = (tradTimePerReq / zcTimePerReq).toFixed(1);
+      const cpuSavings = Math.round(((tradCpu - zcCpu) / tradCpu) * 100);
+
+      // Update display
+      document.getElementById('m-trad-tput').textContent = `${Math.round(tradTput)} MB/s`;
+      document.getElementById('m-zc-tput').textContent = `${Math.round(zcTput)} MB/s`;
+      document.getElementById('m-trad-cpu').textContent = `${Math.round(tradCpu)}%`;
+      document.getElementById('m-zc-cpu').textContent = `${Math.round(zcCpu)}%`;
+      document.getElementById('m-trad-lat').textContent = `${tradLat} μs`;
+      document.getElementById('m-zc-lat').textContent = `${zcLat} μs`;
+      document.getElementById('m-speedup').textContent = `${speedup}x`;
+      document.getElementById('m-savings').textContent = `${cpuSavings}%`;
+
+      // Update explanation
+      const explanation = fileSize < 32
+        ? "At this small file size, the overhead difference is minimal. Zero-copy benefits become significant above 64KB."
+        : fileSize < 512
+        ? `With ${sizeLabel} files and ${conns} connections, zero-copy eliminates ${(fileSizeBytes * 2 / 1024).toFixed(0)} KB of CPU copies per request, freeing cores for application logic.`
+        : `Transferring ${sizeLabel} files to ${conns} clients simultaneously — zero-copy avoids ${((fileSizeBytes * 2 * conns) / (1024*1024)).toFixed(0)} MB/s of unnecessary CPU memory bandwidth, achieving ${speedup}x throughput improvement.`;
+      document.getElementById('pg-explanation').textContent = explanation;
+
+      renderPlaygroundViz(fileSize, conns, tradCpu, zcCpu, tradTput, zcTput);
+    }
+
+    function renderPlaygroundViz(fileSize, conns, tradCpu, zcCpu, tradTput, zcTput) {
+      const svg = document.getElementById('pg-svg');
+      const maxTput = Math.max(tradTput, zcTput);
+
+      let html = '';
+
+      // Traditional side
+      html += `<text x="200" y="25" text-anchor="middle" font-size="12" font-weight="700" fill="#1a202c">Traditional (read + write)</text>`;
+
+      // Throughput bar
+      const tradBarW = Math.max(10, (tradTput / maxTput) * 280);
+      html += `<rect x="60" y="40" width="${tradBarW}" height="28" rx="6" fill="#dc2626" opacity="0.8"/>`;
+      html += `<text x="${60 + tradBarW + 8}" y="58" font-size="10" fill="#64748b">${Math.round(tradTput)} MB/s</text>`;
+      html += `<text x="10" y="58" font-size="9" fill="#64748b">Tput</text>`;
+
+      // CPU bar
+      const tradCpuW = (tradCpu / 100) * 280;
+      html += `<rect x="60" y="78" width="${tradCpuW}" height="28" rx="6" fill="#f97316" opacity="0.8"/>`;
+      html += `<text x="${60 + tradCpuW + 8}" y="96" font-size="10" fill="#64748b">${Math.round(tradCpu)}% CPU</text>`;
+      html += `<text x="10" y="96" font-size="9" fill="#64748b">CPU</text>`;
+
+      // Data flow visualization - Traditional
+      html += `<rect x="60" y="118" width="280" height="50" rx="6" fill="#fee2e2" stroke="#fecaca" stroke-width="1"/>`;
+      const copies = ['Disk', 'K.Buf', 'U.Buf', 'S.Buf', 'NIC'];
+      copies.forEach((label, i) => {
+        const x = 80 + i * 65;
+        html += `<rect x="${x}" y="128" width="50" height="30" rx="4" fill="${i === 2 ? '#dc2626' : '#64748b'}" opacity="0.7"/>`;
+        html += `<text x="${x + 25}" y="147" text-anchor="middle" font-size="8" fill="white" font-weight="600">${label}</text>`;
+        if (i < 4) {
+          html += `<text x="${x + 55}" y="147" font-size="10" fill="#dc2626">→</text>`;
+        }
+      });
+
+      // Zero-copy side
+      html += `<text x="600" y="25" text-anchor="middle" font-size="12" font-weight="700" fill="#1a202c">Zero-Copy (sendfile)</text>`;
+
+      // Throughput bar
+      const zcBarW = Math.max(10, (zcTput / maxTput) * 280);
+      html += `<rect x="460" y="40" width="${zcBarW}" height="28" rx="6" fill="#059669" opacity="0.8"/>`;
+      html += `<text x="${460 + zcBarW + 8}" y="58" font-size="10" fill="#64748b">${Math.round(zcTput)} MB/s</text>`;
+      html += `<text x="410" y="58" font-size="9" fill="#64748b">Tput</text>`;
+
+      // CPU bar
+      const zcCpuW = (zcCpu / 100) * 280;
+      html += `<rect x="460" y="78" width="${zcCpuW}" height="28" rx="6" fill="#10b981" opacity="0.8"/>`;
+      html += `<text x="${460 + zcCpuW + 8}" y="96" font-size="10" fill="#64748b">${Math.round(zcCpu)}% CPU</text>`;
+      html += `<text x="410" y="96" font-size="9" fill="#64748b">CPU</text>`;
+
+      // Data flow visualization - Zero Copy
+      html += `<rect x="460" y="118" width="280" height="50" rx="6" fill="#d1fae5" stroke="#a7f3d0" stroke-width="1"/>`;
+      const zcCopies = ['Disk', 'Page$', 'NIC'];
+      zcCopies.forEach((label, i) => {
+        const x = 500 + i * 90;
+        html += `<rect x="${x}" y="128" width="60" height="30" rx="4" fill="#059669" opacity="0.7"/>`;
+        html += `<text x="${x + 30}" y="147" text-anchor="middle" font-size="8" fill="white" font-weight="600">${label}</text>`;
+        if (i < 2) {
+          html += `<text x="${x + 67}" y="147" font-size="10" fill="#059669">→</text>`;
+        }
+      });
+
+      // Connection visualization
+      html += `<text x="200" y="195" text-anchor="middle" font-size="10" fill="#64748b">${conns} concurrent connections</text>`;
+      html += `<text x="600" y="195" text-anchor="middle" font-size="10" fill="#64748b">${conns} concurrent connections</text>`;
+
+      // Draw connection dots
+      const maxDots = Math.min(conns, 30);
+      for (let i = 0; i < maxDots; i++) {
+        const x1 = 70 + (i / maxDots) * 260;
+        const x2 = 470 + (i / maxDots) * 260;
+        const y = 210 + Math.sin(i * 0.7) * 15;
+        const tradColor = tradCpu > 80 ? '#dc2626' : '#f97316';
+        html += `<circle cx="${x1}" cy="${y}" r="3" fill="${tradColor}" opacity="${0.4 + Math.random() * 0.4}"/>`;
+        html += `<circle cx="${x2}" cy="${y}" r="3" fill="#059669" opacity="${0.6 + Math.random() * 0.3}"/>`;
+      }
+
+      // Divider
+      html += `<line x1="400" y1="10" x2="400" y2="270" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="4,4"/>`;
+
+      svg.innerHTML = html;
+    }
+
+    function applyPreset(type) {
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      switch (type) {
+        case 'small':
+          document.getElementById('pg-filesize').value = 64;
+          document.getElementById('pg-conns').value = 10;
+          document.getElementById('pg-nic').value = '10';
+          document.getElementById('pg-cache').value = 95;
+          break;
+        case 'medium':
+          document.getElementById('pg-filesize').value = 512;
+          document.getElementById('pg-conns').value = 50;
+          document.getElementById('pg-nic').value = '10';
+          document.getElementById('pg-cache').value = 85;
+          break;
+        case 'large':
+          document.getElementById('pg-filesize').value = 1024;
+          document.getElementById('pg-conns').value = 100;
+          document.getElementById('pg-nic').value = '25';
+          document.getElementById('pg-cache').value = 70;
+          break;
+        case 'kafka':
+          document.getElementById('pg-filesize').value = 1024;
+          document.getElementById('pg-conns').value = 50;
+          document.getElementById('pg-nic').value = '25';
+          document.getElementById('pg-cache').value = 98;
+          break;
+      }
+      updatePlayground();
+    }
+
+    function resetPlayground() {
+      document.getElementById('pg-filesize').value = 64;
+      document.getElementById('pg-conns').value = 10;
+      document.getElementById('pg-nic').value = '10';
+      document.getElementById('pg-cache').value = 95;
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('.preset-btn').classList.add('active');
+      updatePlayground();
+    }
+
+    // Initialize playground
+    updatePlayground();
+
+    // ============ KEYBOARD SHORTCUTS ============
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        document.getElementById('seq-play').click();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        document.getElementById('seq-step').click();
+      } else if (e.code === 'KeyR') {
+        document.getElementById('seq-reset').click();
+      }
+    });
+  </script>
+</body>
+</html>

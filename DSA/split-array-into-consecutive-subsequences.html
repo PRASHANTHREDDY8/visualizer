@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Split Array into Consecutive Subsequences — Visualizer</title>
+  <style>
+    :root {
+      --bg: #0c0c14;
+      --surface: #14141f;
+      --surface2: #1c1c2e;
+      --border: #2a2a40;
+      --text: #e0e0f0;
+      --text-dim: #8888aa;
+      --accent: #6c8cff;
+      --accent-glow: rgba(108,140,255,0.25);
+      --green: #4ade80;
+      --green-dim: rgba(74,222,128,0.15);
+      --amber: #fbbf24;
+      --amber-dim: rgba(251,191,36,0.15);
+      --red: #f87171;
+      --red-dim: rgba(248,113,113,0.15);
+      --cyan: #22d3ee;
+      --purple: #a78bfa;
+      --pink: #f472b6;
+      --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --radius: 10px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      text-align: center;
+      padding: 3rem 2rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #10101a 0%, var(--bg) 100%);
+    }
+    .page-header .problem-num {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+    .page-header h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    .page-header .subtitle {
+      color: var(--text-dim);
+      font-size: 1rem;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(12,12,20,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+      gap: 0.25rem;
+      padding: 0.6rem 1rem;
+    }
+    nav button {
+      background: none;
+      border: 1px solid transparent;
+      color: var(--text-dim);
+      font-family: var(--sans);
+      font-size: 0.82rem;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    nav button:hover { color: var(--text); background: var(--surface); }
+    nav button.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    section { margin-bottom: 3rem; }
+    section h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    section h2 .icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .card h3 {
+      font-size: 1rem;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .badge-time { background: var(--green-dim); color: var(--green); }
+    .badge-space { background: var(--accent-glow); color: var(--accent); }
+
+    .example-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin: 0.75rem 0;
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      line-height: 1.8;
+    }
+    .example-box .label {
+      font-family: var(--sans);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.25rem;
+    }
+
+    .insight-box {
+      background: linear-gradient(135deg, rgba(108,140,255,0.08), rgba(167,139,250,0.08));
+      border: 1px solid rgba(108,140,255,0.25);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin: 1rem 0;
+    }
+    .insight-box .tag {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--purple);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ======== Animation Section ======== */
+    .animation-wrapper {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .controls-bar button {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.82rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .controls-bar button:hover { border-color: var(--accent); color: var(--accent); }
+    .controls-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .controls-bar .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+    .controls-bar .speed-control input[type="range"] {
+      width: 80px;
+      accent-color: var(--accent);
+    }
+    .step-info {
+      width: 100%;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border);
+      background: var(--surface2);
+      min-height: 2.5rem;
+      display: flex;
+      align-items: center;
+    }
+    .step-info .step-text { color: var(--text); }
+    .step-info .step-counter {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      margin-right: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .anim-body {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      min-height: 420px;
+    }
+    @media (max-width: 900px) {
+      .anim-body { grid-template-columns: 1fr; }
+      .code-panel { border-left: none !important; border-top: 1px solid var(--border); }
+    }
+
+    .visual-panel { padding: 1.5rem; overflow: auto; }
+
+    .array-row {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 1.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .arr-cell {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      transition: all 0.3s;
+      position: relative;
+    }
+    .arr-cell.current {
+      border-color: var(--cyan);
+      background: rgba(34,211,238,0.12);
+      box-shadow: 0 0 12px rgba(34,211,238,0.3);
+    }
+    .arr-cell.used {
+      opacity: 0.35;
+      border-color: transparent;
+    }
+    .arr-cell.appended {
+      border-color: var(--green);
+      background: var(--green-dim);
+    }
+    .arr-cell.new-seq {
+      border-color: var(--purple);
+      background: rgba(167,139,250,0.12);
+    }
+    .arr-cell.failed {
+      border-color: var(--red);
+      background: var(--red-dim);
+    }
+    .arr-cell .idx {
+      position: absolute;
+      bottom: -18px;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+    }
+
+    .maps-area {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .map-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+    }
+    .map-card h4 {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      font-family: var(--mono);
+    }
+    .map-entries {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .map-entry {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.25rem 0.5rem;
+      min-width: 36px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      transition: all 0.3s;
+    }
+    .map-entry .key { color: var(--text-dim); font-size: 0.7rem; }
+    .map-entry .val { font-weight: 600; }
+    .map-entry.highlight-freq { border-color: var(--amber); background: var(--amber-dim); }
+    .map-entry.highlight-tail { border-color: var(--green); background: var(--green-dim); }
+    .map-entry.highlight-change { border-color: var(--cyan); }
+
+    .subseq-area {
+      margin-top: 1.25rem;
+    }
+    .subseq-area h4 {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      font-family: var(--mono);
+    }
+    .subseqs {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .subseq-row {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .subseq-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      width: 20px;
+      text-align: right;
+      margin-right: 4px;
+    }
+    .subseq-el {
+      width: 34px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 5px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .subseq-el.new-el {
+      animation: popIn 0.35s ease-out;
+    }
+    @keyframes popIn {
+      0% { transform: scale(0); opacity: 0; }
+      60% { transform: scale(1.15); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .result-banner {
+      text-align: center;
+      padding: 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-top: 1rem;
+      display: none;
+    }
+    .result-banner.success {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(74,222,128,0.3);
+      display: block;
+    }
+    .result-banner.failure {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid rgba(248,113,113,0.3);
+      display: block;
+    }
+
+    .code-panel {
+      border-left: 1px solid var(--border);
+      background: var(--surface2);
+      padding: 1rem;
+      overflow: auto;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.85;
+    }
+    .code-panel .code-title {
+      font-family: var(--sans);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.75rem;
+    }
+    .code-line {
+      padding: 1px 6px;
+      border-radius: 3px;
+      white-space: pre;
+      transition: background 0.2s;
+    }
+    .code-line.active {
+      background: var(--accent-glow);
+      border-left: 2px solid var(--accent);
+    }
+    .code-line .kw { color: var(--purple); }
+    .code-line .fn { color: var(--accent); }
+    .code-line .cm { color: #555570; }
+    .code-line .str { color: var(--green); }
+    .code-line .num { color: var(--amber); }
+
+    /* ======== Playground ======== */
+    .playground {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+    .input-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .input-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    .input-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 0.35rem;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-group input:focus { border-color: var(--accent); }
+
+    .btn-primary {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      font-family: var(--sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.55rem 1.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-primary:hover { filter: brightness(1.15); }
+
+    .presets {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .preset-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .preset-btn:hover { border-color: var(--accent); color: var(--text); }
+
+    .playground-result {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--surface2);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      display: none;
+    }
+    .playground-result.show { display: block; }
+    .playground-result .res-label {
+      font-family: var(--sans);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.4rem;
+    }
+
+    .seq-colors {
+      --c0: #6c8cff;
+      --c1: #4ade80;
+      --c2: #fbbf24;
+      --c3: #f472b6;
+      --c4: #22d3ee;
+      --c5: #a78bfa;
+      --c6: #fb923c;
+      --c7: #e879f9;
+    }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <div class="problem-num">LeetCode 659</div>
+    <h1>Split Array into Consecutive Subsequences</h1>
+    <p class="subtitle">Greedy approach with frequency + tails hash maps</p>
+  </header>
+
+  <nav id="nav">
+    <button class="active" data-section="explanation">Explanation</button>
+    <button data-section="animation">Animation</button>
+    <button data-section="playground">Playground</button>
+  </nav>
+
+  <div class="container">
+    <!-- ==================== SECTION 1: EXPLANATION ==================== -->
+    <section id="explanation">
+      <h2><span class="icon" style="background:var(--accent-glow);color:var(--accent);">&#9672;</span> Visual Explanation</h2>
+
+      <div class="card">
+        <h3>Problem Statement</h3>
+        <p style="margin-bottom:0.75rem;">Given a sorted integer array <code style="color:var(--cyan)">nums</code>, determine if it can be split into subsequences where each subsequence consists of <strong>consecutive integers</strong> and has length <strong>&ge; 3</strong>.</p>
+        <div class="example-box">
+          <div class="label">Example</div>
+          <div><span style="color:var(--cyan)">Input:</span> nums = [1, 2, 3, 3, 4, 5]</div>
+          <div><span style="color:var(--green)">Output:</span> true</div>
+          <div style="color:var(--text-dim);font-size:0.82rem;margin-top:0.25rem;">Split into [1,2,3] and [3,4,5] — both consecutive, both length &ge; 3</div>
+        </div>
+        <div class="example-box">
+          <div class="label">Example 2</div>
+          <div><span style="color:var(--cyan)">Input:</span> nums = [1, 2, 3, 3, 4, 4, 5, 5]</div>
+          <div><span style="color:var(--green)">Output:</span> true</div>
+          <div style="color:var(--text-dim);font-size:0.82rem;margin-top:0.25rem;">Split into [1,2,3,4,5] and [3,4,5]</div>
+        </div>
+        <div class="example-box">
+          <div class="label">Example 3</div>
+          <div><span style="color:var(--cyan)">Input:</span> nums = [1, 2, 3, 4, 4, 5]</div>
+          <div><span style="color:var(--red)">Output:</span> false</div>
+          <div style="color:var(--text-dim);font-size:0.82rem;margin-top:0.25rem;">Cannot form valid split — the second 4 cannot start or extend a valid subsequence</div>
+        </div>
+      </div>
+
+      <div class="insight-box">
+        <div class="tag">&#9889; Key Insight</div>
+        <p>For each number, <strong>prefer appending it to an existing subsequence</strong> over starting a new one. Why? Starting a new subsequence "locks in" a commitment for the next two numbers — if they aren't available, we fail. Extending an existing sequence is always safe.</p>
+      </div>
+
+      <div class="card">
+        <h3>Greedy Approach — Two Maps</h3>
+        <p style="margin-bottom:0.75rem;">We maintain two hash maps:</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+          <div style="background:var(--amber-dim);border:1px solid rgba(251,191,36,0.25);border-radius:8px;padding:0.75rem 1rem;">
+            <div style="font-weight:600;color:var(--amber);font-size:0.9rem;margin-bottom:0.25rem;">freq[num]</div>
+            <div style="font-size:0.85rem;color:var(--text-dim);">Remaining count of each number still available to use</div>
+          </div>
+          <div style="background:var(--green-dim);border:1px solid rgba(74,222,128,0.25);border-radius:8px;padding:0.75rem 1rem;">
+            <div style="font-weight:600;color:var(--green);font-size:0.9rem;margin-bottom:0.25rem;">tails[num]</div>
+            <div style="font-size:0.85rem;color:var(--text-dim);">Number of valid subsequences that end with <code>num</code> and want <code>num+1</code> next</div>
+          </div>
+        </div>
+        <p style="font-size:0.9rem;">For each number in the sorted array:</p>
+        <ol style="margin:0.5rem 0 0 1.25rem;font-size:0.88rem;line-height:2;">
+          <li>If <code style="color:var(--amber)">freq[num] == 0</code> → skip (already used)</li>
+          <li>If <code style="color:var(--green)">tails[num-1] > 0</code> → append to existing subsequence</li>
+          <li>Else if <code style="color:var(--amber)">freq[num+1] > 0</code> AND <code style="color:var(--amber)">freq[num+2] > 0</code> → start new length-3 subsequence</li>
+          <li>Else → return <span style="color:var(--red)">false</span></li>
+        </ol>
+      </div>
+
+      <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap;">
+        <span class="badge badge-time">Time: O(n)</span>
+        <span class="badge badge-space">Space: O(n)</span>
+      </div>
+    </section>
+
+    <!-- ==================== SECTION 2: ANIMATION ==================== -->
+    <section id="animation">
+      <h2><span class="icon" style="background:rgba(34,211,238,0.12);color:var(--cyan);">&#9654;</span> Step-by-Step Animation</h2>
+
+      <div class="animation-wrapper">
+        <div class="controls-bar">
+          <button id="btnReset" title="Reset">&#8634; Reset</button>
+          <button id="btnPrev" title="Previous Step">&#9664; Prev</button>
+          <button id="btnPlayPause" title="Play/Pause">&#9654; Play</button>
+          <button id="btnNext" title="Next Step">Next &#9654;</button>
+          <div class="speed-control">
+            <span>Speed</span>
+            <input type="range" id="speedSlider" min="1" max="10" value="5">
+          </div>
+        </div>
+
+        <div class="anim-body">
+          <div class="visual-panel" id="visualPanel">
+            <div class="array-row" id="arrayRow"></div>
+            <div class="maps-area">
+              <div class="map-card">
+                <h4 style="color:var(--amber);">freq (remaining count)</h4>
+                <div class="map-entries" id="freqMap"></div>
+              </div>
+              <div class="map-card">
+                <h4 style="color:var(--green);">tails (seqs ending at)</h4>
+                <div class="map-entries" id="tailsMap"></div>
+              </div>
+            </div>
+            <div class="subseq-area seq-colors">
+              <h4>Formed Subsequences</h4>
+              <div class="subseqs" id="subseqsDisplay"></div>
+            </div>
+            <div class="result-banner" id="resultBanner"></div>
+          </div>
+
+          <div class="code-panel" id="codePanel">
+            <div class="code-title">Algorithm</div>
+            <div id="codeLines"></div>
+          </div>
+        </div>
+
+        <div class="step-info" id="stepInfo">
+          <span class="step-counter" id="stepCounter"></span>
+          <span class="step-text" id="stepText">Press Play or Step to begin</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECTION 3: PLAYGROUND ==================== -->
+    <section id="playground">
+      <h2><span class="icon" style="background:rgba(167,139,250,0.12);color:var(--purple);">&#9881;</span> Interactive Playground</h2>
+
+      <div class="playground">
+        <div class="presets">
+          <span style="font-size:0.8rem;color:var(--text-dim);margin-right:0.25rem;">Presets:</span>
+          <button class="preset-btn" data-input="1,2,3,3,4,5">✓ [1,2,3,3,4,5]</button>
+          <button class="preset-btn" data-input="1,2,3,3,4,4,5,5">✓ [1,2,3,3,4,4,5,5]</button>
+          <button class="preset-btn" data-input="1,2,3,4,4,5">✗ [1,2,3,4,4,5]</button>
+          <button class="preset-btn" data-input="1,2,3">✓ [1,2,3]</button>
+          <button class="preset-btn" data-input="1,2">✗ [1,2]</button>
+          <button class="preset-btn" data-input="1,2,3,4,5,6,7,8,9">✓ [1..9]</button>
+        </div>
+
+        <div class="input-row">
+          <div class="input-group">
+            <label>Sorted array (comma-separated integers)</label>
+            <input type="text" id="pgInput" value="1,2,3,3,4,5" placeholder="e.g. 1,2,3,3,4,5">
+          </div>
+          <button class="btn-primary" id="pgRun">Run Algorithm</button>
+        </div>
+
+        <div class="playground-result" id="pgResult">
+          <div class="res-label">Result</div>
+          <div id="pgResultText"></div>
+          <div id="pgSubseqs" style="margin-top:0.75rem;"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // ===== NAV =====
+    const navBtns = document.querySelectorAll('nav button');
+    const sections = document.querySelectorAll('section');
+    navBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        navBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const target = btn.dataset.section;
+        sections.forEach(s => s.style.display = s.id === target ? '' : 'none');
+      });
+    });
+
+    // ===== ALGORITHM CODE LINES =====
+    const codeText = [
+      ['<span class="kw">function</span> <span class="fn">isPossible</span>(nums) {', null],
+      ['  <span class="kw">const</span> freq = {};', 'init'],
+      ['  <span class="kw">const</span> tails = {};', 'init'],
+      ['  <span class="cm">// Build frequency map</span>', 'init'],
+      ['  <span class="kw">for</span> (<span class="kw">const</span> n <span class="kw">of</span> nums) freq[n] = (freq[n]||<span class="num">0</span>) + <span class="num">1</span>;', 'init'],
+      ['', null],
+      ['  <span class="kw">for</span> (<span class="kw">const</span> num <span class="kw">of</span> nums) {', 'loop'],
+      ['    <span class="kw">if</span> (freq[num] === <span class="num">0</span>) <span class="kw">continue</span>;', 'skip'],
+      ['', null],
+      ['    <span class="kw">if</span> (tails[num-<span class="num">1</span>] > <span class="num">0</span>) {', 'check-tail'],
+      ['      freq[num]--;', 'append'],
+      ['      tails[num-<span class="num">1</span>]--;', 'append'],
+      ['      tails[num] = (tails[num]||<span class="num">0</span>) + <span class="num">1</span>;', 'append'],
+      ['    } <span class="kw">else if</span> (freq[num+<span class="num">1</span>]><span class="num">0</span> && freq[num+<span class="num">2</span>]><span class="num">0</span>) {', 'check-new'],
+      ['      freq[num]--;', 'new-seq'],
+      ['      freq[num+<span class="num">1</span>]--;', 'new-seq'],
+      ['      freq[num+<span class="num">2</span>]--;', 'new-seq'],
+      ['      tails[num+<span class="num">2</span>] = (tails[num+<span class="num">2</span>]||<span class="num">0</span>) + <span class="num">1</span>;', 'new-seq'],
+      ['    } <span class="kw">else</span> {', 'fail'],
+      ['      <span class="kw">return</span> <span class="str">false</span>;', 'fail'],
+      ['    }', null],
+      ['  }', null],
+      ['  <span class="kw">return</span> <span class="str">true</span>;', 'done'],
+      ['}', null],
+    ];
+
+    const codePanelEl = document.getElementById('codeLines');
+    codeText.forEach(([html], i) => {
+      const div = document.createElement('div');
+      div.className = 'code-line';
+      div.id = 'codeLine' + i;
+      div.innerHTML = html || '&nbsp;';
+      codePanelEl.appendChild(div);
+    });
+
+    function highlightCodeLines(tag) {
+      document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+      if (!tag) return;
+      codeText.forEach(([, t], i) => {
+        if (t === tag) document.getElementById('codeLine' + i).classList.add('active');
+      });
+    }
+
+    // ===== COMPUTE ALGORITHM STEPS =====
+    const SEQ_COLORS = ['var(--c0)','var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)','var(--c7)'];
+
+    function computeSteps(nums) {
+      const steps = [];
+      const freq = {};
+      const tails = {};
+      const subsequences = [];
+      const usedIndices = new Set();
+
+      for (const n of nums) freq[n] = (freq[n] || 0) + 1;
+
+      steps.push({
+        type: 'init',
+        text: 'Built frequency map from sorted array.',
+        codeLine: 'init',
+        currentIdx: -1,
+        freq: { ...freq },
+        tails: { ...tails },
+        subsequences: JSON.parse(JSON.stringify(subsequences)),
+        usedIndices: new Set(usedIndices),
+        highlightFreq: Object.keys(freq).map(Number),
+        highlightTails: [],
+        cellClass: {},
+      });
+
+      for (let i = 0; i < nums.length; i++) {
+        const num = nums[i];
+
+        if (freq[num] === 0) {
+          steps.push({
+            type: 'skip',
+            text: `num=${num} at index ${i}: freq[${num}]=0, already used — skip.`,
+            codeLine: 'skip',
+            currentIdx: i,
+            freq: { ...freq },
+            tails: { ...tails },
+            subsequences: JSON.parse(JSON.stringify(subsequences)),
+            usedIndices: new Set(usedIndices),
+            highlightFreq: [num],
+            highlightTails: [],
+            cellClass: { [i]: 'used' },
+          });
+          continue;
+        }
+
+        if ((tails[num - 1] || 0) > 0) {
+          freq[num]--;
+          tails[num - 1]--;
+          tails[num] = (tails[num] || 0) + 1;
+          usedIndices.add(i);
+
+          let appendedTo = -1;
+          for (let s = 0; s < subsequences.length; s++) {
+            const seq = subsequences[s];
+            if (seq[seq.length - 1] === num - 1) {
+              seq.push(num);
+              appendedTo = s;
+              break;
+            }
+          }
+
+          steps.push({
+            type: 'append',
+            text: `num=${num} at index ${i}: tails[${num - 1}]>0 — append to subsequence #${appendedTo + 1} ending at ${num - 1}.`,
+            codeLine: 'append',
+            currentIdx: i,
+            freq: { ...freq },
+            tails: { ...tails },
+            subsequences: JSON.parse(JSON.stringify(subsequences)),
+            usedIndices: new Set(usedIndices),
+            highlightFreq: [num],
+            highlightTails: [num - 1, num],
+            cellClass: { [i]: 'appended' },
+            appendedSeq: appendedTo,
+          });
+        } else if ((freq[num + 1] || 0) > 0 && (freq[num + 2] || 0) > 0) {
+          freq[num]--;
+          freq[num + 1]--;
+          freq[num + 2]--;
+          tails[num + 2] = (tails[num + 2] || 0) + 1;
+          usedIndices.add(i);
+
+          let i1 = -1, i2 = -1;
+          for (let j = i + 1; j < nums.length; j++) {
+            if (nums[j] === num + 1 && i1 === -1 && !usedIndices.has(j)) { i1 = j; usedIndices.add(j); }
+            else if (nums[j] === num + 2 && i2 === -1 && !usedIndices.has(j)) { i2 = j; usedIndices.add(j); }
+            if (i1 !== -1 && i2 !== -1) break;
+          }
+
+          subsequences.push([num, num + 1, num + 2]);
+
+          steps.push({
+            type: 'new-seq',
+            text: `num=${num} at index ${i}: no tail at ${num - 1}, but freq[${num + 1}]>0 and freq[${num + 2}]>0 — start new subsequence [${num},${num + 1},${num + 2}].`,
+            codeLine: 'new-seq',
+            currentIdx: i,
+            freq: { ...freq },
+            tails: { ...tails },
+            subsequences: JSON.parse(JSON.stringify(subsequences)),
+            usedIndices: new Set(usedIndices),
+            highlightFreq: [num, num + 1, num + 2],
+            highlightTails: [num + 2],
+            cellClass: { [i]: 'new-seq', [i1]: 'new-seq', [i2]: 'new-seq' },
+            newSeqIdx: subsequences.length - 1,
+          });
+        } else {
+          steps.push({
+            type: 'fail',
+            text: `num=${num} at index ${i}: no existing tail at ${num - 1}, and can't form [${num},${num + 1},${num + 2}] — IMPOSSIBLE.`,
+            codeLine: 'fail',
+            currentIdx: i,
+            freq: { ...freq },
+            tails: { ...tails },
+            subsequences: JSON.parse(JSON.stringify(subsequences)),
+            usedIndices: new Set(usedIndices),
+            highlightFreq: [num],
+            highlightTails: [],
+            cellClass: { [i]: 'failed' },
+          });
+          return { steps, result: false };
+        }
+      }
+
+      steps.push({
+        type: 'done',
+        text: `All elements processed successfully! Split into ${subsequences.length} valid consecutive subsequence${subsequences.length !== 1 ? 's' : ''}.`,
+        codeLine: 'done',
+        currentIdx: -1,
+        freq: { ...freq },
+        tails: { ...tails },
+        subsequences: JSON.parse(JSON.stringify(subsequences)),
+        usedIndices: new Set(usedIndices),
+        highlightFreq: [],
+        highlightTails: [],
+        cellClass: {},
+      });
+
+      return { steps, result: true };
+    }
+
+    // ===== ANIMATION STATE =====
+    const DEFAULT_NUMS = [1, 2, 3, 3, 4, 5];
+    let animNums = [...DEFAULT_NUMS];
+    let animData = computeSteps(animNums);
+    let currentStep = -1;
+    let playing = false;
+    let playTimer = null;
+
+    const arrayRowEl = document.getElementById('arrayRow');
+    const freqMapEl = document.getElementById('freqMap');
+    const tailsMapEl = document.getElementById('tailsMap');
+    const subseqsEl = document.getElementById('subseqsDisplay');
+    const resultBannerEl = document.getElementById('resultBanner');
+    const stepCounterEl = document.getElementById('stepCounter');
+    const stepTextEl = document.getElementById('stepText');
+
+    function buildArrayRow() {
+      arrayRowEl.innerHTML = '';
+      animNums.forEach((v, i) => {
+        const cell = document.createElement('div');
+        cell.className = 'arr-cell';
+        cell.id = 'arrCell' + i;
+        cell.innerHTML = `${v}<span class="idx">${i}</span>`;
+        arrayRowEl.appendChild(cell);
+      });
+    }
+
+    function renderMapEntries(container, map, highlightKeys, cssClass) {
+      container.innerHTML = '';
+      const keys = Object.keys(map).map(Number).sort((a, b) => a - b);
+      keys.forEach(k => {
+        if (map[k] === undefined) return;
+        const entry = document.createElement('div');
+        entry.className = 'map-entry' + (highlightKeys.includes(k) ? ' ' + cssClass : '');
+        entry.innerHTML = `<span class="key">${k}</span><span class="val">${map[k]}</span>`;
+        container.appendChild(entry);
+      });
+    }
+
+    function renderSubsequences(subseqs, newSeqIdx, appendedSeq) {
+      subseqsEl.innerHTML = '';
+      if (subseqs.length === 0) {
+        subseqsEl.innerHTML = '<span style="font-size:0.82rem;color:var(--text-dim);font-style:italic;">No subsequences formed yet</span>';
+        return;
+      }
+      subseqs.forEach((seq, si) => {
+        const row = document.createElement('div');
+        row.className = 'subseq-row';
+        const label = document.createElement('span');
+        label.className = 'subseq-label';
+        label.textContent = '#' + (si + 1);
+        row.appendChild(label);
+
+        const color = SEQ_COLORS[si % SEQ_COLORS.length];
+        seq.forEach((val, vi) => {
+          const el = document.createElement('div');
+          el.className = 'subseq-el';
+          const isNew = (si === newSeqIdx) || (si === appendedSeq && vi === seq.length - 1);
+          if (isNew) el.classList.add('new-el');
+          el.style.background = color.replace(')', ',0.15)').replace('var(', 'rgba(');
+          el.style.background = `rgba(${getColorRGB(si)},0.15)`;
+          el.style.border = `1.5px solid rgba(${getColorRGB(si)},0.5)`;
+          el.style.color = color.includes('var(') ? color : '#fff';
+          el.textContent = val;
+          row.appendChild(el);
+        });
+        subseqsEl.appendChild(row);
+      });
+    }
+
+    function getColorRGB(idx) {
+      const colors = [
+        '108,140,255', '74,222,128', '251,191,36', '244,114,182',
+        '34,211,238', '167,139,250', '251,146,60', '232,121,249'
+      ];
+      return colors[idx % colors.length];
+    }
+
+    function renderStep(stepIdx) {
+      if (stepIdx < 0 || stepIdx >= animData.steps.length) return;
+      const step = animData.steps[stepIdx];
+
+      // Array cells
+      document.querySelectorAll('.arr-cell').forEach((cell, i) => {
+        cell.className = 'arr-cell';
+        if (step.usedIndices.has(i) && i !== step.currentIdx) cell.classList.add('used');
+        if (step.cellClass[i]) cell.classList.add(step.cellClass[i]);
+        if (i === step.currentIdx && !step.cellClass[i]) cell.classList.add('current');
+      });
+
+      renderMapEntries(freqMapEl, step.freq, step.highlightFreq, 'highlight-freq');
+      renderMapEntries(tailsMapEl, step.tails, step.highlightTails, 'highlight-tail');
+      renderSubsequences(step.subsequences, step.newSeqIdx ?? -1, step.appendedSeq ?? -1);
+
+      highlightCodeLines(step.codeLine);
+      stepCounterEl.textContent = `[${stepIdx + 1}/${animData.steps.length}]`;
+      stepTextEl.textContent = step.text;
+
+      // Result banner
+      resultBannerEl.className = 'result-banner';
+      resultBannerEl.style.display = 'none';
+      if (step.type === 'done') {
+        resultBannerEl.className = 'result-banner success';
+        resultBannerEl.textContent = '✓ TRUE — Successfully split into consecutive subsequences!';
+      } else if (step.type === 'fail') {
+        resultBannerEl.className = 'result-banner failure';
+        resultBannerEl.textContent = '✗ FALSE — Cannot form valid consecutive subsequences.';
+      }
+    }
+
+    function resetAnimation() {
+      stopPlaying();
+      currentStep = -1;
+      buildArrayRow();
+      freqMapEl.innerHTML = '';
+      tailsMapEl.innerHTML = '';
+      subseqsEl.innerHTML = '<span style="font-size:0.82rem;color:var(--text-dim);font-style:italic;">No subsequences formed yet</span>';
+      resultBannerEl.className = 'result-banner';
+      resultBannerEl.style.display = 'none';
+      highlightCodeLines(null);
+      stepCounterEl.textContent = '';
+      stepTextEl.textContent = 'Press Play or Step to begin';
+      updateButtons();
+    }
+
+    function stepForward() {
+      if (currentStep < animData.steps.length - 1) {
+        currentStep++;
+        renderStep(currentStep);
+        updateButtons();
+        if (currentStep >= animData.steps.length - 1) stopPlaying();
+      }
+    }
+
+    function stepBackward() {
+      if (currentStep > 0) {
+        currentStep--;
+        renderStep(currentStep);
+        updateButtons();
+      }
+    }
+
+    function getSpeed() {
+      return 1200 - document.getElementById('speedSlider').value * 100;
+    }
+
+    function startPlaying() {
+      playing = true;
+      document.getElementById('btnPlayPause').innerHTML = '&#9646;&#9646; Pause';
+      tick();
+    }
+
+    function stopPlaying() {
+      playing = false;
+      if (playTimer) { clearTimeout(playTimer); playTimer = null; }
+      document.getElementById('btnPlayPause').innerHTML = '&#9654; Play';
+    }
+
+    function tick() {
+      if (!playing) return;
+      stepForward();
+      if (currentStep < animData.steps.length - 1) {
+        playTimer = setTimeout(tick, getSpeed());
+      } else {
+        stopPlaying();
+      }
+    }
+
+    function updateButtons() {
+      document.getElementById('btnPrev').disabled = currentStep <= 0;
+      document.getElementById('btnNext').disabled = currentStep >= animData.steps.length - 1;
+    }
+
+    document.getElementById('btnReset').addEventListener('click', resetAnimation);
+    document.getElementById('btnPrev').addEventListener('click', () => { stopPlaying(); stepBackward(); });
+    document.getElementById('btnNext').addEventListener('click', () => { stopPlaying(); stepForward(); });
+    document.getElementById('btnPlayPause').addEventListener('click', () => {
+      if (playing) {
+        stopPlaying();
+      } else {
+        if (currentStep >= animData.steps.length - 1) resetAnimation();
+        startPlaying();
+      }
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        document.getElementById('btnPlayPause').click();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        stopPlaying();
+        stepForward();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        stopPlaying();
+        stepBackward();
+      }
+    });
+
+    // ===== PLAYGROUND =====
+    const pgInput = document.getElementById('pgInput');
+    const pgResult = document.getElementById('pgResult');
+    const pgResultText = document.getElementById('pgResultText');
+    const pgSubseqs = document.getElementById('pgSubseqs');
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        pgInput.value = btn.dataset.input;
+        runPlayground();
+      });
+    });
+
+    document.getElementById('pgRun').addEventListener('click', runPlayground);
+    pgInput.addEventListener('keydown', e => { if (e.key === 'Enter') runPlayground(); });
+
+    function runPlayground() {
+      const raw = pgInput.value.trim();
+      if (!raw) return;
+      const nums = raw.split(/[\s,]+/).map(Number).filter(n => !isNaN(n));
+      if (nums.length === 0) return;
+      nums.sort((a, b) => a - b);
+
+      const { steps, result } = computeSteps(nums);
+      const lastStep = steps[steps.length - 1];
+
+      pgResult.classList.add('show');
+      if (result) {
+        pgResultText.innerHTML = `<span style="color:var(--green);font-weight:600;">TRUE</span> — Can be split into ${lastStep.subsequences.length} valid consecutive subsequence${lastStep.subsequences.length !== 1 ? 's' : ''}.`;
+        let html = '';
+        lastStep.subsequences.forEach((seq, si) => {
+          const color = `rgba(${getColorRGB(si)},`;
+          html += `<div style="display:flex;align-items:center;gap:4px;margin-top:6px;">
+            <span style="font-family:var(--mono);font-size:0.75rem;color:var(--text-dim);width:20px;">#${si + 1}</span>`;
+          seq.forEach(v => {
+            html += `<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:28px;border-radius:5px;font-size:0.82rem;font-weight:600;background:${color}0.15);border:1.5px solid ${color}0.5);font-family:var(--mono);">${v}</span>`;
+          });
+          html += `</div>`;
+        });
+        pgSubseqs.innerHTML = html;
+      } else {
+        const failStep = steps.find(s => s.type === 'fail');
+        pgResultText.innerHTML = `<span style="color:var(--red);font-weight:600;">FALSE</span> — ${failStep ? failStep.text : 'Cannot split into valid subsequences.'}`;
+        pgSubseqs.innerHTML = '';
+      }
+
+      // Also load into animation
+      animNums = nums;
+      animData = computeSteps(nums);
+      resetAnimation();
+    }
+
+    // ===== INIT =====
+    buildArrayRow();
+    updateButtons();
+  </script>
+</body>
+</html>

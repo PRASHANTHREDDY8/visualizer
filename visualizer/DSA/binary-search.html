@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Binary Search — Visualizer</title>
+  <style>
+    :root {
+      --bg: #0a0a10;
+      --surface: #13131f;
+      --surface2: #1a1a2e;
+      --surface3: #22223a;
+      --border: #2a2a44;
+      --text: #e2e2f0;
+      --text-dim: #8888aa;
+      --text-muted: #555570;
+      --accent: #6c63ff;
+      --accent-glow: rgba(108, 99, 255, 0.35);
+      --active: #f0c040;
+      --active-glow: rgba(240, 192, 64, 0.3);
+      --found: #4ade80;
+      --found-glow: rgba(74, 222, 128, 0.3);
+      --eliminated: #ff4466;
+      --eliminated-dim: rgba(255, 68, 102, 0.15);
+      --low-color: #38bdf8;
+      --high-color: #f472b6;
+      --mid-color: #f0c040;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --mono: 'Courier New', 'Consolas', monospace;
+      --sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Subtle grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(108, 99, 255, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(244, 114, 182, 0.03) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-header h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--high-color) 50%, var(--active) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    .page-header .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    /* ── Section titles ── */
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .section-label::before {
+      content: '';
+      display: inline-block;
+      width: 18px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 1px;
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-bottom: 2rem;
+      transition: border-color 0.3s;
+    }
+
+    .card:hover {
+      border-color: rgba(108, 99, 255, 0.3);
+    }
+
+    /* ── Complexity Badges ── */
+    .badges {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 50px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      font-family: var(--mono);
+      border: 1px solid;
+    }
+
+    .badge-time {
+      background: rgba(108, 99, 255, 0.12);
+      border-color: rgba(108, 99, 255, 0.3);
+      color: var(--accent);
+    }
+
+    .badge-space {
+      background: rgba(74, 222, 128, 0.1);
+      border-color: rgba(74, 222, 128, 0.3);
+      color: var(--found);
+    }
+
+    /* ── Key Insight ── */
+    .insight-box {
+      background: linear-gradient(135deg, rgba(108, 99, 255, 0.08), rgba(244, 114, 182, 0.06));
+      border: 1px solid rgba(108, 99, 255, 0.25);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.75rem;
+      margin: 1.5rem 0;
+      position: relative;
+    }
+
+    .insight-box::before {
+      content: '💡';
+      font-size: 1.5rem;
+      position: absolute;
+      top: -12px;
+      left: 18px;
+      background: var(--surface);
+      padding: 0 6px;
+    }
+
+    .insight-box .insight-title {
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+      font-size: 0.95rem;
+    }
+
+    .insight-box p {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    /* ── Approach Overview ── */
+    .approach-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .approach-grid { grid-template-columns: 1fr; }
+    }
+
+    .approach-step {
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+      border-left: 3px solid var(--accent);
+    }
+
+    .approach-step .step-num {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    .approach-step h4 {
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      font-size: 1rem;
+    }
+
+    .approach-step p {
+      color: var(--text-dim);
+      font-size: 0.88rem;
+    }
+
+    /* ── Example Box ── */
+    .example-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1.5rem 0;
+      padding: 1.5rem;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      flex-wrap: wrap;
+    }
+
+    .example-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      min-width: 70px;
+    }
+
+    .mini-array {
+      display: flex;
+      gap: 4px;
+    }
+
+    .mini-cell {
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      transition: all 0.3s;
+    }
+
+    .mini-cell.highlight {
+      background: rgba(74, 222, 128, 0.15);
+      border-color: var(--found);
+      color: var(--found);
+    }
+
+    .arrow-right {
+      color: var(--accent);
+      font-size: 1.3rem;
+    }
+
+    .result-badge {
+      font-family: var(--mono);
+      font-weight: 700;
+      color: var(--found);
+      font-size: 1rem;
+      padding: 0.3rem 0.8rem;
+      background: rgba(74, 222, 128, 0.1);
+      border-radius: 6px;
+      border: 1px solid rgba(74, 222, 128, 0.3);
+    }
+
+    /* ═══════════════════════════════════════
+       SECTION 2: ANIMATION
+       ═══════════════════════════════════════ */
+
+    .animation-area {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      min-height: 400px;
+    }
+
+    @media (max-width: 900px) {
+      .animation-area {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .visual-panel {
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 350px;
+    }
+
+    .code-panel {
+      background: #0d0d18;
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.85;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+
+    .code-panel .code-line {
+      padding: 2px 10px;
+      border-radius: 4px;
+      transition: background 0.3s, color 0.3s;
+      white-space: pre;
+      color: var(--text-dim);
+    }
+
+    .code-panel .code-line.active-line {
+      background: rgba(108, 99, 255, 0.18);
+      color: var(--text);
+      box-shadow: inset 3px 0 0 var(--accent);
+    }
+
+    .code-panel .code-line .keyword { color: #c792ea; }
+    .code-panel .code-line .func { color: #82aaff; }
+    .code-panel .code-line .num { color: #f78c6c; }
+    .code-panel .code-line .comment { color: #546e7a; font-style: italic; }
+    .code-panel .code-line .str { color: #c3e88d; }
+    .code-panel .code-line .op { color: #89ddff; }
+    .code-panel .code-line .var { color: #eeffff; }
+
+    /* Controls */
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 0;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 0.55rem 1.2rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      font-family: var(--sans);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn:hover {
+      background: var(--surface3);
+      border-color: var(--accent);
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #7c73ff;
+      border-color: #7c73ff;
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: auto;
+    }
+
+    .speed-control label {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    .speed-slider {
+      -webkit-appearance: none;
+      width: 100px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--surface3);
+      outline: none;
+    }
+
+    .speed-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg);
+    }
+
+    .step-info {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      font-family: var(--mono);
+    }
+
+    /* Narration bar */
+    .narration {
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+      margin-top: 0.75rem;
+      font-size: 0.92rem;
+      color: var(--text);
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      border-left: 3px solid var(--accent);
+      transition: all 0.3s;
+    }
+
+    /* Array cells in animation */
+    .anim-array-wrapper {
+      width: 100%;
+      margin: 1.5rem 0;
+    }
+
+    .anim-array {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .anim-cell-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: opacity 0.4s;
+    }
+
+    .anim-cell {
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 700;
+      border: 2px solid var(--border);
+      background: var(--surface3);
+      color: var(--text);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .anim-cell.eliminated {
+      background: var(--eliminated-dim);
+      border-color: rgba(255, 68, 102, 0.25);
+      color: var(--text-muted);
+      opacity: 0.45;
+    }
+
+    .anim-cell.active {
+      background: rgba(240, 192, 64, 0.15);
+      border-color: var(--active);
+      color: var(--active);
+      box-shadow: 0 0 20px var(--active-glow);
+      transform: scale(1.12);
+    }
+
+    .anim-cell.found {
+      background: rgba(74, 222, 128, 0.15);
+      border-color: var(--found);
+      color: var(--found);
+      box-shadow: 0 0 25px var(--found-glow);
+      transform: scale(1.18);
+    }
+
+    .anim-cell.in-range {
+      border-color: rgba(108, 99, 255, 0.4);
+      background: rgba(108, 99, 255, 0.07);
+    }
+
+    .anim-index {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    /* Pointer labels */
+    .pointer-labels {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 8px;
+      min-height: 30px;
+    }
+
+    .pointer-slot {
+      width: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .pointer-arrow {
+      font-size: 0.75rem;
+      line-height: 1;
+      transition: opacity 0.3s;
+    }
+
+    .pointer-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      padding: 1px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.5px;
+      transition: opacity 0.3s;
+    }
+
+    .pointer-tag.low {
+      color: var(--low-color);
+      background: rgba(56, 189, 248, 0.15);
+    }
+
+    .pointer-tag.mid {
+      color: var(--mid-color);
+      background: rgba(240, 192, 64, 0.15);
+    }
+
+    .pointer-tag.high {
+      color: var(--high-color);
+      background: rgba(244, 114, 182, 0.15);
+    }
+
+    /* Variables display */
+    .vars-display {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      margin: 1rem 0;
+      flex-wrap: wrap;
+    }
+
+    .var-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+    }
+
+    .var-name {
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    .var-value {
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-weight: 700;
+      transition: all 0.3s;
+    }
+
+    .var-value.low-val { color: var(--low-color); background: rgba(56, 189, 248, 0.1); }
+    .var-value.mid-val { color: var(--mid-color); background: rgba(240, 192, 64, 0.1); }
+    .var-value.high-val { color: var(--high-color); background: rgba(244, 114, 182, 0.1); }
+    .var-value.target-val { color: var(--accent); background: rgba(108, 99, 255, 0.1); }
+
+    .target-display {
+      text-align: center;
+      margin-bottom: 1rem;
+      font-family: var(--mono);
+      font-size: 0.95rem;
+    }
+
+    .target-display span {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* ═══════════════════════════════════════
+       SECTION 3: PLAYGROUND
+       ═══════════════════════════════════════ */
+
+    .playground-inputs {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .input-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .input-group input {
+      padding: 0.65rem 0.85rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .presets {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    .presets .label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      margin-right: 0.25rem;
+    }
+
+    .preset-btn {
+      padding: 0.4rem 0.8rem;
+      border-radius: 50px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-family: var(--mono);
+      transition: all 0.2s;
+    }
+
+    .preset-btn:hover {
+      background: var(--surface3);
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .playground-result {
+      margin-top: 1.5rem;
+      padding: 1.25rem;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--mono);
+      font-size: 0.92rem;
+      border-left: 3px solid var(--border);
+      transition: border-color 0.3s;
+    }
+
+    .playground-result.success {
+      border-left-color: var(--found);
+    }
+
+    .playground-result.failure {
+      border-left-color: var(--eliminated);
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    /* ── Section separator ── */
+    .section-separator {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 3rem 0;
+    }
+
+    /* ── Responsive tweaks ── */
+    @media (max-width: 768px) {
+      .page-header h1 { font-size: 2rem; }
+      h2 { font-size: 1.4rem; }
+      .card { padding: 1.25rem; }
+      .anim-cell { width: 42px; height: 42px; font-size: 0.85rem; }
+      .pointer-slot { width: 42px; }
+      .controls-bar { justify-content: center; }
+      .speed-control { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- ═══ HEADER ═══ -->
+    <header class="page-header">
+      <h1>Binary Search</h1>
+      <p class="subtitle">Efficient search on sorted arrays — halve the search space at every step</p>
+    </header>
+
+    <!-- ═══════════════════════════════════════
+         SECTION 1: VISUAL EXPLANATION
+         ═══════════════════════════════════════ -->
+    <section>
+      <div class="section-label">Section 1</div>
+      <h2>Visual Explanation</h2>
+
+      <div class="card">
+        <h3 style="margin-bottom:0.75rem;">Problem Statement</h3>
+        <p style="color:var(--text-dim); font-size:0.95rem; margin-bottom:0.5rem;">
+          Given a <strong>sorted array</strong> of integers and a <strong>target value</strong>, return the index of the target if it exists, or <code style="color:var(--eliminated); background:var(--eliminated-dim); padding:0.1rem 0.4rem; border-radius:4px;">-1</code> if it does not.
+        </p>
+
+        <div class="example-visual">
+          <span class="example-label">Input:</span>
+          <div class="mini-array">
+            <div class="mini-cell">1</div>
+            <div class="mini-cell">3</div>
+            <div class="mini-cell">5</div>
+            <div class="mini-cell highlight">7</div>
+            <div class="mini-cell">9</div>
+            <div class="mini-cell">11</div>
+            <div class="mini-cell">13</div>
+          </div>
+          <span style="color:var(--text-dim); font-size:0.88rem;">target = <strong style="color:var(--accent);">7</strong></span>
+          <span class="arrow-right">&#10132;</span>
+          <span class="example-label">Output:</span>
+          <span class="result-badge">index 3</span>
+        </div>
+
+        <div class="badges">
+          <span class="badge badge-time">Time: O(log n)</span>
+          <span class="badge badge-space">Space: O(1)</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="insight-box">
+          <div class="insight-title">Key Insight</div>
+          <p>
+            Because the array is <strong>sorted</strong>, comparing the target with the <em>middle element</em> tells you which <strong>half</strong> to discard entirely.
+            Each comparison eliminates <strong>50%</strong> of the remaining elements, giving logarithmic time complexity.
+            For an array of 1,000,000 elements, binary search needs at most <strong>20 comparisons</strong> instead of 1,000,000.
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:0.5rem;">Approach Overview</h3>
+        <p style="color:var(--text-dim); font-size:0.92rem;">
+          Maintain two pointers, <code style="color:var(--low-color)">low</code> and <code style="color:var(--high-color)">high</code>, that bound the current search region. Repeatedly compute the <code style="color:var(--mid-color)">mid</code> index and compare.
+        </p>
+
+        <div class="approach-grid">
+          <div class="approach-step">
+            <div class="step-num">Step 1</div>
+            <h4>Initialize Pointers</h4>
+            <p>Set <code style="color:var(--low-color)">low = 0</code> and <code style="color:var(--high-color)">high = n - 1</code> to cover the entire array.</p>
+          </div>
+          <div class="approach-step">
+            <div class="step-num">Step 2</div>
+            <h4>Compute Mid</h4>
+            <p>Calculate <code style="color:var(--mid-color)">mid = Math.floor((low + high) / 2)</code> to find the center of the current range.</p>
+          </div>
+          <div class="approach-step" style="border-left-color: var(--active);">
+            <div class="step-num">Step 3</div>
+            <h4>Compare &amp; Decide</h4>
+            <p>If <code>arr[mid] === target</code>, return mid. If <code>arr[mid] &lt; target</code>, move low up. If <code>arr[mid] &gt; target</code>, move high down.</p>
+          </div>
+          <div class="approach-step" style="border-left-color: var(--found);">
+            <div class="step-num">Step 4</div>
+            <h4>Repeat or Finish</h4>
+            <p>Continue while <code style="color:var(--low-color)">low</code> &le; <code style="color:var(--high-color)">high</code>. If the loop ends without finding, return -1.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-separator"></div>
+
+    <!-- ═══════════════════════════════════════
+         SECTION 2: STEP-BY-STEP ANIMATION
+         ═══════════════════════════════════════ -->
+    <section>
+      <div class="section-label">Section 2</div>
+      <h2>Step-by-Step Animation</h2>
+
+      <div class="card" id="animation-card">
+        <!-- Controls -->
+        <div class="controls-bar">
+          <button class="btn btn-primary" id="playBtn" aria-label="Play or Pause animation">&#9654; Play</button>
+          <button class="btn" id="stepBtn" aria-label="Step forward">&#9654;&#9654; Step</button>
+          <button class="btn" id="resetBtn" aria-label="Reset animation">&#8634; Reset</button>
+          <span class="step-info" id="stepInfo">Step 0 / 0</span>
+          <div class="speed-control">
+            <label for="speedSlider">Speed</label>
+            <input type="range" id="speedSlider" class="speed-slider" min="1" max="10" value="5" aria-label="Animation speed">
+          </div>
+        </div>
+
+        <div class="animation-area">
+          <!-- Visual panel -->
+          <div class="visual-panel" id="visualPanel">
+            <div class="target-display" id="targetDisplay">Target = <span>7</span></div>
+            <div class="vars-display" id="varsDisplay">
+              <div class="var-item"><span class="var-name">low:</span> <span class="var-value low-val" id="varLow">0</span></div>
+              <div class="var-item"><span class="var-name">high:</span> <span class="var-value high-val" id="varHigh">8</span></div>
+              <div class="var-item"><span class="var-name">mid:</span> <span class="var-value mid-val" id="varMid">—</span></div>
+            </div>
+            <div class="anim-array-wrapper">
+              <div class="anim-array" id="animArray"></div>
+              <div class="pointer-labels" id="pointerLabels"></div>
+            </div>
+          </div>
+
+          <!-- Code panel -->
+          <div class="code-panel" id="codePanel"></div>
+        </div>
+
+        <!-- Narration -->
+        <div class="narration" id="narration">Press <strong>Play</strong> or <strong>Step</strong> to start the animation.</div>
+      </div>
+    </section>
+
+    <div class="section-separator"></div>
+
+    <!-- ═══════════════════════════════════════
+         SECTION 3: INTERACTIVE PLAYGROUND
+         ═══════════════════════════════════════ -->
+    <section>
+      <div class="section-label">Section 3</div>
+      <h2>Interactive Playground</h2>
+
+      <div class="card">
+        <div class="playground-inputs">
+          <div class="input-group">
+            <label for="inputArray">Sorted Array (comma-separated)</label>
+            <input type="text" id="inputArray" value="1, 3, 5, 7, 9, 11, 13, 15, 17" placeholder="e.g. 1, 3, 5, 7, 9">
+          </div>
+          <div class="input-group" style="max-width: 140px; min-width: 100px;">
+            <label for="inputTarget">Target</label>
+            <input type="text" id="inputTarget" value="7" placeholder="e.g. 7">
+          </div>
+          <button class="btn btn-primary" id="runBtn" style="align-self: flex-end;">&#9654; Run</button>
+        </div>
+
+        <div class="presets">
+          <span class="label">Presets:</span>
+          <button class="preset-btn" data-arr="2, 5, 8, 12, 16, 23, 38, 56, 72, 91" data-target="23">Find 23 in 10 elements</button>
+          <button class="preset-btn" data-arr="1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15" data-target="1">Target at start</button>
+          <button class="preset-btn" data-arr="1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15" data-target="15">Target at end</button>
+          <button class="preset-btn" data-arr="10, 20, 30, 40, 50" data-target="35">Target not found</button>
+          <button class="preset-btn" data-arr="42" data-target="42">Single element</button>
+        </div>
+
+        <!-- Playground animation area -->
+        <div style="margin-top: 1.5rem;">
+          <div class="controls-bar">
+            <button class="btn btn-primary" id="pgPlayBtn" aria-label="Play or Pause playground animation">&#9654; Play</button>
+            <button class="btn" id="pgStepBtn" aria-label="Step forward">&#9654;&#9654; Step</button>
+            <button class="btn" id="pgResetBtn" aria-label="Reset playground">&#8634; Reset</button>
+            <span class="step-info" id="pgStepInfo">Step 0 / 0</span>
+            <div class="speed-control">
+              <label for="pgSpeedSlider">Speed</label>
+              <input type="range" id="pgSpeedSlider" class="speed-slider" min="1" max="10" value="5" aria-label="Playground animation speed">
+            </div>
+          </div>
+          <div class="visual-panel" id="pgVisualPanel" style="min-height: 260px;">
+            <div class="target-display" id="pgTargetDisplay">Target = <span>—</span></div>
+            <div class="vars-display" id="pgVarsDisplay">
+              <div class="var-item"><span class="var-name">low:</span> <span class="var-value low-val" id="pgVarLow">—</span></div>
+              <div class="var-item"><span class="var-name">high:</span> <span class="var-value high-val" id="pgVarHigh">—</span></div>
+              <div class="var-item"><span class="var-name">mid:</span> <span class="var-value mid-val" id="pgVarMid">—</span></div>
+            </div>
+            <div class="anim-array-wrapper">
+              <div class="anim-array" id="pgAnimArray"></div>
+              <div class="pointer-labels" id="pgPointerLabels"></div>
+            </div>
+          </div>
+          <div class="narration" id="pgNarration">Enter an array and target, then press <strong>Run</strong>.</div>
+        </div>
+
+        <div class="playground-result" id="pgResult">
+          Waiting for input...
+        </div>
+      </div>
+    </section>
+
+    <div style="text-align:center; padding: 2rem 0; color: var(--text-muted); font-size: 0.8rem;">
+      Binary Search Visualizer &mdash; Interactive Algorithm Education
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════
+    // ALGORITHM: Binary Search Step Generator
+    // ═══════════════════════════════════════
+
+    const CODE_LINES = [
+      { text: 'function binarySearch(arr, target) {', indent: 0 },
+      { text: '  let low = 0;', indent: 1 },
+      { text: '  let high = arr.length - 1;', indent: 1 },
+      { text: '', indent: 0 },
+      { text: '  while (low <= high) {', indent: 1 },
+      { text: '    let mid = Math.floor((low + high) / 2);', indent: 2 },
+      { text: '', indent: 0 },
+      { text: '    if (arr[mid] === target) {', indent: 2 },
+      { text: '      return mid;  // Found!', indent: 3 },
+      { text: '    } else if (arr[mid] < target) {', indent: 2 },
+      { text: '      low = mid + 1;  // Search right half', indent: 3 },
+      { text: '    } else {', indent: 2 },
+      { text: '      high = mid - 1; // Search left half', indent: 3 },
+      { text: '    }', indent: 2 },
+      { text: '  }', indent: 1 },
+      { text: '', indent: 0 },
+      { text: '  return -1;  // Not found', indent: 1 },
+      { text: '}', indent: 0 },
+    ];
+
+    function computeSteps(arr, target) {
+      const steps = [];
+      let low = 0;
+      let high = arr.length - 1;
+      const eliminated = new Set();
+
+      // Initial step
+      steps.push({
+        low, high, mid: null,
+        activeLine: 1,
+        eliminated: new Set(eliminated),
+        found: -1,
+        narration: `Initialize: low = 0, high = ${high}. The entire array is our search space.`,
+        phase: 'init'
+      });
+
+      steps.push({
+        low, high, mid: null,
+        activeLine: 2,
+        eliminated: new Set(eliminated),
+        found: -1,
+        narration: `Set high = ${high} (last index). Ready to begin searching for target = ${target}.`,
+        phase: 'init'
+      });
+
+      while (low <= high) {
+        // Enter while loop
+        steps.push({
+          low, high, mid: null,
+          activeLine: 4,
+          eliminated: new Set(eliminated),
+          found: -1,
+          narration: `Check: low (${low}) <= high (${high})? Yes — continue searching.`,
+          phase: 'check'
+        });
+
+        const mid = Math.floor((low + high) / 2);
+
+        // Compute mid
+        steps.push({
+          low, high, mid,
+          activeLine: 5,
+          eliminated: new Set(eliminated),
+          found: -1,
+          narration: `Compute mid = floor((${low} + ${high}) / 2) = ${mid}. Examine arr[${mid}] = ${arr[mid]}.`,
+          phase: 'compute-mid'
+        });
+
+        if (arr[mid] === target) {
+          steps.push({
+            low, high, mid,
+            activeLine: 7,
+            eliminated: new Set(eliminated),
+            found: mid,
+            narration: `arr[${mid}] = ${arr[mid]} equals target ${target}. Found at index ${mid}!`,
+            phase: 'found'
+          });
+          steps.push({
+            low, high, mid,
+            activeLine: 8,
+            eliminated: new Set(eliminated),
+            found: mid,
+            narration: `Return ${mid}. Binary search complete — target found!`,
+            phase: 'return-found'
+          });
+          return steps;
+        } else if (arr[mid] < target) {
+          steps.push({
+            low, high, mid,
+            activeLine: 9,
+            eliminated: new Set(eliminated),
+            found: -1,
+            narration: `arr[${mid}] = ${arr[mid]} < target ${target}. Target is in the right half.`,
+            phase: 'go-right'
+          });
+          // Eliminate left side including mid
+          for (let i = low; i <= mid; i++) eliminated.add(i);
+          low = mid + 1;
+          steps.push({
+            low, high, mid,
+            activeLine: 10,
+            eliminated: new Set(eliminated),
+            found: -1,
+            narration: `Move low to ${low}. Eliminated indices 0..${mid} — ${eliminated.size} elements removed from search.`,
+            phase: 'move-low'
+          });
+        } else {
+          steps.push({
+            low, high, mid,
+            activeLine: 11,
+            eliminated: new Set(eliminated),
+            found: -1,
+            narration: `arr[${mid}] = ${arr[mid]} > target ${target}. Target is in the left half.`,
+            phase: 'go-left'
+          });
+          // Eliminate right side including mid
+          for (let i = mid; i <= high; i++) eliminated.add(i);
+          high = mid - 1;
+          steps.push({
+            low, high, mid,
+            activeLine: 12,
+            eliminated: new Set(eliminated),
+            found: -1,
+            narration: `Move high to ${high}. Eliminated indices ${mid}..${high + 1} — ${eliminated.size} elements removed from search.`,
+            phase: 'move-high'
+          });
+        }
+      }
+
+      // Loop ended without finding
+      steps.push({
+        low, high, mid: null,
+        activeLine: 4,
+        eliminated: new Set(eliminated),
+        found: -1,
+        narration: `Check: low (${low}) <= high (${high})? No — search space is empty.`,
+        phase: 'exhausted'
+      });
+      steps.push({
+        low, high, mid: null,
+        activeLine: 16,
+        eliminated: new Set(eliminated),
+        found: -1,
+        narration: `Return -1. Target ${target} not found in the array.`,
+        phase: 'return-not-found'
+      });
+
+      return steps;
+    }
+
+
+    // ═══════════════════════════════════════
+    // RENDERER CLASS
+    // ═══════════════════════════════════════
+
+    class BinarySearchAnimator {
+      constructor(config) {
+        this.arr = config.arr;
+        this.target = config.target;
+        this.arrayEl = document.getElementById(config.arrayId);
+        this.pointersEl = document.getElementById(config.pointersId);
+        this.narrationEl = document.getElementById(config.narrationId);
+        this.varLow = document.getElementById(config.varLowId);
+        this.varHigh = document.getElementById(config.varHighId);
+        this.varMid = document.getElementById(config.varMidId);
+        this.targetDisp = document.getElementById(config.targetDispId);
+        this.stepInfoEl = document.getElementById(config.stepInfoId);
+        this.playBtn = document.getElementById(config.playBtnId);
+        this.stepBtn = document.getElementById(config.stepBtnId);
+        this.resetBtn = document.getElementById(config.resetBtnId);
+        this.speedSlider = document.getElementById(config.speedSliderId);
+        this.codePanelEl = config.codePanelId ? document.getElementById(config.codePanelId) : null;
+
+        this.steps = [];
+        this.currentStep = -1;
+        this.isPlaying = false;
+        this.timer = null;
+
+        this.init();
+      }
+
+      init() {
+        this.steps = computeSteps(this.arr, this.target);
+        this.currentStep = -1;
+        this.isPlaying = false;
+        if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+
+        // Render target
+        this.targetDisp.querySelector('span').textContent = this.target;
+
+        // Render code panel
+        if (this.codePanelEl) this.renderCodePanel();
+
+        // Render array
+        this.renderArray();
+
+        // Reset UI
+        this.varLow.textContent = '—';
+        this.varHigh.textContent = '—';
+        this.varMid.textContent = '—';
+        this.stepInfoEl.textContent = `Step 0 / ${this.steps.length}`;
+        this.playBtn.innerHTML = '&#9654; Play';
+        this.narrationEl.innerHTML = 'Press <strong>Play</strong> or <strong>Step</strong> to start the animation.';
+
+        // Events
+        this.playBtn.onclick = () => this.togglePlay();
+        this.stepBtn.onclick = () => this.stepForward();
+        this.resetBtn.onclick = () => this.reset();
+      }
+
+      renderCodePanel() {
+        this.codePanelEl.innerHTML = '';
+        CODE_LINES.forEach((line, i) => {
+          const div = document.createElement('div');
+          div.className = 'code-line';
+          div.dataset.line = i;
+          div.innerHTML = this.highlightSyntax(line.text);
+          this.codePanelEl.appendChild(div);
+        });
+      }
+
+      highlightSyntax(text) {
+        if (!text.trim()) return '&nbsp;';
+        return text
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/\b(function|let|const|var|return|if|else|while|for)\b/g, '<span class="keyword">$1</span>')
+          .replace(/\b(Math\.floor|binarySearch)\b/g, '<span class="func">$1</span>')
+          .replace(/(\/\/.*)/g, '<span class="comment">$1</span>')
+          .replace(/\b(\d+)\b/g, '<span class="num">$1</span>');
+      }
+
+      renderArray() {
+        this.arrayEl.innerHTML = '';
+        this.pointersEl.innerHTML = '';
+
+        this.arr.forEach((val, i) => {
+          const container = document.createElement('div');
+          container.className = 'anim-cell-container';
+
+          const cell = document.createElement('div');
+          cell.className = 'anim-cell';
+          cell.textContent = val;
+          cell.dataset.index = i;
+
+          const idx = document.createElement('div');
+          idx.className = 'anim-index';
+          idx.textContent = i;
+
+          container.appendChild(cell);
+          container.appendChild(idx);
+          this.arrayEl.appendChild(container);
+
+          // Pointer slot
+          const slot = document.createElement('div');
+          slot.className = 'pointer-slot';
+          slot.dataset.index = i;
+          this.pointersEl.appendChild(slot);
+        });
+      }
+
+      renderStep(stepIdx) {
+        if (stepIdx < 0 || stepIdx >= this.steps.length) return;
+        const step = this.steps[stepIdx];
+
+        // Update vars
+        this.varLow.textContent = step.low;
+        this.varHigh.textContent = step.high;
+        this.varMid.textContent = step.mid !== null ? step.mid : '—';
+
+        // Update array cells
+        const cells = this.arrayEl.querySelectorAll('.anim-cell');
+        cells.forEach((cell, i) => {
+          cell.className = 'anim-cell';
+          if (step.found === i) {
+            cell.classList.add('found');
+          } else if (step.eliminated.has(i)) {
+            cell.classList.add('eliminated');
+          } else if (step.mid !== null && step.mid === i) {
+            cell.classList.add('active');
+          } else if (i >= step.low && i <= step.high) {
+            cell.classList.add('in-range');
+          }
+        });
+
+        // Update pointer labels
+        const slots = this.pointersEl.querySelectorAll('.pointer-slot');
+        slots.forEach(s => s.innerHTML = '');
+
+        if (step.found < 0) {
+          const addPointer = (idx, label, cls) => {
+            if (idx >= 0 && idx < slots.length) {
+              const existing = slots[idx].innerHTML;
+              const arrow = document.createElement('div');
+              arrow.className = 'pointer-arrow';
+              arrow.textContent = '\u25B2';
+              arrow.style.color = cls === 'low' ? 'var(--low-color)' : cls === 'high' ? 'var(--high-color)' : 'var(--mid-color)';
+              const tag = document.createElement('div');
+              tag.className = `pointer-tag ${cls}`;
+              tag.textContent = label;
+              if (!existing) {
+                slots[idx].appendChild(arrow);
+              }
+              slots[idx].appendChild(tag);
+            }
+          };
+
+          addPointer(step.low, 'L', 'low');
+          if (step.mid !== null) addPointer(step.mid, 'M', 'mid');
+          addPointer(step.high, 'H', 'high');
+        } else {
+          // Found pointer
+          const idx = step.found;
+          if (idx >= 0 && idx < slots.length) {
+            const arrow = document.createElement('div');
+            arrow.className = 'pointer-arrow';
+            arrow.textContent = '\u2605';
+            arrow.style.color = 'var(--found)';
+            arrow.style.fontSize = '1rem';
+            const tag = document.createElement('div');
+            tag.className = 'pointer-tag';
+            tag.textContent = 'FOUND';
+            tag.style.color = 'var(--found)';
+            tag.style.background = 'rgba(74,222,128,0.15)';
+            slots[idx].appendChild(arrow);
+            slots[idx].appendChild(tag);
+          }
+        }
+
+        // Update code highlight
+        if (this.codePanelEl) {
+          const lines = this.codePanelEl.querySelectorAll('.code-line');
+          lines.forEach(l => l.classList.remove('active-line'));
+          if (step.activeLine >= 0 && step.activeLine < lines.length) {
+            lines[step.activeLine].classList.add('active-line');
+            lines[step.activeLine].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          }
+        }
+
+        // Narration
+        this.narrationEl.textContent = step.narration;
+
+        // Step info
+        this.stepInfoEl.textContent = `Step ${stepIdx + 1} / ${this.steps.length}`;
+      }
+
+      stepForward() {
+        if (this.currentStep < this.steps.length - 1) {
+          this.currentStep++;
+          this.renderStep(this.currentStep);
+        } else {
+          this.pause();
+        }
+      }
+
+      togglePlay() {
+        if (this.isPlaying) {
+          this.pause();
+        } else {
+          this.play();
+        }
+      }
+
+      play() {
+        if (this.currentStep >= this.steps.length - 1) {
+          this.reset();
+        }
+        this.isPlaying = true;
+        this.playBtn.innerHTML = '&#10074;&#10074; Pause';
+        this.tick();
+      }
+
+      pause() {
+        this.isPlaying = false;
+        this.playBtn.innerHTML = '&#9654; Play';
+        if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+      }
+
+      tick() {
+        if (!this.isPlaying) return;
+        this.stepForward();
+        if (this.currentStep >= this.steps.length - 1) {
+          this.pause();
+          return;
+        }
+        const speed = this.speedSlider.value;
+        const delay = 1800 - (speed - 1) * 170; // 1800ms to ~170ms
+        this.timer = setTimeout(() => this.tick(), delay);
+      }
+
+      reset() {
+        this.pause();
+        this.currentStep = -1;
+        this.renderArray();
+        this.varLow.textContent = '—';
+        this.varHigh.textContent = '—';
+        this.varMid.textContent = '—';
+        this.stepInfoEl.textContent = `Step 0 / ${this.steps.length}`;
+        this.narrationEl.innerHTML = 'Press <strong>Play</strong> or <strong>Step</strong> to start the animation.';
+
+        if (this.codePanelEl) {
+          this.codePanelEl.querySelectorAll('.code-line').forEach(l => l.classList.remove('active-line'));
+        }
+      }
+
+      updateData(arr, target) {
+        this.arr = arr;
+        this.target = target;
+        this.init();
+      }
+    }
+
+
+    // ═══════════════════════════════════════
+    // INITIALIZATION
+    // ═══════════════════════════════════════
+
+    // Default animation data
+    const defaultArr = [1, 3, 5, 7, 9, 11, 13, 15, 17];
+    const defaultTarget = 7;
+
+    // Section 2: Main animation
+    const mainAnim = new BinarySearchAnimator({
+      arr: defaultArr,
+      target: defaultTarget,
+      arrayId: 'animArray',
+      pointersId: 'pointerLabels',
+      narrationId: 'narration',
+      varLowId: 'varLow',
+      varHighId: 'varHigh',
+      varMidId: 'varMid',
+      targetDispId: 'targetDisplay',
+      stepInfoId: 'stepInfo',
+      playBtnId: 'playBtn',
+      stepBtnId: 'stepBtn',
+      resetBtnId: 'resetBtn',
+      speedSliderId: 'speedSlider',
+      codePanelId: 'codePanel',
+    });
+
+    // Section 3: Playground animation
+    const pgAnim = new BinarySearchAnimator({
+      arr: [],
+      target: 0,
+      arrayId: 'pgAnimArray',
+      pointersId: 'pgPointerLabels',
+      narrationId: 'pgNarration',
+      varLowId: 'pgVarLow',
+      varHighId: 'pgVarHigh',
+      varMidId: 'pgVarMid',
+      targetDispId: 'pgTargetDisplay',
+      stepInfoId: 'pgStepInfo',
+      playBtnId: 'pgPlayBtn',
+      stepBtnId: 'pgStepBtn',
+      resetBtnId: 'pgResetBtn',
+      speedSliderId: 'pgSpeedSlider',
+      codePanelId: null,
+    });
+
+    // Run button
+    const inputArrayEl = document.getElementById('inputArray');
+    const inputTargetEl = document.getElementById('inputTarget');
+    const pgResultEl = document.getElementById('pgResult');
+
+    document.getElementById('runBtn').addEventListener('click', runPlayground);
+
+    function runPlayground() {
+      const rawArr = inputArrayEl.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+      const target = parseInt(inputTargetEl.value.trim(), 10);
+
+      if (rawArr.length === 0 || isNaN(target)) {
+        pgResultEl.textContent = 'Please enter a valid sorted array and target.';
+        pgResultEl.className = 'playground-result failure';
+        return;
+      }
+
+      // Sort to ensure valid input
+      rawArr.sort((a, b) => a - b);
+      inputArrayEl.value = rawArr.join(', ');
+
+      pgAnim.updateData(rawArr, target);
+
+      // Compute final result for display
+      const finalStep = pgAnim.steps[pgAnim.steps.length - 1];
+      if (finalStep.found >= 0) {
+        pgResultEl.innerHTML = `<strong style="color:var(--found)">Found!</strong>&nbsp; Target ${target} is at index <strong>${finalStep.found}</strong>. (${pgAnim.steps.length} steps)`;
+        pgResultEl.className = 'playground-result success';
+      } else {
+        pgResultEl.innerHTML = `<strong style="color:var(--eliminated)">Not found.</strong>&nbsp; Target ${target} is not in the array. (${pgAnim.steps.length} steps)`;
+        pgResultEl.className = 'playground-result failure';
+      }
+    }
+
+    // Preset buttons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        inputArrayEl.value = btn.dataset.arr;
+        inputTargetEl.value = btn.dataset.target;
+        runPlayground();
+      });
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Only handle if not in input field
+      if (e.target.tagName === 'INPUT') return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        mainAnim.togglePlay();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        mainAnim.stepForward();
+      } else if (e.code === 'KeyR') {
+        e.preventDefault();
+        mainAnim.reset();
+      }
+    });
+  </script>
+</body>
+</html>

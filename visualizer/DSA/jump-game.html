@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jump Game — Visualizer</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-2: #1a1a28;
+      --surface-3: #222236;
+      --border: #2a2a40;
+      --text: #e8e8f0;
+      --text-dim: #8888a0;
+      --accent: #6c5ce7;
+      --accent-glow: #6c5ce740;
+      --success: #00d2a0;
+      --success-glow: #00d2a040;
+      --warning: #ffa726;
+      --warning-glow: #ffa72640;
+      --danger: #ff5252;
+      --danger-glow: #ff525240;
+      --current: #42a5f5;
+      --current-glow: #42a5f540;
+      --reachable: #6c5ce7;
+      --font-mono: 'Courier New', Consolas, monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+      position: relative;
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      border-radius: 2px;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--text), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .header .subtitle {
+      color: var(--text-dim);
+      font-size: 1rem;
+    }
+
+    /* Sections */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0.5;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .section-title .icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent-glow);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    /* Explanation Section */
+    .problem-statement {
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+      border-left: 3px solid var(--accent);
+    }
+
+    .problem-statement p {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+    }
+
+    .key-insight {
+      background: linear-gradient(135deg, var(--success-glow), transparent);
+      border: 1px solid var(--success);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .key-insight h3 {
+      color: var(--success);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .key-insight p {
+      font-size: 0.95rem;
+    }
+
+    .approach {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .approach { grid-template-columns: 1fr; }
+    }
+
+    .approach-step {
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .approach-step .step-num {
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .approach-step p {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+
+    .complexity-badges {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .badge-time {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+
+    .badge-space {
+      background: var(--success-glow);
+      border: 1px solid var(--success);
+      color: var(--success);
+    }
+
+    .badge code {
+      font-family: var(--font-mono);
+    }
+
+    /* Example Diagram */
+    .example-diagram {
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .example-diagram .arr-display {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 1rem;
+    }
+
+    .example-diagram .arr-cell {
+      width: 48px;
+      height: 48px;
+      background: var(--surface-3);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .example-diagram .arr-cell.highlight {
+      border-color: var(--success);
+      background: var(--success-glow);
+      color: var(--success);
+    }
+
+    .example-diagram .jump-arrows {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Animation Section */
+    .animation-area {
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .array-container {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .cell {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 1.2rem;
+      font-weight: 700;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 2px solid var(--border);
+      background: var(--surface-3);
+    }
+
+    .cell .index-label {
+      position: absolute;
+      bottom: -20px;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    .cell.unvisited {
+      border-color: var(--border);
+      background: var(--surface-3);
+    }
+
+    .cell.reachable {
+      border-color: var(--reachable);
+      background: var(--accent-glow);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .cell.current {
+      border-color: var(--current);
+      background: rgba(66, 165, 245, 0.15);
+      box-shadow: 0 0 16px var(--current-glow);
+      transform: scale(1.08);
+    }
+
+    .cell.success {
+      border-color: var(--success);
+      background: var(--success-glow);
+      box-shadow: 0 0 12px var(--success-glow);
+    }
+
+    .cell.failed {
+      border-color: var(--danger);
+      background: var(--danger-glow);
+      box-shadow: 0 0 12px var(--danger-glow);
+    }
+
+    .cell.max-reach {
+      position: relative;
+    }
+
+    .cell.max-reach::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 10px;
+      height: 10px;
+      background: var(--warning);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--warning-glow);
+    }
+
+    /* Reach bar */
+    .reach-bar-container {
+      width: 100%;
+      max-width: 600px;
+      margin-top: 0.5rem;
+    }
+
+    .reach-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 0.4rem;
+    }
+
+    .reach-bar {
+      height: 8px;
+      background: var(--surface-3);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .reach-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--success));
+      border-radius: 4px;
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Narration */
+    .narration {
+      background: var(--surface-3);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.5rem;
+      font-size: 0.9rem;
+      color: var(--text);
+      text-align: center;
+      min-height: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      width: 100%;
+    }
+
+    .narration .step-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      padding: 0.15rem 0.6rem;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-right: 0.75rem;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 0.6rem 1.2rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn:hover {
+      background: var(--surface-3);
+      border-color: var(--accent);
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #7c6cf7;
+      border-color: #7c6cf7;
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    .speed-control input[type="range"] {
+      width: 80px;
+      accent-color: var(--accent);
+    }
+
+    /* Code Panel */
+    .code-panel {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .code-panel-header {
+      background: var(--surface-3);
+      padding: 0.6rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .code-panel pre {
+      padding: 1rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.8;
+    }
+
+    .code-line {
+      padding: 0 0.5rem;
+      border-radius: 4px;
+      transition: background 0.3s;
+      display: block;
+    }
+
+    .code-line.active {
+      background: var(--accent-glow);
+      border-left: 3px solid var(--accent);
+      padding-left: calc(0.5rem - 3px);
+    }
+
+    .code-line .keyword { color: #c792ea; }
+    .code-line .variable { color: #82aaff; }
+    .code-line .number { color: #f78c6c; }
+    .code-line .operator { color: #89ddff; }
+    .code-line .boolean { color: #ff5370; }
+    .code-line .comment { color: #546e7a; font-style: italic; }
+
+    /* Variables Display */
+    .variables-display {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 1rem;
+      background: var(--surface-3);
+      border-radius: var(--radius-sm);
+      margin-top: 1rem;
+    }
+
+    .var-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .var-item .var-name {
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+    }
+
+    .var-item .var-value {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+    }
+
+    /* Playground Section */
+    .playground-inputs {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+
+    .input-group {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 0.4rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .presets {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+
+    .preset-btn {
+      padding: 0.4rem 0.8rem;
+      border-radius: 50px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-mono);
+    }
+
+    .preset-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .result-display {
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius-sm);
+      font-size: 1rem;
+      font-weight: 700;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .result-display.success {
+      background: var(--success-glow);
+      border: 1px solid var(--success);
+      color: var(--success);
+    }
+
+    .result-display.failure {
+      background: var(--danger-glow);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+    }
+
+    .result-display.hidden {
+      display: none;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 2rem 0;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-in {
+      animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>Jump Game</h1>
+      <p class="subtitle">LeetCode #55 — Greedy Algorithm</p>
+    </div>
+
+    <!-- Section 1: Visual Explanation -->
+    <div class="section">
+      <div class="section-title">
+        <span class="icon">&#x1F4A1;</span>
+        Visual Explanation
+      </div>
+
+      <div class="problem-statement">
+        <p>Given an integer array <code>nums</code>, where each element represents the maximum jump length from that position. Starting at index 0, determine if you can reach the last index.</p>
+      </div>
+
+      <div class="example-diagram">
+        <div class="arr-display">
+          <div class="arr-cell highlight">2</div>
+          <div class="arr-cell highlight">3</div>
+          <div class="arr-cell">1</div>
+          <div class="arr-cell highlight">1</div>
+          <div class="arr-cell highlight">4</div>
+        </div>
+        <div class="jump-arrows">Index 0 can jump to 1 or 2 &rarr; Index 1 can jump to 2, 3, or 4 &rarr; Reached the end!</div>
+      </div>
+
+      <div class="key-insight">
+        <h3>Key Insight</h3>
+        <p>You don't need to find an actual path. Just track the <strong>farthest reachable index</strong> as you scan left to right. If at any position <code>i</code>, you find <code>i > maxReach</code>, it means there's a gap you can't cross. Otherwise, update <code>maxReach = max(maxReach, i + nums[i])</code>.</p>
+      </div>
+
+      <div class="approach">
+        <div class="approach-step">
+          <span class="step-num">1</span>
+          <p>Initialize <code>maxReach = 0</code> (farthest index reachable so far)</p>
+        </div>
+        <div class="approach-step">
+          <span class="step-num">2</span>
+          <p>For each index <code>i</code>, check if <code>i > maxReach</code>. If so, return false (can't reach here)</p>
+        </div>
+        <div class="approach-step">
+          <span class="step-num">3</span>
+          <p>Update: <code>maxReach = max(maxReach, i + nums[i])</code></p>
+        </div>
+        <div class="approach-step">
+          <span class="step-num">4</span>
+          <p>If the loop completes, the last index is reachable — return true</p>
+        </div>
+      </div>
+
+      <div class="complexity-badges">
+        <span class="badge badge-time">Time: <code>O(n)</code></span>
+        <span class="badge badge-space">Space: <code>O(1)</code></span>
+      </div>
+    </div>
+
+    <!-- Section 2: Step-by-Step Animation -->
+    <div class="section">
+      <div class="section-title">
+        <span class="icon">&#x25B6;</span>
+        Step-by-Step Animation
+      </div>
+
+      <div class="animation-area" id="animationArea">
+        <div class="array-container" id="arrayContainer"></div>
+        <div class="reach-bar-container">
+          <div class="reach-bar-label">
+            <span>Max Reach</span>
+            <span id="reachLabel">0 / ?</span>
+          </div>
+          <div class="reach-bar">
+            <div class="reach-bar-fill" id="reachBarFill" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="narration" id="narration">
+          Press <strong>Play</strong> or <strong>Step</strong> to begin the animation.
+        </div>
+      </div>
+
+      <div class="variables-display" id="variablesDisplay">
+        <div class="var-item"><span class="var-name">i</span> <span class="var-value" id="varI">-</span></div>
+        <div class="var-item"><span class="var-name">maxReach</span> <span class="var-value" id="varMaxReach">0</span></div>
+        <div class="var-item"><span class="var-name">nums[i]</span> <span class="var-value" id="varNumsI">-</span></div>
+        <div class="var-item"><span class="var-name">i + nums[i]</span> <span class="var-value" id="varJump">-</span></div>
+      </div>
+
+      <div class="controls" style="margin-top: 1.5rem;">
+        <button class="btn btn-primary" id="btnPlay">&#x25B6; Play</button>
+        <button class="btn" id="btnStep">&#x23E9; Step</button>
+        <button class="btn" id="btnReset">&#x21BA; Reset</button>
+        <div class="speed-control">
+          <span>Speed:</span>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <div class="code-panel" style="margin-top: 1.5rem;">
+        <div class="code-panel-header">Algorithm — Greedy</div>
+        <pre><code><span class="code-line" id="codeLine0"><span class="keyword">function</span> <span class="variable">canJump</span>(nums) {</span>
+<span class="code-line" id="codeLine1">  <span class="keyword">let</span> <span class="variable">maxReach</span> <span class="operator">=</span> <span class="number">0</span>;</span>
+<span class="code-line" id="codeLine2">  <span class="keyword">for</span> (<span class="keyword">let</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i <span class="operator">&lt;</span> nums.length; i++) {</span>
+<span class="code-line" id="codeLine3">    <span class="keyword">if</span> (i <span class="operator">&gt;</span> maxReach) <span class="keyword">return</span> <span class="boolean">false</span>;</span>
+<span class="code-line" id="codeLine4">    maxReach <span class="operator">=</span> Math.max(maxReach, i <span class="operator">+</span> nums[i]);</span>
+<span class="code-line" id="codeLine5">  }</span>
+<span class="code-line" id="codeLine6">  <span class="keyword">return</span> <span class="boolean">true</span>;</span>
+<span class="code-line" id="codeLine7">}</span></code></pre>
+      </div>
+    </div>
+
+    <!-- Section 3: Interactive Playground -->
+    <div class="section">
+      <div class="section-title">
+        <span class="icon">&#x1F3AE;</span>
+        Interactive Playground
+      </div>
+
+      <div class="presets">
+        <button class="preset-btn" onclick="loadPreset([2,3,1,1,4])">2,3,1,1,4 (true)</button>
+        <button class="preset-btn" onclick="loadPreset([3,2,1,0,4])">3,2,1,0,4 (false)</button>
+        <button class="preset-btn" onclick="loadPreset([0])">0 (true)</button>
+        <button class="preset-btn" onclick="loadPreset([1,0,1,0])">1,0,1,0 (false)</button>
+        <button class="preset-btn" onclick="loadPreset([2,0,0])">2,0,0 (true)</button>
+        <button class="preset-btn" onclick="loadPreset([5,4,3,2,1,0,0])">5,4,3,2,1,0,0 (true)</button>
+      </div>
+
+      <div class="playground-inputs">
+        <div class="input-group">
+          <label>Array (comma-separated)</label>
+          <input type="text" id="inputArray" value="2,3,1,1,4" placeholder="e.g., 2,3,1,1,4">
+        </div>
+        <button class="btn btn-primary" id="btnRun">Run</button>
+      </div>
+
+      <div class="result-display hidden" id="resultDisplay"></div>
+    </div>
+
+    <div class="footer">
+      Jump Game Visualizer — Greedy Algorithm
+    </div>
+  </div>
+
+  <script>
+    // State
+    let animationNums = [2, 3, 1, 1, 4];
+    let steps = [];
+    let currentStep = -1;
+    let isPlaying = false;
+    let playInterval = null;
+    let speed = 5;
+
+    // DOM Elements
+    const arrayContainer = document.getElementById('arrayContainer');
+    const narration = document.getElementById('narration');
+    const reachLabel = document.getElementById('reachLabel');
+    const reachBarFill = document.getElementById('reachBarFill');
+    const varI = document.getElementById('varI');
+    const varMaxReach = document.getElementById('varMaxReach');
+    const varNumsI = document.getElementById('varNumsI');
+    const varJump = document.getElementById('varJump');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnStep = document.getElementById('btnStep');
+    const btnReset = document.getElementById('btnReset');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedLabel = document.getElementById('speedLabel');
+    const resultDisplay = document.getElementById('resultDisplay');
+    const inputArray = document.getElementById('inputArray');
+
+    // Compute algorithm steps
+    function computeSteps(nums) {
+      const result = [];
+      let maxReach = 0;
+
+      result.push({
+        type: 'init',
+        i: -1,
+        maxReach: 0,
+        codeLine: 1,
+        description: 'Initialize maxReach = 0. We\'ll track the farthest index reachable.',
+        cellStates: nums.map(() => 'unvisited'),
+        maxReachIdx: -1
+      });
+
+      for (let i = 0; i < nums.length; i++) {
+        // Check if i > maxReach
+        if (i > maxReach) {
+          const cellStates = nums.map((_, idx) => {
+            if (idx < i) return 'reachable';
+            if (idx === i) return 'failed';
+            return 'unvisited';
+          });
+          result.push({
+            type: 'fail',
+            i: i,
+            maxReach: maxReach,
+            numsI: nums[i],
+            jump: i + nums[i],
+            codeLine: 3,
+            description: `i = ${i} > maxReach = ${maxReach}. We can't reach index ${i}! Return FALSE.`,
+            cellStates: cellStates,
+            maxReachIdx: maxReach
+          });
+          return result;
+        }
+
+        const oldMaxReach = maxReach;
+        maxReach = Math.max(maxReach, i + nums[i]);
+
+        const cellStates = nums.map((_, idx) => {
+          if (idx === i) return 'current';
+          if (idx <= oldMaxReach && idx < i) return 'reachable';
+          if (idx <= maxReach) return 'reachable';
+          return 'unvisited';
+        });
+
+        const desc = i + nums[i] > oldMaxReach
+          ? `At index ${i}: nums[${i}] = ${nums[i]}, can reach ${i} + ${nums[i]} = ${i + nums[i]}. Update maxReach: ${oldMaxReach} → ${maxReach}.`
+          : `At index ${i}: nums[${i}] = ${nums[i]}, can reach ${i} + ${nums[i]} = ${i + nums[i]}. maxReach unchanged at ${maxReach}.`;
+
+        result.push({
+          type: 'step',
+          i: i,
+          maxReach: maxReach,
+          numsI: nums[i],
+          jump: i + nums[i],
+          codeLine: 4,
+          description: desc,
+          cellStates: cellStates,
+          maxReachIdx: maxReach
+        });
+
+        if (maxReach >= nums.length - 1 && i < nums.length - 1) {
+          const successStates = nums.map((_, idx) => {
+            if (idx <= maxReach && idx <= nums.length - 1) return 'success';
+            return 'unvisited';
+          });
+          result.push({
+            type: 'early-success',
+            i: i,
+            maxReach: maxReach,
+            numsI: nums[i],
+            jump: i + nums[i],
+            codeLine: 6,
+            description: `maxReach = ${maxReach} >= last index (${nums.length - 1}). We can reach the end! Return TRUE.`,
+            cellStates: successStates,
+            maxReachIdx: maxReach
+          });
+          return result;
+        }
+      }
+
+      const successStates = nums.map(() => 'success');
+      result.push({
+        type: 'success',
+        i: nums.length - 1,
+        maxReach: maxReach,
+        codeLine: 6,
+        description: `Loop completed. We can reach the last index. Return TRUE.`,
+        cellStates: successStates,
+        maxReachIdx: maxReach
+      });
+
+      return result;
+    }
+
+    // Render array
+    function renderArray(nums) {
+      arrayContainer.innerHTML = '';
+      nums.forEach((val, idx) => {
+        const cell = document.createElement('div');
+        cell.className = 'cell unvisited';
+        cell.id = `cell-${idx}`;
+        cell.innerHTML = `${val}<span class="index-label">${idx}</span>`;
+        arrayContainer.appendChild(cell);
+      });
+    }
+
+    // Apply step state
+    function applyStep(step) {
+      if (!step) return;
+
+      // Update cells
+      const cells = arrayContainer.querySelectorAll('.cell');
+      step.cellStates.forEach((state, idx) => {
+        if (cells[idx]) {
+          cells[idx].className = `cell ${state}`;
+          if (step.maxReachIdx === idx && state !== 'failed') {
+            cells[idx].classList.add('max-reach');
+          }
+        }
+      });
+
+      // Update narration
+      const stepNum = currentStep >= 0 ? currentStep : 0;
+      narration.innerHTML = `<span class="step-badge">Step ${stepNum + 1}</span> ${step.description}`;
+
+      // Update variables
+      varI.textContent = step.i >= 0 ? step.i : '-';
+      varMaxReach.textContent = step.maxReach;
+      varNumsI.textContent = step.numsI !== undefined ? step.numsI : '-';
+      varJump.textContent = step.jump !== undefined ? step.jump : '-';
+
+      // Update reach bar
+      const lastIdx = animationNums.length - 1;
+      const pct = lastIdx > 0 ? Math.min((step.maxReach / lastIdx) * 100, 100) : 100;
+      reachBarFill.style.width = `${pct}%`;
+      reachLabel.textContent = `${step.maxReach} / ${lastIdx}`;
+
+      // Highlight code line
+      for (let i = 0; i <= 7; i++) {
+        document.getElementById(`codeLine${i}`).classList.remove('active');
+      }
+      document.getElementById(`codeLine${step.codeLine}`).classList.add('active');
+    }
+
+    // Initialize animation
+    function initAnimation(nums) {
+      animationNums = nums;
+      steps = computeSteps(nums);
+      currentStep = -1;
+      isPlaying = false;
+      clearInterval(playInterval);
+      btnPlay.innerHTML = '&#x25B6; Play';
+      renderArray(nums);
+      narration.innerHTML = 'Press <strong>Play</strong> or <strong>Step</strong> to begin the animation.';
+      varI.textContent = '-';
+      varMaxReach.textContent = '0';
+      varNumsI.textContent = '-';
+      varJump.textContent = '-';
+      reachBarFill.style.width = '0%';
+      reachLabel.textContent = `0 / ${nums.length - 1}`;
+      for (let i = 0; i <= 7; i++) {
+        document.getElementById(`codeLine${i}`).classList.remove('active');
+      }
+    }
+
+    // Step forward
+    function stepForward() {
+      if (currentStep >= steps.length - 1) {
+        stopPlaying();
+        return;
+      }
+      currentStep++;
+      applyStep(steps[currentStep]);
+
+      if (currentStep >= steps.length - 1) {
+        stopPlaying();
+      }
+    }
+
+    // Play/Pause
+    function togglePlay() {
+      if (isPlaying) {
+        stopPlaying();
+      } else {
+        if (currentStep >= steps.length - 1) {
+          initAnimation(animationNums);
+        }
+        isPlaying = true;
+        btnPlay.innerHTML = '&#x23F8; Pause';
+        const delay = Math.max(200, 1200 - speed * 100);
+        playInterval = setInterval(stepForward, delay);
+      }
+    }
+
+    function stopPlaying() {
+      isPlaying = false;
+      clearInterval(playInterval);
+      btnPlay.innerHTML = '&#x25B6; Play';
+    }
+
+    // Event Listeners
+    btnPlay.addEventListener('click', togglePlay);
+    btnStep.addEventListener('click', () => {
+      stopPlaying();
+      stepForward();
+    });
+    btnReset.addEventListener('click', () => initAnimation(animationNums));
+
+    speedSlider.addEventListener('input', (e) => {
+      speed = parseInt(e.target.value);
+      speedLabel.textContent = `${speed}x`;
+      if (isPlaying) {
+        clearInterval(playInterval);
+        const delay = Math.max(200, 1200 - speed * 100);
+        playInterval = setInterval(stepForward, delay);
+      }
+    });
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+      if (e.code === 'ArrowRight') { e.preventDefault(); stopPlaying(); stepForward(); }
+      if (e.code === 'KeyR') { e.preventDefault(); initAnimation(animationNums); }
+    });
+
+    // Playground
+    function loadPreset(nums) {
+      inputArray.value = nums.join(',');
+      runPlayground();
+    }
+
+    function runPlayground() {
+      const text = inputArray.value.trim();
+      const nums = text.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+
+      if (nums.length === 0) {
+        resultDisplay.className = 'result-display failure';
+        resultDisplay.textContent = 'Please enter a valid array.';
+        return;
+      }
+
+      // Run algorithm
+      let maxReach = 0;
+      let result = true;
+      for (let i = 0; i < nums.length; i++) {
+        if (i > maxReach) { result = false; break; }
+        maxReach = Math.max(maxReach, i + nums[i]);
+      }
+
+      resultDisplay.classList.remove('hidden');
+      if (result) {
+        resultDisplay.className = 'result-display success';
+        resultDisplay.textContent = `TRUE — You can reach the last index!`;
+      } else {
+        resultDisplay.className = 'result-display failure';
+        resultDisplay.textContent = `FALSE — You cannot reach the last index.`;
+      }
+
+      // Also start animation with this input
+      initAnimation(nums);
+    }
+
+    document.getElementById('btnRun').addEventListener('click', runPlayground);
+    inputArray.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') runPlayground();
+    });
+
+    // Initialize with default
+    initAnimation([2, 3, 1, 1, 4]);
+  </script>
+</body>
+</html>

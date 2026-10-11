@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS Step Functions — System Design Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f3f5f7;
+      --border: #e2e6ea;
+      --text: #1a1d23;
+      --text-secondary: #5a6270;
+      --accent: #e8590c;
+      --accent-light: #fff4e6;
+      --blue: #1971c2;
+      --blue-light: #e7f5ff;
+      --green: #2f9e44;
+      --green-light: #ebfbee;
+      --purple: #7048e8;
+      --purple-light: #f3f0ff;
+      --amber: #e67700;
+      --amber-light: #fff9db;
+      --red: #c92a2a;
+      --red-light: #fff5f5;
+      --cyan: #0c8599;
+      --cyan-light: #e3fafc;
+      --radius: 10px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.06);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.1);
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Navigation */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+
+    .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      height: 56px;
+      overflow-x: auto;
+    }
+
+    .nav-brand {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--accent);
+      white-space: nowrap;
+      letter-spacing: -0.3px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .nav-link {
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    /* Hero */
+    .hero {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 3rem 2rem 2rem;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .badges {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-top: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-blue { background: var(--blue-light); color: var(--blue); }
+    .badge-green { background: var(--green-light); color: var(--green); }
+    .badge-purple { background: var(--purple-light); color: var(--purple); }
+    .badge-amber { background: var(--amber-light); color: var(--amber); }
+
+    /* Section */
+    .section {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+
+    .section-header {
+      margin-bottom: 2rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.8px;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-header p {
+      color: var(--text-secondary);
+      font-size: 1rem;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .card .tech {
+      display: inline-block;
+      margin-top: 0.5rem;
+      padding: 0.2rem 0.5rem;
+      background: var(--surface-alt);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: var(--mono);
+      color: var(--blue);
+    }
+
+    /* Architecture Diagram */
+    .diagram-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+
+    .diagram-svg {
+      width: 100%;
+      min-height: 500px;
+    }
+
+    .diagram-svg .component {
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .diagram-svg .component:hover {
+      filter: brightness(0.95);
+      transform: translateY(-2px);
+    }
+
+    .diagram-svg .component rect,
+    .diagram-svg .component path,
+    .diagram-svg .component ellipse {
+      transition: all 0.3s;
+    }
+
+    .diagram-svg .component:hover rect,
+    .diagram-svg .component:hover path,
+    .diagram-svg .component:hover ellipse {
+      stroke-width: 2.5;
+    }
+
+    .tooltip {
+      position: absolute;
+      background: var(--text);
+      color: white;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      max-width: 250px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 50;
+    }
+
+    .tooltip.visible { opacity: 1; }
+
+    /* Sequence Diagram */
+    .sequence-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+    }
+
+    .seq-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .seq-btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .seq-btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .seq-btn-primary:hover { background: #d14b08; }
+
+    .seq-btn-secondary {
+      background: var(--surface-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .seq-btn-secondary:hover { background: var(--border); }
+
+    .seq-btn-secondary.active {
+      background: var(--blue-light);
+      color: var(--blue);
+      border-color: var(--blue);
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .speed-control input[type="range"] {
+      width: 80px;
+      accent-color: var(--accent);
+    }
+
+    .seq-narration {
+      padding: 1rem;
+      background: var(--accent-light);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+    }
+
+    .seq-step-counter {
+      font-weight: 700;
+      color: var(--accent);
+      margin-right: 0.5rem;
+    }
+
+    /* Comparison Table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr.chosen {
+      background: var(--accent-light);
+    }
+
+    .comparison-table tr.chosen td:first-child {
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .chosen-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      font-size: 0.65rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+
+    /* Pitfall Cards */
+    .pitfall-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--amber);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .pitfall-header {
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .pitfall-header:hover { background: var(--surface-alt); }
+
+    .pitfall-chevron {
+      transition: transform 0.2s;
+      font-size: 0.8rem;
+    }
+
+    .pitfall-card.open .pitfall-chevron {
+      transform: rotate(180deg);
+    }
+
+    .pitfall-body {
+      padding: 0 1.5rem;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .pitfall-card.open .pitfall-body {
+      padding: 0 1.5rem 1.5rem;
+      max-height: 600px;
+    }
+
+    .pitfall-body dt {
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 0.75rem;
+    }
+
+    .pitfall-body dd {
+      font-size: 0.88rem;
+      margin-top: 0.25rem;
+      color: var(--text);
+    }
+
+    /* Best Practices */
+    .practice-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--green);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .practice-card h4 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--green);
+    }
+
+    .practice-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .practice-card li {
+      position: relative;
+      padding-left: 1.25rem;
+      font-size: 0.87rem;
+      margin-bottom: 0.4rem;
+      color: var(--text-secondary);
+    }
+
+    .practice-card li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    /* Scaling */
+    .estimation-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .estimation-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .estimation-item .value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -1px;
+    }
+
+    .estimation-item .label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 0.25rem;
+    }
+
+    /* Use Cases */
+    .usecase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+
+    .usecase-card h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .usecase-card .scale-tag {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      background: var(--cyan-light);
+      color: var(--cyan);
+      font-size: 0.7rem;
+      font-weight: 600;
+      border-radius: 3px;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .tab:hover { border-color: var(--accent); color: var(--accent); }
+    .tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* State Machine SVG */
+    .state-diagram {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .state-node {
+      transition: all 0.3s;
+    }
+
+    .state-node.active rect,
+    .state-node.active path {
+      stroke: var(--accent);
+      stroke-width: 3;
+    }
+
+    .state-node.completed rect,
+    .state-node.completed path {
+      fill: var(--green-light);
+      stroke: var(--green);
+    }
+
+    .state-node.failed rect,
+    .state-node.failed path {
+      fill: var(--red-light);
+      stroke: var(--red);
+    }
+
+    /* Flow selector */
+    .flow-selector {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      .nav-inner { gap: 0.5rem; }
+      .section { padding: 2rem 1rem; }
+      .card-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <span class="nav-brand">AWS Step Functions</span>
+      <div class="nav-links">
+        <a href="#architecture" class="nav-link active">Architecture</a>
+        <a href="#components" class="nav-link">Components</a>
+        <a href="#sequence" class="nav-link">Request Flow</a>
+        <a href="#comparisons" class="nav-link">Comparisons</a>
+        <a href="#usecases" class="nav-link">Use Cases</a>
+        <a href="#bestpractices" class="nav-link">Best Practices</a>
+        <a href="#scaling" class="nav-link">Scaling</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <header class="hero">
+    <h1>AWS Step Functions</h1>
+    <p>A serverless orchestration service that lets you coordinate distributed applications and microservices using visual workflows defined as state machines.</p>
+    <div class="badges">
+      <span class="badge badge-blue">Serverless</span>
+      <span class="badge badge-green">Managed Service</span>
+      <span class="badge badge-purple">Event-Driven</span>
+      <span class="badge badge-amber">Workflow Orchestration</span>
+    </div>
+  </header>
+
+  <!-- Section 1: Architecture -->
+  <section class="section" id="architecture">
+    <div class="section-header">
+      <h2>Architecture Diagram</h2>
+      <p>How Step Functions orchestrates workflows across AWS services using state machine definitions.</p>
+    </div>
+    <div class="diagram-container">
+      <svg class="diagram-svg" viewBox="0 0 1100 560" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background groups -->
+        <rect x="20" y="20" width="320" height="520" rx="12" fill="#f8f9fa" stroke="#dee2e6" stroke-dasharray="5,5"/>
+        <text x="40" y="50" font-size="12" fill="#868e96" font-weight="600">CLIENT LAYER</text>
+
+        <rect x="370" y="20" width="360" height="520" rx="12" fill="#fff4e6" stroke="#ffe8cc" stroke-dasharray="5,5"/>
+        <text x="390" y="50" font-size="12" fill="#e8590c" font-weight="600">ORCHESTRATION LAYER</text>
+
+        <rect x="760" y="20" width="320" height="520" rx="12" fill="#e7f5ff" stroke="#a5d8ff" stroke-dasharray="5,5"/>
+        <text x="780" y="50" font-size="12" fill="#1971c2" font-weight="600">EXECUTION LAYER</text>
+
+        <!-- Client components -->
+        <g class="component" data-tip="AWS Console, CLI, or SDK triggers workflow executions" onclick="scrollToSection('components')">
+          <rect x="60" y="90" width="240" height="60" rx="8" fill="white" stroke="#495057" stroke-width="1.5"/>
+          <text x="180" y="120" text-anchor="middle" font-size="13" font-weight="600" fill="#1a1d23">API Gateway / SDK</text>
+          <text x="180" y="138" text-anchor="middle" font-size="10" fill="#868e96">StartExecution API</text>
+        </g>
+
+        <g class="component" data-tip="EventBridge rules can automatically start Step Functions executions based on events" onclick="scrollToSection('components')">
+          <rect x="60" y="180" width="240" height="60" rx="8" fill="white" stroke="#495057" stroke-width="1.5"/>
+          <text x="180" y="210" text-anchor="middle" font-size="13" font-weight="600" fill="#1a1d23">EventBridge</text>
+          <text x="180" y="228" text-anchor="middle" font-size="10" fill="#868e96">Event-Driven Triggers</text>
+        </g>
+
+        <g class="component" data-tip="CloudWatch Alarms or scheduled events triggering workflows" onclick="scrollToSection('components')">
+          <rect x="60" y="270" width="240" height="60" rx="8" fill="white" stroke="#495057" stroke-width="1.5"/>
+          <text x="180" y="300" text-anchor="middle" font-size="13" font-weight="600" fill="#1a1d23">CloudWatch Events</text>
+          <text x="180" y="318" text-anchor="middle" font-size="10" fill="#868e96">Scheduled / Alarm Triggers</text>
+        </g>
+
+        <g class="component" data-tip="Other Step Functions or nested workflows that call child workflows" onclick="scrollToSection('components')">
+          <rect x="60" y="360" width="240" height="60" rx="8" fill="white" stroke="#495057" stroke-width="1.5"/>
+          <text x="180" y="390" text-anchor="middle" font-size="13" font-weight="600" fill="#1a1d23">Nested Workflows</text>
+          <text x="180" y="408" text-anchor="middle" font-size="10" fill="#868e96">Parent State Machines</text>
+        </g>
+
+        <!-- Step Functions Core -->
+        <g class="component" data-tip="The core Step Functions service that manages state machine definitions and executions" onclick="scrollToSection('components')">
+          <rect x="420" y="80" width="260" height="90" rx="10" fill="#fff" stroke="#e8590c" stroke-width="2.5"/>
+          <text x="550" y="115" text-anchor="middle" font-size="14" font-weight="700" fill="#e8590c">Step Functions</text>
+          <text x="550" y="135" text-anchor="middle" font-size="11" fill="#495057">State Machine Engine</text>
+          <text x="550" y="153" text-anchor="middle" font-size="9" fill="#868e96">ASL Definition • Execution History</text>
+        </g>
+
+        <!-- State Types -->
+        <g class="component" data-tip="Task states invoke Lambda, ECS, Batch, Glue, or other AWS services">
+          <rect x="420" y="200" width="120" height="50" rx="6" fill="#ebfbee" stroke="#2f9e44" stroke-width="1.5"/>
+          <text x="480" y="225" text-anchor="middle" font-size="11" font-weight="600" fill="#2f9e44">Task State</text>
+          <text x="480" y="240" text-anchor="middle" font-size="9" fill="#868e96">Invoke Services</text>
+        </g>
+
+        <g class="component" data-tip="Choice states add branching logic based on input data">
+          <path d="M 600 200 L 660 225 L 600 250 L 540 225 Z" fill="#f3f0ff" stroke="#7048e8" stroke-width="1.5"/>
+          <text x="600" y="228" text-anchor="middle" font-size="10" font-weight="600" fill="#7048e8">Choice</text>
+        </g>
+
+        <g class="component" data-tip="Parallel states execute multiple branches concurrently">
+          <rect x="420" y="270" width="120" height="50" rx="6" fill="#e7f5ff" stroke="#1971c2" stroke-width="1.5"/>
+          <text x="480" y="295" text-anchor="middle" font-size="11" font-weight="600" fill="#1971c2">Parallel State</text>
+          <text x="480" y="310" text-anchor="middle" font-size="9" fill="#868e96">Concurrent</text>
+        </g>
+
+        <g class="component" data-tip="Map states iterate over arrays, processing items in parallel or sequentially">
+          <rect x="560" y="270" width="120" height="50" rx="6" fill="#fff9db" stroke="#e67700" stroke-width="1.5"/>
+          <text x="620" y="295" text-anchor="middle" font-size="11" font-weight="600" fill="#e67700">Map State</text>
+          <text x="620" y="310" text-anchor="middle" font-size="9" fill="#868e96">Iterate Items</text>
+        </g>
+
+        <g class="component" data-tip="Wait states pause execution for a duration or until a timestamp">
+          <rect x="420" y="340" width="120" height="50" rx="6" fill="#e3fafc" stroke="#0c8599" stroke-width="1.5"/>
+          <text x="480" y="365" text-anchor="middle" font-size="11" font-weight="600" fill="#0c8599">Wait State</text>
+          <text x="480" y="380" text-anchor="middle" font-size="9" fill="#868e96">Delay/Timer</text>
+        </g>
+
+        <g class="component" data-tip="Pass states transform data, Succeed/Fail states terminate execution">
+          <rect x="560" y="340" width="120" height="50" rx="6" fill="#f8f9fa" stroke="#495057" stroke-width="1.5"/>
+          <text x="620" y="365" text-anchor="middle" font-size="11" font-weight="600" fill="#495057">Pass/Succeed</text>
+          <text x="620" y="380" text-anchor="middle" font-size="9" fill="#868e96">Transform/End</text>
+        </g>
+
+        <!-- Error Handling -->
+        <g class="component" data-tip="Built-in retry and catch mechanisms for handling transient and permanent failures">
+          <rect x="420" y="420" width="260" height="50" rx="6" fill="#fff5f5" stroke="#c92a2a" stroke-width="1.5"/>
+          <text x="550" y="445" text-anchor="middle" font-size="12" font-weight="600" fill="#c92a2a">Retry & Catch (Error Handling)</text>
+          <text x="550" y="460" text-anchor="middle" font-size="9" fill="#868e96">Exponential Backoff • Error Matchers • Fallback States</text>
+        </g>
+
+        <!-- Execution Targets -->
+        <g class="component" data-tip="AWS Lambda functions for compute tasks" onclick="scrollToSection('components')">
+          <rect x="800" y="80" width="240" height="55" rx="8" fill="white" stroke="#1971c2" stroke-width="1.5"/>
+          <text x="920" y="107" text-anchor="middle" font-size="12" font-weight="600" fill="#1971c2">AWS Lambda</text>
+          <text x="920" y="123" text-anchor="middle" font-size="9" fill="#868e96">Serverless Compute</text>
+        </g>
+
+        <g class="component" data-tip="ECS/Fargate for containerized tasks that need more resources or longer runtimes">
+          <rect x="800" y="150" width="240" height="55" rx="8" fill="white" stroke="#1971c2" stroke-width="1.5"/>
+          <text x="920" y="177" text-anchor="middle" font-size="12" font-weight="600" fill="#1971c2">ECS / Fargate</text>
+          <text x="920" y="193" text-anchor="middle" font-size="9" fill="#868e96">Container Tasks</text>
+        </g>
+
+        <g class="component" data-tip="DynamoDB for storing workflow metadata, results, or idempotency tokens">
+          <path d="M 800 245 Q 800 225 840 225 L 1000 225 Q 1040 225 1040 245 L 1040 280 Q 1040 295 1000 295 L 840 295 Q 800 295 800 280 Z" fill="white" stroke="#1971c2" stroke-width="1.5"/>
+          <ellipse cx="920" cy="228" rx="120" ry="10" fill="none" stroke="#1971c2" stroke-width="1"/>
+          <text x="920" y="265" text-anchor="middle" font-size="12" font-weight="600" fill="#1971c2">DynamoDB</text>
+          <text x="920" y="282" text-anchor="middle" font-size="9" fill="#868e96">State Storage</text>
+        </g>
+
+        <g class="component" data-tip="SNS/SQS for notifications, decoupling, and async messaging between steps">
+          <rect x="800" y="315" width="240" height="55" rx="8" fill="white" stroke="#1971c2" stroke-width="1.5"/>
+          <text x="920" y="342" text-anchor="middle" font-size="12" font-weight="600" fill="#1971c2">SNS / SQS</text>
+          <text x="920" y="358" text-anchor="middle" font-size="9" fill="#868e96">Notifications & Queues</text>
+        </g>
+
+        <g class="component" data-tip="AWS Glue for ETL jobs and data processing tasks within workflows">
+          <rect x="800" y="385" width="240" height="55" rx="8" fill="white" stroke="#1971c2" stroke-width="1.5"/>
+          <text x="920" y="412" text-anchor="middle" font-size="12" font-weight="600" fill="#1971c2">Glue / Batch / SageMaker</text>
+          <text x="920" y="428" text-anchor="middle" font-size="9" fill="#868e96">Data & ML Processing</text>
+        </g>
+
+        <g class="component" data-tip="Human approval via callback tokens — pauses execution until an external signal resumes it">
+          <rect x="800" y="455" width="240" height="55" rx="8" fill="white" stroke="#7048e8" stroke-width="1.5"/>
+          <text x="920" y="482" text-anchor="middle" font-size="12" font-weight="600" fill="#7048e8">Human Approval</text>
+          <text x="920" y="498" text-anchor="middle" font-size="9" fill="#868e96">Callback Tokens (.waitForTaskToken)</text>
+        </g>
+
+        <!-- Arrows -->
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M 0 0 L 8 3 L 0 6 Z" fill="#868e96"/>
+          </marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M 0 0 L 8 3 L 0 6 Z" fill="#e8590c"/>
+          </marker>
+        </defs>
+
+        <!-- Client to Step Functions -->
+        <line x1="300" y1="120" x2="415" y2="115" stroke="#868e96" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line x1="300" y1="210" x2="415" y2="140" stroke="#868e96" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line x1="300" y1="300" x2="415" y2="155" stroke="#868e96" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line x1="300" y1="390" x2="415" y2="160" stroke="#868e96" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <!-- Step Functions to Targets -->
+        <line x1="680" y1="125" x2="795" y2="107" stroke="#e8590c" stroke-width="1.5" marker-end="url(#arrow-accent)"/>
+        <line x1="680" y1="130" x2="795" y2="177" stroke="#e8590c" stroke-width="1.5" marker-end="url(#arrow-accent)"/>
+        <line x1="680" y1="140" x2="795" y2="255" stroke="#e8590c" stroke-width="1.2" marker-end="url(#arrow-accent)" stroke-dasharray="4,3"/>
+        <line x1="680" y1="145" x2="795" y2="340" stroke="#e8590c" stroke-width="1.2" marker-end="url(#arrow-accent)" stroke-dasharray="4,3"/>
+        <line x1="680" y1="150" x2="795" y2="412" stroke="#e8590c" stroke-width="1.2" marker-end="url(#arrow-accent)" stroke-dasharray="4,3"/>
+        <line x1="680" y1="155" x2="795" y2="482" stroke="#e8590c" stroke-width="1.2" marker-end="url(#arrow-accent)" stroke-dasharray="4,3"/>
+
+        <!-- Labels on connections -->
+        <text x="345" y="102" font-size="8" fill="#868e96" text-anchor="middle">REST/SDK</text>
+        <text x="345" y="172" font-size="8" fill="#868e96" text-anchor="middle">Events</text>
+        <text x="730" y="105" font-size="8" fill="#e8590c" text-anchor="middle">Invoke</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Section 2: Components -->
+  <section class="section" id="components">
+    <div class="section-header">
+      <h2>Component Breakdown</h2>
+      <p>Deep dive into each component of the Step Functions architecture.</p>
+    </div>
+    <div class="card-grid">
+      <div class="card">
+        <h3><span style="color:var(--accent)">&#9654;</span> State Machine Engine</h3>
+        <p>The core orchestrator that interprets Amazon States Language (ASL) definitions and manages execution state transitions, input/output processing, and error handling.</p>
+        <span class="tech">Amazon States Language (JSON)</span>
+        <p style="margin-top:0.75rem;font-size:0.82rem"><strong>Key Decision:</strong> Declarative JSON-based workflow over imperative code — enables visual editing, versioning, and auditing.</p>
+      </div>
+      <div class="card">
+        <h3><span style="color:var(--green)">&#9632;</span> Task States</h3>
+        <p>The workhorse state type. Invokes AWS services directly using optimized SDK integrations — supports 220+ AWS services with request/response, sync, or callback patterns.</p>
+        <span class="tech">Lambda • ECS • Batch • Glue • SageMaker</span>
+        <p style="margin-top:0.75rem;font-size:0.82rem"><strong>Scaling:</strong> Each task invocation is independent; parallelism scales with the target service's limits.</p>
+      </div>
+      <div class="card">
+        <h3><span style="color:var(--purple)">&#9670;</span> Choice State</h3>
+        <p>Conditional branching using comparison operators on the execution input. Supports boolean logic (And, Or, Not) and numeric/string comparisons.</p>
+        <span class="tech">JsonPath • Comparison Rules</span>
+        <p style="margin-top:0.75rem;font-size:0.82rem"><strong>Key Decision:</strong> Data-driven routing — avoids custom Lambda for simple conditionals.</p>
+      </div>
+      <div class="card">
+        <h3><span style="color:var(--blue)">&#9646;&#9646;</span> Parallel State</h3>
+        <p>Executes multiple branches concurrently and waits for all to complete (or one to fail). Output is an array of each branch's result.</p>
+        <span class="tech">Fan-out / Fan-in Pattern</span>
+        <p style="margin-top:0.75rem;font-size:0.82rem"><strong>Scaling:</strong> Branches execute truly in parallel — bounded by service quotas (default 1M open executions).</p>
+      </div>
+      <div class="card">
+        <h3><span style="color:var(--amber)">&#8634;</span> Map State</h3>
+        <p>Iterates over an array in the input, running a sub-workflow for each item. Supports Inline mode (up to 40 concurrent) and Distributed mode (up to 10,000 concurrent).</p>
+        <span class="tech">Inline Map • Distributed Map</span>
+        <p style="margin-top:0.75rem;font-size:0.82rem"><strong>Key Decision:</strong> Distributed Map for large-scale data processing (millions of items from S3).</p>
+      </div>
+      <div class="card">
+        <h3><span style="color:var(--red)">&#9888;</span> Error Handling</h3>
+        <p>Built-in Retry (with exponential backoff, max attempts, jitter) and Catch (route to fallback states). Handles both service errors and custom application errors.</p>
+        <span class="tech">States.ALL • States.Timeout • Custom Errors</span>
+        <p style="margin-top:0.75rem;font-size:0.82rem"><strong>Key Decision:</strong> Declarative retry in the workflow definition, not in application code.</p>
+      </div>
+      <div class="card">
+        <h3><span style="color:var(--cyan)">&#9203;</span> Wait & Callback</h3>
+        <p>Wait states pause for a duration or until a timestamp. Callback pattern (.waitForTaskToken) suspends execution until an external system sends back a token.</p>
+        <span class="tech">Seconds • Timestamp • TaskToken</span>
+        <p style="margin-top:0.75rem;font-size:0.82rem"><strong>Scaling:</strong> Waiting executions consume no compute — only counts against open execution quota.</p>
+      </div>
+      <div class="card">
+        <h3><span style="color:var(--blue)">&#128202;</span> Express vs Standard</h3>
+        <p><strong>Standard:</strong> Exactly-once, up to 1 year, full history (for long-running). <strong>Express:</strong> At-least-once, up to 5 min, high throughput (for event processing, streaming).</p>
+        <span class="tech">Standard Workflows • Express Workflows</span>
+        <p style="margin-top:0.75rem;font-size:0.82rem"><strong>Key Decision:</strong> Express for high-volume/short-lived; Standard for durability/auditability.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Sequence Diagram -->
+  <section class="section" id="sequence">
+    <div class="section-header">
+      <h2>Request Flow</h2>
+      <p>Animated sequence diagrams showing how Step Functions orchestrates a typical workflow execution.</p>
+    </div>
+    <div class="sequence-container">
+      <div class="flow-selector">
+        <button class="seq-btn seq-btn-secondary active" onclick="selectFlow('standard')">Standard Execution</button>
+        <button class="seq-btn seq-btn-secondary" onclick="selectFlow('express')">Express Execution</button>
+        <button class="seq-btn seq-btn-secondary" onclick="selectFlow('callback')">Callback Pattern</button>
+        <button class="seq-btn seq-btn-secondary" onclick="selectFlow('error')">Error & Retry</button>
+      </div>
+      <div class="seq-controls">
+        <button class="seq-btn seq-btn-primary" id="playBtn" onclick="togglePlay()">&#9654; Play</button>
+        <button class="seq-btn seq-btn-secondary" onclick="stepForward()">Step &#9654;|</button>
+        <button class="seq-btn seq-btn-secondary" onclick="resetAnimation()">&#8634; Reset</button>
+        <div class="speed-control">
+          <span>Speed:</span>
+          <input type="range" min="0.5" max="3" step="0.25" value="1" id="speedSlider" oninput="updateSpeed(this.value)">
+          <span id="speedLabel">1x</span>
+        </div>
+      </div>
+      <div class="seq-narration" id="seqNarration">
+        <span class="seq-step-counter" id="stepCounter"></span>
+        <span id="narrationText">Press Play to animate the workflow execution flow.</span>
+      </div>
+      <div class="state-diagram">
+        <svg id="sequenceSvg" width="100%" height="400" viewBox="0 0 1000 400">
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Comparisons -->
+  <section class="section" id="comparisons">
+    <div class="section-header">
+      <h2>Comparisons with Alternatives</h2>
+      <p>How Step Functions compares to other workflow orchestration approaches.</p>
+    </div>
+    <div class="card" style="overflow-x:auto;">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Approach</th>
+            <th>Key Idea</th>
+            <th>Pros</th>
+            <th>Cons</th>
+            <th>Best For</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="chosen">
+            <td>AWS Step Functions <span class="chosen-badge">CHOSEN</span></td>
+            <td>Managed state machine with visual workflows and native AWS integrations</td>
+            <td>Fully managed, built-in error handling, visual debugging, 220+ service integrations</td>
+            <td>AWS lock-in, 256KB payload limit, cost at high volume, learning ASL syntax</td>
+            <td>AWS-native workflows, serverless orchestration, human-in-the-loop</td>
+          </tr>
+          <tr>
+            <td>Apache Airflow (MWAA)</td>
+            <td>DAG-based workflow scheduler defined in Python code</td>
+            <td>Python-native, rich ecosystem, good for data pipelines, open source</td>
+            <td>Not serverless (needs cluster), scheduler bottleneck, weaker at real-time</td>
+            <td>Data engineering, ETL pipelines, scheduled batch processing</td>
+          </tr>
+          <tr>
+            <td>Temporal / Cadence</td>
+            <td>Durable execution framework with replay-based fault tolerance</td>
+            <td>Code-first (any language), strong consistency, replay debugging, no payload limits</td>
+            <td>Self-managed infrastructure (or Temporal Cloud), operational complexity, steeper learning curve</td>
+            <td>Long-running business processes, microservice orchestration, saga patterns</td>
+          </tr>
+          <tr>
+            <td>EventBridge + SQS/SNS</td>
+            <td>Choreography via event routing — no central orchestrator</td>
+            <td>Loose coupling, high throughput, simple per-service logic, no single point of failure</td>
+            <td>Hard to visualize end-to-end flow, complex error handling, eventual consistency debugging</td>
+            <td>Event-driven architectures, pub/sub, when services own their logic</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:2rem;">
+      <h3 style="font-size:1.1rem;margin-bottom:1rem;">When to Pick Each</h3>
+      <div class="card-grid">
+        <div class="card" style="border-left:4px solid var(--accent)">
+          <h3 style="font-size:0.9rem;">Choose Step Functions when...</h3>
+          <p>You need visual workflows, native AWS service integrations, built-in retry/catch, and don't want to manage infrastructure. Ideal for serverless architectures.</p>
+        </div>
+        <div class="card" style="border-left:4px solid var(--blue)">
+          <h3 style="font-size:0.9rem;">Choose Airflow when...</h3>
+          <p>You have complex data pipelines with Python transformations, need schedule-based triggers, and your team prefers code-defined DAGs over JSON state machines.</p>
+        </div>
+        <div class="card" style="border-left:4px solid var(--purple)">
+          <h3 style="font-size:0.9rem;">Choose Temporal when...</h3>
+          <p>You need durable execution guarantees, long-running workflows (weeks/months), complex saga patterns, and want to write workflows in your application language.</p>
+        </div>
+        <div class="card" style="border-left:4px solid var(--green)">
+          <h3 style="font-size:0.9rem;">Choose Choreography when...</h3>
+          <p>Services should be fully decoupled, you need extreme throughput, and each service can independently handle its own error recovery and state.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:2rem;">
+      <h3 style="font-size:1.1rem;margin-bottom:1rem;">Real-World Usage</h3>
+      <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+        <div class="card">
+          <h3 style="font-size:0.9rem;">Step Functions</h3>
+          <p>Netflix (media processing), Coca-Cola (vending machine IoT), Capital One (fraud detection workflows)</p>
+        </div>
+        <div class="card">
+          <h3 style="font-size:0.9rem;">Airflow</h3>
+          <p>Airbnb (data pipelines), Lyft (ML pipelines), Slack (ETL orchestration)</p>
+        </div>
+        <div class="card">
+          <h3 style="font-size:0.9rem;">Temporal</h3>
+          <p>Uber (originally Cadence), Stripe (payment workflows), Netflix (some services), Snap</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Use Cases & Pitfalls -->
+  <section class="section" id="usecases">
+    <div class="section-header">
+      <h2>Use Cases & Common Pitfalls</h2>
+      <p>Where Step Functions shines, and the mistakes to avoid.</p>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin-bottom:1rem;">Primary Use Cases</h3>
+    <div class="card-grid" style="margin-bottom:2rem;">
+      <div class="usecase-card">
+        <span class="scale-tag">100K–10M executions/day</span>
+        <h4>Order Processing & Fulfillment</h4>
+        <p style="font-size:0.87rem;color:var(--text-secondary)">Validate → charge payment → reserve inventory → ship → notify. Each step has retry logic and compensation on failure (saga pattern).</p>
+      </div>
+      <div class="usecase-card">
+        <span class="scale-tag">Media & Document Processing</span>
+        <h4>Media Transcoding Pipelines</h4>
+        <p style="font-size:0.87rem;color:var(--text-secondary)">Upload triggers → extract metadata → transcode to multiple formats (Parallel) → generate thumbnails → update CDN. Map state for batch processing.</p>
+      </div>
+      <div class="usecase-card">
+        <span class="scale-tag">ETL & Data Pipelines</span>
+        <h4>Data Lake Ingestion</h4>
+        <p style="font-size:0.87rem;color:var(--text-secondary)">Distributed Map processes millions of S3 objects in parallel through Glue jobs, with automatic checkpointing and resumption on failure.</p>
+      </div>
+      <div class="usecase-card">
+        <span class="scale-tag">Human-in-the-Loop</span>
+        <h4>Approval Workflows</h4>
+        <p style="font-size:0.87rem;color:var(--text-secondary)">Loan applications, expense approvals, compliance reviews — workflow pauses with callback token until human action resumes it (days/weeks later).</p>
+      </div>
+      <div class="usecase-card">
+        <span class="scale-tag">ML Operations</span>
+        <h4>ML Model Training & Deployment</h4>
+        <p style="font-size:0.87rem;color:var(--text-secondary)">Data prep → train model (SageMaker) → evaluate metrics → Choice state for quality gate → deploy to endpoint or alert team.</p>
+      </div>
+      <div class="usecase-card">
+        <span class="scale-tag">DevOps Automation</span>
+        <h4>Infrastructure Provisioning</h4>
+        <p style="font-size:0.87rem;color:var(--text-secondary)">Create resources → configure → run health checks → register in service mesh. Automatic rollback on any failure via compensation steps.</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin-bottom:0.5rem;">Anti-Use-Cases</h3>
+    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:1rem;">Don't use Step Functions when...</p>
+    <div class="card-grid" style="margin-bottom:2.5rem;">
+      <div class="card" style="border-left:4px solid var(--red);">
+        <h3 style="font-size:0.9rem;color:var(--red);">Ultra-high throughput (>100K TPS)</h3>
+        <p>Step Functions Standard has state transition limits. For fire-and-forget event processing at extreme scale, use Kinesis + Lambda or EventBridge Pipes.</p>
+      </div>
+      <div class="card" style="border-left:4px solid var(--red);">
+        <h3 style="font-size:0.9rem;color:var(--red);">Sub-millisecond latency requirements</h3>
+        <p>Each state transition adds ~50-100ms overhead. For real-time, low-latency processing, invoke services directly or use a local orchestrator.</p>
+      </div>
+      <div class="card" style="border-left:4px solid var(--red);">
+        <h3 style="font-size:0.9rem;color:var(--red);">Simple linear Lambda chains</h3>
+        <p>If your workflow is just A→B→C with no branching or error handling, Lambda Destinations or EventBridge Pipes are simpler and cheaper.</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--amber);">Common Pitfalls</h3>
+
+    <div class="pitfall-card" onclick="togglePitfall(this)">
+      <div class="pitfall-header">
+        <span>&#9888; Using Standard Workflows for high-volume event processing</span>
+        <span class="pitfall-chevron">&#9660;</span>
+      </div>
+      <div class="pitfall-body">
+        <dl>
+          <dt>The Mistake</dt>
+          <dd>Using Standard Workflows (priced per state transition) for processing thousands of events per second from Kinesis or SQS.</dd>
+          <dt>Why It Happens</dt>
+          <dd>Standard is the default, and teams don't discover Express Workflows until the bill arrives.</dd>
+          <dt>The Consequence</dt>
+          <dd>At $0.025 per 1K transitions, processing 10K events/sec × 5 states = $108K/month. Express would cost ~$1.5K.</dd>
+          <dt>The Fix</dt>
+          <dd>Use Express Workflows for high-volume, short-duration (<5 min) executions. Reserve Standard for long-running workflows that need exactly-once semantics.</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="pitfall-card" onclick="togglePitfall(this)">
+      <div class="pitfall-header">
+        <span>&#9888; Exceeding the 256KB payload limit</span>
+        <span class="pitfall-chevron">&#9660;</span>
+      </div>
+      <div class="pitfall-body">
+        <dl>
+          <dt>The Mistake</dt>
+          <dd>Passing large datasets (file contents, query results, images) directly through the state machine's input/output.</dd>
+          <dt>Why It Happens</dt>
+          <dd>It's convenient to pass data inline, and the limit isn't hit until the data grows in production.</dd>
+          <dt>The Consequence</dt>
+          <dd>Execution fails with "States.DataLimitExceeded" — and it's hard to recover mid-workflow.</dd>
+          <dt>The Fix</dt>
+          <dd>Store large payloads in S3 and pass only references (S3 URIs or DynamoDB keys) through the state machine. Use ResultPath to keep payloads lean.</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="pitfall-card" onclick="togglePitfall(this)">
+      <div class="pitfall-header">
+        <span>&#9888; Not using InputPath/OutputPath/ResultPath properly</span>
+        <span class="pitfall-chevron">&#9660;</span>
+      </div>
+      <div class="pitfall-body">
+        <dl>
+          <dt>The Mistake</dt>
+          <dd>Letting the entire execution context accumulate by not filtering state input/output, leading to bloated payloads and confused data flow.</dd>
+          <dt>Why It Happens</dt>
+          <dd>The default behavior passes everything through, which works at first but becomes unwieldy.</dd>
+          <dt>The Consequence</dt>
+          <dd>Later states receive unexpected fields, hitting payload limits or causing Lambda functions to process irrelevant data. Debugging becomes nightmare-ish.</dd>
+          <dt>The Fix</dt>
+          <dd>Use InputPath to select what a state needs, ResultPath to control where output is placed, and OutputPath to filter what gets passed forward. Design clean data contracts between states.</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="pitfall-card" onclick="togglePitfall(this)">
+      <div class="pitfall-header">
+        <span>&#9888; Ignoring idempotency in Task states</span>
+        <span class="pitfall-chevron">&#9660;</span>
+      </div>
+      <div class="pitfall-body">
+        <dl>
+          <dt>The Mistake</dt>
+          <dd>Assuming each Task state runs exactly once. With retries and at-least-once delivery (Express), a task may execute multiple times.</dd>
+          <dt>Why It Happens</dt>
+          <dd>Standard Workflows guarantee exactly-once semantics at the execution level, but network issues can still cause duplicate task invocations during retries.</dd>
+          <dt>The Consequence</dt>
+          <dd>Duplicate charges, double-sends, or corrupted state when a payment is processed twice or an email is sent twice.</dd>
+          <dt>The Fix</dt>
+          <dd>Make all Task state targets idempotent. Use idempotency keys (e.g., execution ID + state name) in DynamoDB conditional writes or payment API idempotency headers.</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="pitfall-card" onclick="togglePitfall(this)">
+      <div class="pitfall-header">
+        <span>&#9888; Monolithic state machines with 100+ states</span>
+        <span class="pitfall-chevron">&#9660;</span>
+      </div>
+      <div class="pitfall-body">
+        <dl>
+          <dt>The Mistake</dt>
+          <dd>Putting an entire business process into a single massive state machine rather than composing smaller, focused workflows.</dd>
+          <dt>Why It Happens</dt>
+          <dd>It starts small and grows organically. The visual editor makes it seem manageable until it isn't.</dd>
+          <dt>The Consequence</dt>
+          <dd>Impossible to test in isolation, deployment risk increases, and a single failure can block unrelated workflow branches. Version management becomes painful.</dd>
+          <dt>The Fix</dt>
+          <dd>Decompose into nested workflows using StartExecution or SDK integrations. Each sub-workflow should handle one logical concern. Use EventBridge for loose coupling between workflow stages.</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="pitfall-card" onclick="togglePitfall(this)">
+      <div class="pitfall-header">
+        <span>&#9888; Not setting timeouts (HeartbeatSeconds / TimeoutSeconds)</span>
+        <span class="pitfall-chevron">&#9660;</span>
+      </div>
+      <div class="pitfall-body">
+        <dl>
+          <dt>The Mistake</dt>
+          <dd>Omitting timeout configuration on Task states, relying on the default 1-year timeout for Standard Workflows.</dd>
+          <dt>Why It Happens</dt>
+          <dd>Timeouts aren't required in ASL, so they're easy to forget during development when tasks always complete quickly.</dd>
+          <dt>The Consequence</dt>
+          <dd>A stuck Lambda or unresponsive external service causes the execution to hang indefinitely, consuming quota and making the workflow invisible to monitoring.</dd>
+          <dt>The Fix</dt>
+          <dd>Always set TimeoutSeconds on every Task state. For long-running tasks (.sync pattern), use HeartbeatSeconds to detect failures early. Set aggressive timeouts and let retry logic handle transient issues.</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 6: Best Practices -->
+  <section class="section" id="bestpractices">
+    <div class="section-header">
+      <h2>Best Practices</h2>
+      <p>Proven patterns for building robust Step Functions workflows.</p>
+    </div>
+
+    <div class="practice-card">
+      <h4>Design Phase</h4>
+      <ul>
+        <li>Start by identifying all the states and transitions on paper before writing ASL — the visual model is the design</li>
+        <li>Define clear data contracts between states: what each state expects as input and produces as output</li>
+        <li>Choose Standard vs Express early — it changes cost model, duration limits, and execution semantics</li>
+        <li>Plan your error handling taxonomy: which errors are retryable (transient) vs. fatal (permanent)</li>
+        <li>Design for observability: use meaningful state names that show up clearly in X-Ray traces and CloudWatch</li>
+      </ul>
+    </div>
+
+    <div class="practice-card">
+      <h4>Implementation</h4>
+      <ul>
+        <li>Use SDK service integrations over Lambda wrappers when possible — they're cheaper, faster, and have less code to maintain</li>
+        <li>Keep payloads small: store data in S3/DynamoDB, pass references. Use ResultSelector to extract only needed fields from service responses</li>
+        <li>Set TimeoutSeconds and HeartbeatSeconds on every Task state — never rely on the default 1-year timeout</li>
+        <li>Use Retry with exponential backoff (BackoffRate: 2.0) for all retryable errors, with MaxAttempts between 3-6</li>
+        <li>Implement the saga pattern: for each action that modifies state, define a compensating action in the Catch block</li>
+        <li>Use execution name as an idempotency key — duplicate StartExecution calls with the same name are rejected</li>
+        <li>Leverage Intrinsic Functions (States.Format, States.JsonMerge, States.MathAdd) to avoid Lambda for simple transformations</li>
+      </ul>
+    </div>
+
+    <div class="practice-card">
+      <h4>Operations & Monitoring</h4>
+      <ul>
+        <li>Set CloudWatch alarms on: ExecutionsFailed, ExecutionsTimedOut, ExecutionThrottled, and ThrottledEvents</li>
+        <li>Enable X-Ray tracing for end-to-end visibility across service boundaries within the workflow</li>
+        <li>Use execution input metadata (correlation IDs, request IDs) that propagates through all states for distributed tracing</li>
+        <li>Monitor execution duration percentiles — a sudden increase signals downstream service degradation</li>
+        <li>Set up dead-letter queues for Express Workflows that fail (they don't maintain execution history like Standard)</li>
+        <li>Use CloudWatch Logs execution logging (level: ALL for debug, ERROR for production) for audit trails</li>
+      </ul>
+    </div>
+
+    <div class="practice-card">
+      <h4>Scaling & Cost Optimization</h4>
+      <ul>
+        <li>Use Distributed Map for processing large datasets — up to 10,000 concurrent child executions from S3 inventories</li>
+        <li>Batch small events: instead of one execution per event, collect events in SQS and process in batches via a single execution</li>
+        <li>Monitor and request quota increases early: default is 1,500 state transitions/sec and 1M open executions</li>
+        <li>Use Express Workflows for anything under 5 minutes with high volume — 80-90% cheaper at scale</li>
+        <li>Minimize state transitions: combine simple Pass states, remove unnecessary states, use Intrinsic Functions instead of Lambda</li>
+        <li>For recursive patterns, use Distributed Map rather than self-invoking state machines to avoid runaway costs</li>
+      </ul>
+    </div>
+
+    <div class="practice-card">
+      <h4>Testing & Deployment</h4>
+      <ul>
+        <li>Use Step Functions Local (Docker image) for unit testing workflow logic without deploying to AWS</li>
+        <li>Test each state in isolation: mock service integrations in Step Functions Local with mock config files</li>
+        <li>Deploy with versioned aliases — point production traffic to a specific version, not $LATEST</li>
+        <li>Use TestState API to test individual states with real AWS service integrations without executing the full workflow</li>
+        <li>Implement blue-green deployment: deploy new version, test with synthetic traffic, then switch the trigger</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Section 7: Scaling & Trade-offs -->
+  <section class="section" id="scaling">
+    <div class="section-header">
+      <h2>Scaling & Trade-offs</h2>
+      <p>Capacity planning, growth strategies, and fundamental design trade-offs.</p>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin-bottom:1rem;">Capacity Estimation</h3>
+    <div class="estimation-grid" style="margin-bottom:2rem;">
+      <div class="estimation-item">
+        <div class="value">1,500</div>
+        <div class="label">State Transitions/sec (default)</div>
+      </div>
+      <div class="estimation-item">
+        <div class="value">1M</div>
+        <div class="label">Max Open Executions</div>
+      </div>
+      <div class="estimation-item">
+        <div class="value">256 KB</div>
+        <div class="label">Max Payload Size</div>
+      </div>
+      <div class="estimation-item">
+        <div class="value">25K</div>
+        <div class="label">Execution History Events</div>
+      </div>
+      <div class="estimation-item">
+        <div class="value">1 year</div>
+        <div class="label">Max Duration (Standard)</div>
+      </div>
+      <div class="estimation-item">
+        <div class="value">5 min</div>
+        <div class="label">Max Duration (Express)</div>
+      </div>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin-bottom:1rem;">Scaling Strategies</h3>
+    <div class="card-grid" style="margin-bottom:2rem;">
+      <div class="card">
+        <h3 style="font-size:0.95rem;">10x Growth</h3>
+        <p style="font-size:0.87rem;">Request quota increases for state transitions/sec. Use Distributed Map for batch jobs. Move high-volume paths to Express Workflows. Shard by tenant/region using separate state machines.</p>
+      </div>
+      <div class="card">
+        <h3 style="font-size:0.95rem;">100x Growth</h3>
+        <p style="font-size:0.87rem;">Multi-region deployment with separate state machines per region. Event-driven fan-out with SQS buffering before Step Functions. Decompose monolithic workflows into choreographed micro-workflows.</p>
+      </div>
+      <div class="card">
+        <h3 style="font-size:0.95rem;">Cost at Scale</h3>
+        <p style="font-size:0.87rem;"><strong>Standard:</strong> $0.025/1K transitions. At 1B transitions/month = $25K.<br><strong>Express:</strong> $1/1M requests + $0.00001667/GB-sec. At 1B requests = $1K + memory costs.<br>Optimize by reducing state count and using Express where possible.</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin-bottom:1rem;">Key Trade-offs</h3>
+    <div class="card-grid">
+      <div class="card" style="border-top:3px solid var(--accent);">
+        <h3 style="font-size:0.9rem;">Orchestration vs Choreography</h3>
+        <p style="font-size:0.87rem;"><strong>Step Functions (orchestration):</strong> Central control, easy to understand flow, simple error handling. <strong>Trade-off:</strong> Single point of coordination, tighter coupling to orchestrator.</p>
+      </div>
+      <div class="card" style="border-top:3px solid var(--purple);">
+        <h3 style="font-size:0.9rem;">Standard vs Express</h3>
+        <p style="font-size:0.87rem;"><strong>Standard:</strong> Exactly-once, full history, long-running. <strong>Express:</strong> At-least-once, ephemeral, cheap at volume. <strong>Trade-off:</strong> Durability/auditability vs cost/throughput.</p>
+      </div>
+      <div class="card" style="border-top:3px solid var(--blue);">
+        <h3 style="font-size:0.9rem;">Sync vs Async Invocation</h3>
+        <p style="font-size:0.87rem;"><strong>Sync (.sync):</strong> Step Functions waits for completion — simple, deterministic. <strong>Async (callback):</strong> Fire-and-forget with task token — handles long operations. <strong>Trade-off:</strong> Simplicity vs flexibility/duration.</p>
+      </div>
+      <div class="card" style="border-top:3px solid var(--green);">
+        <h3 style="font-size:0.9rem;">Inline Map vs Distributed Map</h3>
+        <p style="font-size:0.87rem;"><strong>Inline:</strong> ≤40 concurrency, data in payload, simple. <strong>Distributed:</strong> ≤10K concurrency, reads from S3, child executions. <strong>Trade-off:</strong> Simplicity/payload limits vs scale/operational complexity.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:2rem;">
+      <h3 style="font-size:1.1rem;margin-bottom:1rem;">Failure Scenarios</h3>
+      <div class="card-grid">
+        <div class="card" style="border-left:4px solid var(--red);">
+          <h3 style="font-size:0.9rem;">Lambda Throttling</h3>
+          <p style="font-size:0.85rem;">When downstream Lambda hits concurrency limits, Step Functions retries with backoff. Mitigation: reserved concurrency, provisioned concurrency, or SQS buffer.</p>
+        </div>
+        <div class="card" style="border-left:4px solid var(--red);">
+          <h3 style="font-size:0.9rem;">State Machine Service Outage</h3>
+          <p style="font-size:0.85rem;">Step Functions is multi-AZ within a region. For cross-region resilience, deploy duplicate state machines in a secondary region with Route53 failover.</p>
+        </div>
+        <div class="card" style="border-left:4px solid var(--red);">
+          <h3 style="font-size:0.9rem;">Execution History Limit (25K events)</h3>
+          <p style="font-size:0.85rem;">Long-running workflows with many iterations hit the 25K event limit. Mitigation: use Continue-As-New pattern — start a new execution carrying forward state.</p>
+        </div>
+        <div class="card" style="border-left:4px solid var(--red);">
+          <h3 style="font-size:0.9rem;">Callback Token Lost</h3>
+          <p style="font-size:0.85rem;">If the system processing a callback token crashes before sending SendTaskSuccess/Failure, the execution hangs. Mitigation: always set HeartbeatSeconds; store tokens durably in DynamoDB.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer style="text-align:center;padding:3rem 2rem;color:var(--text-secondary);font-size:0.8rem;">
+    AWS Step Functions — System Design Visualizer
+  </footer>
+
+  <script>
+    // Navigation active state
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = document.querySelectorAll('.section');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= 100) current = section.id;
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+      });
+    });
+
+    function scrollToSection(id) {
+      document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Tooltip
+    const tooltip = document.getElementById('tooltip');
+    document.querySelectorAll('.component').forEach(comp => {
+      comp.addEventListener('mouseenter', (e) => {
+        const tip = comp.getAttribute('data-tip');
+        if (!tip) return;
+        tooltip.textContent = tip;
+        tooltip.classList.add('visible');
+      });
+      comp.addEventListener('mousemove', (e) => {
+        tooltip.style.left = (e.pageX + 12) + 'px';
+        tooltip.style.top = (e.pageY - 40) + 'px';
+      });
+      comp.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('visible');
+      });
+    });
+
+    // Pitfall toggle
+    function togglePitfall(el) {
+      el.classList.toggle('open');
+    }
+
+    // Sequence Diagram Animation
+    let currentFlow = 'standard';
+    let isPlaying = false;
+    let animInterval = null;
+    let currentStepIdx = 0;
+    let speed = 1;
+
+    const flows = {
+      standard: {
+        actors: ['Client', 'API GW', 'Step Functions', 'Lambda A', 'DynamoDB', 'Lambda B', 'SNS'],
+        steps: [
+          { from: 0, to: 1, label: 'POST /start-workflow', desc: 'Client sends request to API Gateway to start a new workflow execution.' },
+          { from: 1, to: 2, label: 'StartExecution(input)', desc: 'API Gateway invokes Step Functions StartExecution API with the request payload.' },
+          { from: 2, to: 2, label: 'Create execution', desc: 'Step Functions creates a new execution, validates the ASL definition, and begins at the StartAt state.' },
+          { from: 2, to: 3, label: 'Invoke (Task State 1)', desc: 'First Task state invokes Lambda A synchronously — Step Functions waits for the response.' },
+          { from: 3, to: 2, label: 'Return result', desc: 'Lambda A completes processing and returns its output. Step Functions records the state transition.' },
+          { from: 2, to: 4, label: 'PutItem (Task State 2)', desc: 'Second Task state uses SDK integration to write directly to DynamoDB — no Lambda needed.' },
+          { from: 4, to: 2, label: 'Success', desc: 'DynamoDB confirms the write. Step Functions transitions to the next state.' },
+          { from: 2, to: 5, label: 'Invoke (Task State 3)', desc: 'Third Task state invokes Lambda B for final processing step.' },
+          { from: 5, to: 2, label: 'Return result', desc: 'Lambda B returns its result. Step Functions evaluates the next transition.' },
+          { from: 2, to: 6, label: 'Publish (Task State 4)', desc: 'Final Task state publishes a completion notification to SNS.' },
+          { from: 2, to: 1, label: 'ExecutionSucceeded', desc: 'Execution completes successfully. Full history is available for auditing in the console.' },
+          { from: 1, to: 0, label: '200 OK + result', desc: 'API Gateway returns the workflow result to the client (if using synchronous Express execution).' }
+        ]
+      },
+      express: {
+        actors: ['Event Source', 'EventBridge', 'Step Functions\n(Express)', 'Lambda', 'DynamoDB'],
+        steps: [
+          { from: 0, to: 1, label: 'Emit event', desc: 'An event source (S3, SQS, custom app) emits an event to EventBridge.' },
+          { from: 1, to: 2, label: 'Rule triggers execution', desc: 'EventBridge rule matches the event pattern and triggers a Step Functions Express Workflow.' },
+          { from: 2, to: 3, label: 'Invoke Lambda', desc: 'Express Workflow invokes Lambda — at-least-once semantics, so Lambda must be idempotent.' },
+          { from: 3, to: 2, label: 'Result', desc: 'Lambda returns quickly (Express max 5 min total). No execution history stored — uses CloudWatch Logs.' },
+          { from: 2, to: 4, label: 'Write result', desc: 'Final state writes the processed result to DynamoDB.' },
+          { from: 4, to: 2, label: 'OK', desc: 'Execution completes. Billed by duration and memory, not per-transition. 80-90% cheaper at volume.' }
+        ]
+      },
+      callback: {
+        actors: ['Step Functions', 'SQS', 'Worker', 'Human', 'Step Functions\n(resumed)'],
+        steps: [
+          { from: 0, to: 1, label: 'SendMessage + TaskToken', desc: 'Step Functions sends a message to SQS containing the task token. Execution pauses and waits.' },
+          { from: 1, to: 2, label: 'Receive message', desc: 'A worker (Lambda or EC2) picks up the message from SQS. Execution remains paused — no cost while waiting.' },
+          { from: 2, to: 3, label: 'Request approval', desc: 'Worker sends an approval request to a human (email, Slack, web UI) with a link containing the task token.' },
+          { from: 3, to: 3, label: '⏳ Days pass...', desc: 'Execution stays paused for hours, days, or weeks — up to 1 year for Standard Workflows. No compute consumed.' },
+          { from: 3, to: 2, label: 'Approve', desc: 'Human clicks "Approve" in the UI. The application receives the approval decision.' },
+          { from: 2, to: 4, label: 'SendTaskSuccess(token, output)', desc: 'Worker calls SendTaskSuccess API with the original task token and the approval result. Execution resumes.' },
+          { from: 4, to: 4, label: 'Continue workflow', desc: 'Step Functions resumes from where it paused, using the approval output as the state result. Remaining states execute normally.' }
+        ]
+      },
+      error: {
+        actors: ['Step Functions', 'Lambda', 'Step Functions\n(retry)', 'Lambda\n(retry 2)', 'Catch Handler'],
+        steps: [
+          { from: 0, to: 1, label: 'Invoke Lambda', desc: 'Step Functions invokes a Lambda function as a Task state.' },
+          { from: 1, to: 0, label: '❌ ServiceException', desc: 'Lambda fails with a transient error (timeout, throttle, or service exception).' },
+          { from: 0, to: 0, label: 'Retry policy: wait 2s', desc: 'Retry policy kicks in: IntervalSeconds=2, BackoffRate=2.0, MaxAttempts=3. First retry waits 2 seconds.' },
+          { from: 0, to: 2, label: 'Retry #1', desc: 'Step Functions retries the Lambda invocation (attempt 2 of 3).' },
+          { from: 2, to: 3, label: 'Invoke Lambda', desc: 'Second attempt — Lambda is invoked again with the same input.' },
+          { from: 3, to: 2, label: '❌ Timeout', desc: 'Lambda times out again. Retry policy waits 4s (2s × BackoffRate 2.0) before next attempt.' },
+          { from: 2, to: 2, label: 'Retry policy: wait 4s', desc: 'Exponential backoff: 2s → 4s → 8s. Adding jitter (MaxDelaySeconds) prevents thundering herd.' },
+          { from: 2, to: 3, label: 'Retry #2 (final)', desc: 'Third and final attempt (MaxAttempts=3 exhausted after this).' },
+          { from: 3, to: 2, label: '❌ Failed again', desc: 'Lambda fails for the third time. All retry attempts exhausted.' },
+          { from: 2, to: 4, label: 'Catch → fallback state', desc: 'Catch block activates: routes to a fallback state (e.g., send alert, write to DLQ, compensate). Error and Cause are available in the Catch output.' }
+        ]
+      }
+    };
+
+    function selectFlow(flow) {
+      currentFlow = flow;
+      currentStepIdx = 0;
+      isPlaying = false;
+      clearInterval(animInterval);
+      document.getElementById('playBtn').innerHTML = '&#9654; Play';
+      document.querySelectorAll('.flow-selector .seq-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      renderSequence();
+      document.getElementById('stepCounter').textContent = '';
+      document.getElementById('narrationText').textContent = 'Press Play to animate the ' + flow + ' workflow flow.';
+    }
+
+    function renderSequence() {
+      const svg = document.getElementById('sequenceSvg');
+      const flow = flows[currentFlow];
+      const actorCount = flow.actors.length;
+      const spacing = 900 / (actorCount - 1);
+      const startX = 60;
+
+      let html = '';
+
+      // Actor lifelines
+      flow.actors.forEach((actor, i) => {
+        const x = startX + i * spacing;
+        const lines = actor.split('\n');
+        html += `<rect x="${x - 45}" y="10" width="90" height="${lines.length > 1 ? 42 : 32}" rx="6" fill="#f8f9fa" stroke="#495057" stroke-width="1.5"/>`;
+        lines.forEach((line, li) => {
+          html += `<text x="${x}" y="${26 + li * 14}" text-anchor="middle" font-size="${lines.length > 1 ? 9 : 10}" font-weight="600" fill="#1a1d23">${line}</text>`;
+        });
+        html += `<line x1="${x}" y1="52" x2="${x}" y2="390" stroke="#dee2e6" stroke-width="1" stroke-dasharray="4,4"/>`;
+      });
+
+      // Steps (messages)
+      flow.steps.forEach((step, idx) => {
+        const fromX = startX + step.from * spacing;
+        const toX = startX + step.to * spacing;
+        const y = 75 + idx * 28;
+        const isActive = idx < currentStepIdx;
+        const isCurrent = idx === currentStepIdx - 1;
+        const color = isCurrent ? '#e8590c' : (isActive ? '#2f9e44' : '#ced4da');
+        const textColor = isCurrent ? '#e8590c' : (isActive ? '#2f9e44' : '#adb5bd');
+        const strokeWidth = isCurrent ? 2.5 : 1.5;
+
+        if (fromX === toX) {
+          // Self-arrow
+          html += `<path d="M ${fromX} ${y} C ${fromX + 40} ${y} ${fromX + 40} ${y + 16} ${fromX} ${y + 16}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" marker-end="url(#arr-${idx})"/>`;
+        } else {
+          html += `<line x1="${fromX}" y1="${y}" x2="${toX}" y2="${y}" stroke="${color}" stroke-width="${strokeWidth}" marker-end="url(#arr-${idx})"/>`;
+        }
+        html += `<defs><marker id="arr-${idx}" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><path d="M 0 0 L 6 2.5 L 0 5 Z" fill="${color}"/></marker></defs>`;
+
+        const labelX = fromX === toX ? fromX + 45 : (fromX + toX) / 2;
+        html += `<text x="${labelX}" y="${y - 4}" text-anchor="middle" font-size="8" fill="${textColor}" font-weight="${isCurrent ? '700' : '400'}">${step.label}</text>`;
+      });
+
+      svg.innerHTML = html;
+      svg.setAttribute('height', Math.max(400, 75 + flow.steps.length * 28 + 30));
+      svg.setAttribute('viewBox', `0 0 1000 ${Math.max(400, 75 + flow.steps.length * 28 + 30)}`);
+    }
+
+    function togglePlay() {
+      if (isPlaying) {
+        isPlaying = false;
+        clearInterval(animInterval);
+        document.getElementById('playBtn').innerHTML = '&#9654; Play';
+      } else {
+        isPlaying = true;
+        document.getElementById('playBtn').innerHTML = '&#9646;&#9646; Pause';
+        if (currentStepIdx >= flows[currentFlow].steps.length) {
+          currentStepIdx = 0;
+        }
+        animInterval = setInterval(() => {
+          stepForward();
+          if (currentStepIdx >= flows[currentFlow].steps.length) {
+            clearInterval(animInterval);
+            isPlaying = false;
+            document.getElementById('playBtn').innerHTML = '&#9654; Play';
+          }
+        }, 1500 / speed);
+      }
+    }
+
+    function stepForward() {
+      const flow = flows[currentFlow];
+      if (currentStepIdx < flow.steps.length) {
+        currentStepIdx++;
+        renderSequence();
+        const step = flow.steps[currentStepIdx - 1];
+        document.getElementById('stepCounter').textContent = `Step ${currentStepIdx}/${flow.steps.length}:`;
+        document.getElementById('narrationText').textContent = step.desc;
+      }
+    }
+
+    function resetAnimation() {
+      currentStepIdx = 0;
+      isPlaying = false;
+      clearInterval(animInterval);
+      document.getElementById('playBtn').innerHTML = '&#9654; Play';
+      renderSequence();
+      document.getElementById('stepCounter').textContent = '';
+      document.getElementById('narrationText').textContent = 'Press Play to animate the workflow execution flow.';
+    }
+
+    function updateSpeed(val) {
+      speed = parseFloat(val);
+      document.getElementById('speedLabel').textContent = val + 'x';
+      if (isPlaying) {
+        clearInterval(animInterval);
+        animInterval = setInterval(() => {
+          stepForward();
+          if (currentStepIdx >= flows[currentFlow].steps.length) {
+            clearInterval(animInterval);
+            isPlaying = false;
+            document.getElementById('playBtn').innerHTML = '&#9654; Play';
+          }
+        }, 1500 / speed);
+      }
+    }
+
+    // Initial render
+    renderSequence();
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+      if (e.code === 'ArrowRight') { e.preventDefault(); stepForward(); }
+      if (e.code === 'KeyR') { resetAnimation(); }
+    });
+  </script>
+</body>
+</html>

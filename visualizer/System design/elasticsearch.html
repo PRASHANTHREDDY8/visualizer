@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elasticsearch — System Design Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f4f6f9;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --primary: #f59e0b;
+      --primary-dark: #d97706;
+      --primary-light: #fef3c7;
+      --accent: #10b981;
+      --accent-light: #d1fae5;
+      --danger: #ef4444;
+      --danger-light: #fee2e2;
+      --info: #3b82f6;
+      --info-light: #dbeafe;
+      --purple: #8b5cf6;
+      --purple-light: #ede9fe;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.12);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Navigation */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+
+    .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      height: 60px;
+      overflow-x: auto;
+    }
+
+    .nav-brand {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--primary-dark);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-brand svg { width: 24px; height: 24px; }
+
+    .nav-links {
+      display: flex;
+      gap: 0.25rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+
+    /* Sections */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    section {
+      margin-bottom: 4rem;
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      margin-bottom: 2rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-primary { background: var(--primary-light); color: var(--primary-dark); }
+    .badge-accent { background: var(--accent-light); color: #065f46; }
+    .badge-info { background: var(--info-light); color: #1e40af; }
+    .badge-purple { background: var(--purple-light); color: #5b21b6; }
+    .badge-danger { background: var(--danger-light); color: #991b1b; }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: linear-gradient(135deg, var(--primary-light) 0%, #fff 50%, var(--accent-light) 100%);
+      border-radius: var(--radius);
+      margin-bottom: 3rem;
+      border: 1px solid var(--border);
+    }
+
+    .hero h1 {
+      font-size: 2.75rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary-dark), #b45309);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .hero-badges {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Architecture Diagram */
+    .arch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow-md);
+      overflow-x: auto;
+    }
+
+    .arch-svg {
+      width: 100%;
+      min-width: 900px;
+      height: 600px;
+    }
+
+    .arch-svg text {
+      font-family: var(--font);
+      fill: var(--text);
+    }
+
+    .arch-svg .component {
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .arch-svg .component:hover rect,
+    .arch-svg .component:hover ellipse,
+    .arch-svg .component:hover polygon,
+    .arch-svg .component:hover path {
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+      stroke-width: 2.5;
+    }
+
+    .arch-svg .connection {
+      opacity: 0.6;
+      transition: opacity 0.3s;
+    }
+
+    .arch-svg .component:hover ~ .connection,
+    .arch-svg .connection:hover {
+      opacity: 1;
+    }
+
+    .tooltip {
+      position: fixed;
+      background: var(--text);
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      max-width: 280px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 1000;
+      line-height: 1.5;
+    }
+
+    .tooltip.visible { opacity: 1; }
+
+    /* Cards */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card p { color: var(--text-muted); font-size: 0.9rem; }
+
+    .card-meta {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    /* Sequence Diagram */
+    .sequence-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    .seq-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .seq-controls button {
+      padding: 0.5rem 1.25rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+
+    .seq-controls button:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+    }
+
+    .seq-controls button.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .seq-controls select {
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-size: 0.875rem;
+      background: var(--surface);
+    }
+
+    .seq-narration {
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      border-left: 3px solid var(--primary);
+    }
+
+    .seq-svg {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .seq-svg svg {
+      min-width: 800px;
+    }
+
+    /* Comparison Table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr:last-child td { border-bottom: none; }
+
+    .comparison-table tr.chosen {
+      background: var(--primary-light);
+    }
+
+    .chosen-badge {
+      display: inline-block;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      margin-left: 0.5rem;
+      font-weight: 600;
+    }
+
+    /* Pitfalls */
+    .pitfall-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--danger);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .pitfall-header {
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .pitfall-header:hover { background: var(--danger-light); }
+
+    .pitfall-body {
+      padding: 0 1.5rem;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.3s;
+    }
+
+    .pitfall-body.open {
+      max-height: 600px;
+      padding: 0 1.5rem 1.5rem;
+    }
+
+    .pitfall-body dt {
+      font-weight: 600;
+      color: var(--danger);
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .pitfall-body dd {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
+
+    /* Best Practices */
+    .practice-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .practice-header {
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .practice-header:hover { background: var(--accent-light); }
+
+    .practice-body {
+      padding: 0 1.5rem;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.3s;
+    }
+
+    .practice-body.open {
+      max-height: 800px;
+      padding: 0 1.5rem 1.5rem;
+    }
+
+    .practice-body ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .practice-body li {
+      position: relative;
+      padding: 0.5rem 0 0.5rem 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .practice-body li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* Scaling */
+    .scale-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .scale-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .scale-card h4 {
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .scale-card .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+
+    .scale-card .metric:last-child { border-bottom: none; }
+    .scale-card .metric span:last-child { font-weight: 600; color: var(--primary-dark); }
+
+    /* Use Cases */
+    .usecase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .usecase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      border-top: 3px solid var(--info);
+    }
+
+    .usecase-card.anti { border-top-color: var(--danger); }
+
+    .usecase-card h4 { font-size: 0.95rem; margin-bottom: 0.5rem; }
+    .usecase-card p { font-size: 0.85rem; color: var(--text-muted); }
+
+    /* Code blocks */
+    .code-block {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 1.25rem;
+      border-radius: var(--radius-sm);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      overflow-x: auto;
+      line-height: 1.7;
+      margin: 1rem 0;
+    }
+
+    .code-block .keyword { color: #cba6f7; }
+    .code-block .string { color: #a6e3a1; }
+    .code-block .comment { color: #6c7086; font-style: italic; }
+    .code-block .number { color: #fab387; }
+    .code-block .property { color: #89b4fa; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
+    }
+
+    .tab {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      background: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.2s;
+    }
+
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--primary-dark); border-bottom-color: var(--primary); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Chevron */
+    .chevron {
+      transition: transform 0.3s;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .chevron.open { transform: rotate(180deg); }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .card-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 2rem; }
+      .container { padding: 1.5rem; }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .arch-svg { min-width: 600px; }
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-in {
+      animation: fadeIn 0.5s ease both;
+    }
+
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      Elasticsearch
+    </div>
+    <ul class="nav-links">
+      <li><a href="#architecture" class="active">Architecture</a></li>
+      <li><a href="#components">Components</a></li>
+      <li><a href="#sequence">Request Flow</a></li>
+      <li><a href="#comparisons">Comparisons</a></li>
+      <li><a href="#usecases">Use Cases</a></li>
+      <li><a href="#pitfalls">Pitfalls</a></li>
+      <li><a href="#practices">Best Practices</a></li>
+      <li><a href="#scaling">Scaling</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero animate-in">
+    <h1>Elasticsearch</h1>
+    <p>A distributed, RESTful search and analytics engine built on Apache Lucene. Designed for horizontal scalability, near real-time search, and multi-tenancy.</p>
+    <div class="hero-badges">
+      <span class="badge badge-primary">Distributed</span>
+      <span class="badge badge-accent">Near Real-Time</span>
+      <span class="badge badge-info">Full-Text Search</span>
+      <span class="badge badge-purple">Analytics</span>
+    </div>
+  </div>
+
+  <!-- Section 1: Architecture -->
+  <section id="architecture">
+    <div class="section-header">
+      <h2>Architecture Diagram</h2>
+      <p>Hover over components to see connections. Click to jump to details.</p>
+    </div>
+    <div class="arch-diagram">
+      <svg class="arch-svg" viewBox="0 0 1100 600" id="archSvg">
+        <!-- Background groups -->
+        <rect x="30" y="20" width="250" height="560" rx="12" fill="#fef3c7" opacity="0.3" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4"/>
+        <text x="155" y="50" text-anchor="middle" font-size="12" font-weight="600" fill="#92400e">CLIENT LAYER</text>
+
+        <rect x="310" y="20" width="480" height="560" rx="12" fill="#dbeafe" opacity="0.3" stroke="#3b82f6" stroke-width="1" stroke-dasharray="4"/>
+        <text x="550" y="50" text-anchor="middle" font-size="12" font-weight="600" fill="#1e40af">ELASTICSEARCH CLUSTER</text>
+
+        <rect x="820" y="20" width="250" height="560" rx="12" fill="#d1fae5" opacity="0.3" stroke="#10b981" stroke-width="1" stroke-dasharray="4"/>
+        <text x="945" y="50" text-anchor="middle" font-size="12" font-weight="600" fill="#065f46">STORAGE & INGESTION</text>
+
+        <!-- Client Layer -->
+        <g class="component" data-id="app" data-tooltip="Application servers that send search/index requests via REST API or client libraries (Java, Python, JS, Go, etc.)">
+          <rect x="70" y="90" width="170" height="60" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+          <text x="155" y="117" text-anchor="middle" font-size="13" font-weight="600">Application</text>
+          <text x="155" y="137" text-anchor="middle" font-size="10" fill="#64748b">REST Client / SDK</text>
+        </g>
+
+        <g class="component" data-id="kibana" data-tooltip="Kibana: visualization and management UI for Elasticsearch. Dashboards, Dev Tools, Index Management, and monitoring.">
+          <rect x="70" y="180" width="170" height="60" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+          <text x="155" y="207" text-anchor="middle" font-size="13" font-weight="600">Kibana</text>
+          <text x="155" y="227" text-anchor="middle" font-size="10" fill="#64748b">Visualization & UI</text>
+        </g>
+
+        <g class="component" data-id="logstash" data-tooltip="Logstash: server-side data processing pipeline that ingests, transforms, and sends data to Elasticsearch. Supports 200+ input/filter/output plugins.">
+          <rect x="70" y="360" width="170" height="60" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+          <text x="155" y="387" text-anchor="middle" font-size="13" font-weight="600">Logstash</text>
+          <text x="155" y="407" text-anchor="middle" font-size="10" fill="#64748b">Ingest Pipeline</text>
+        </g>
+
+        <g class="component" data-id="beats" data-tooltip="Beats: lightweight data shippers installed on edge hosts. Filebeat (logs), Metricbeat (metrics), Packetbeat (network), Heartbeat (uptime).">
+          <rect x="70" y="450" width="170" height="60" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+          <text x="155" y="477" text-anchor="middle" font-size="13" font-weight="600">Beats Agents</text>
+          <text x="155" y="497" text-anchor="middle" font-size="10" fill="#64748b">Filebeat / Metricbeat</text>
+        </g>
+
+        <!-- Elasticsearch Cluster -->
+        <g class="component" data-id="coordinator" data-tooltip="Coordinating Node: receives client requests, routes to relevant shards, gathers and merges results. Every node can act as coordinator. Dedicated coordinating nodes reduce load on data nodes.">
+          <rect x="360" y="80" width="180" height="60" rx="10" fill="#fff" stroke="#3b82f6" stroke-width="2"/>
+          <text x="450" y="107" text-anchor="middle" font-size="13" font-weight="600">Coordinating Node</text>
+          <text x="450" y="127" text-anchor="middle" font-size="10" fill="#64748b">Route & Aggregate</text>
+        </g>
+
+        <g class="component" data-id="master" data-tooltip="Master Node: manages cluster state — index creation/deletion, shard allocation, node tracking. Uses quorum-based election (min_master_nodes). Lightweight — no data storage or search.">
+          <polygon points="640,80 730,110 640,140 550,110" fill="#fff" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="640" y="107" text-anchor="middle" font-size="12" font-weight="600">Master</text>
+          <text x="640" y="122" text-anchor="middle" font-size="9" fill="#64748b">Cluster State</text>
+        </g>
+
+        <!-- Data Nodes -->
+        <g class="component" data-id="data-hot" data-tooltip="Hot Data Node: stores recently indexed data. Uses fast SSDs for write-heavy workloads. Holds primary shards receiving new documents.">
+          <rect x="340" y="190" width="140" height="80" rx="10" fill="#fff" stroke="#ef4444" stroke-width="2"/>
+          <text x="410" y="222" text-anchor="middle" font-size="12" font-weight="600">Data Node</text>
+          <text x="410" y="240" text-anchor="middle" font-size="11" fill="#ef4444" font-weight="600">HOT</text>
+          <text x="410" y="258" text-anchor="middle" font-size="9" fill="#64748b">SSD / Recent Data</text>
+        </g>
+
+        <g class="component" data-id="data-warm" data-tooltip="Warm Data Node: holds older, less-frequently accessed data. Optimized for read-heavy workloads on cheaper storage. Receives data from hot tier via ILM policies.">
+          <rect x="500" y="190" width="140" height="80" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+          <text x="570" y="222" text-anchor="middle" font-size="12" font-weight="600">Data Node</text>
+          <text x="570" y="240" text-anchor="middle" font-size="11" fill="#f59e0b" font-weight="600">WARM</text>
+          <text x="570" y="258" text-anchor="middle" font-size="9" fill="#64748b">HDD / Older Data</text>
+        </g>
+
+        <g class="component" data-id="data-cold" data-tooltip="Cold Data Node: stores rarely accessed data with reduced replica count. Uses cheapest storage. Searchable but with higher latency. Can use frozen tier with searchable snapshots.">
+          <rect x="660" y="190" width="140" height="80" rx="10" fill="#fff" stroke="#3b82f6" stroke-width="2"/>
+          <text x="730" y="222" text-anchor="middle" font-size="12" font-weight="600">Data Node</text>
+          <text x="730" y="240" text-anchor="middle" font-size="11" fill="#3b82f6" font-weight="600">COLD</text>
+          <text x="730" y="258" text-anchor="middle" font-size="9" fill="#64748b">Archive / Frozen</text>
+        </g>
+
+        <!-- Shard internals -->
+        <g class="component" data-id="shard" data-tooltip="Shard: the basic unit of storage in Elasticsearch. Each shard is a Lucene index. An index is split into N primary shards, each with R replica shards for HA. Default: 1 primary, 1 replica.">
+          <rect x="360" y="310" width="130" height="70" rx="8" fill="#fff" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="425" y="337" text-anchor="middle" font-size="11" font-weight="600">Primary Shard</text>
+          <rect x="375" y="350" width="40" height="20" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+          <text x="395" y="364" text-anchor="middle" font-size="8">Seg 1</text>
+          <rect x="420" y="350" width="40" height="20" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+          <text x="440" y="364" text-anchor="middle" font-size="8">Seg 2</text>
+        </g>
+
+        <g class="component" data-id="replica" data-tooltip="Replica Shard: exact copy of a primary shard on a different node. Serves read requests for load balancing. Promotes to primary if original primary fails.">
+          <rect x="520" y="310" width="130" height="70" rx="8" fill="#fff" stroke="#10b981" stroke-width="1.5"/>
+          <text x="585" y="337" text-anchor="middle" font-size="11" font-weight="600">Replica Shard</text>
+          <rect x="535" y="350" width="40" height="20" rx="4" fill="#d1fae5" stroke="#10b981" stroke-width="1"/>
+          <text x="555" y="364" text-anchor="middle" font-size="8">Seg 1</text>
+          <rect x="580" y="350" width="40" height="20" rx="4" fill="#d1fae5" stroke="#10b981" stroke-width="1"/>
+          <text x="600" y="364" text-anchor="middle" font-size="8">Seg 2</text>
+        </g>
+
+        <!-- Lucene Internals -->
+        <g class="component" data-id="lucene" data-tooltip="Lucene Index: each shard is a Lucene instance containing immutable segments. Each segment has an inverted index, stored fields, doc values, and term vectors. Segments merge periodically.">
+          <rect x="360" y="420" width="290" height="70" rx="10" fill="#fff" stroke="#8b5cf6" stroke-width="1.5"/>
+          <text x="505" y="445" text-anchor="middle" font-size="12" font-weight="600">Lucene Engine</text>
+          <text x="505" y="465" text-anchor="middle" font-size="9" fill="#64748b">Inverted Index | Doc Values | Stored Fields</text>
+          <text x="505" y="480" text-anchor="middle" font-size="9" fill="#64748b">Segment Merge | Translog | Refresh</text>
+        </g>
+
+        <!-- Ingest Node -->
+        <g class="component" data-id="ingest" data-tooltip="Ingest Node: pre-processes documents before indexing using pipelines of processors (grok, date, geoip, script, etc.). Lightens the load on external tools like Logstash.">
+          <rect x="360" y="530" width="180" height="45" rx="8" fill="#fff" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="450" y="557" text-anchor="middle" font-size="11" font-weight="600">Ingest Node (Pipelines)</text>
+        </g>
+
+        <!-- Storage Layer -->
+        <g class="component" data-id="disk" data-tooltip="Local disk storage: each data node stores shard data on local SSDs/HDDs. Lucene segments, translog, and metadata all reside here. OS filesystem cache is critical for performance.">
+          <ellipse cx="945" cy="130" rx="80" ry="35" fill="#fff" stroke="#10b981" stroke-width="2"/>
+          <text x="945" y="127" text-anchor="middle" font-size="11" font-weight="600">Local Disk</text>
+          <text x="945" y="145" text-anchor="middle" font-size="9" fill="#64748b">SSD / HDD</text>
+        </g>
+
+        <g class="component" data-id="snapshot" data-tooltip="Snapshot Repository: S3, GCS, Azure Blob, HDFS, or shared filesystem for backup and restore. Supports incremental snapshots. Used for disaster recovery and cold/frozen tier searchable snapshots.">
+          <ellipse cx="945" cy="230" rx="80" ry="35" fill="#fff" stroke="#10b981" stroke-width="2"/>
+          <text x="945" y="227" text-anchor="middle" font-size="11" font-weight="600">Snapshot Repo</text>
+          <text x="945" y="245" text-anchor="middle" font-size="9" fill="#64748b">S3 / GCS / Azure</text>
+        </g>
+
+        <g class="component" data-id="kafka" data-tooltip="Message Queue (Kafka/Kinesis): buffers data between producers and Elasticsearch. Provides backpressure, replay, and decoupling. Logstash or Kafka Connect consumes and indexes.">
+          <rect x="865" y="350" width="160" height="55" rx="8" fill="#fff" stroke="#10b981" stroke-width="2"/>
+          <text x="945" y="375" text-anchor="middle" font-size="11" font-weight="600">Kafka / Queue</text>
+          <text x="945" y="393" text-anchor="middle" font-size="9" fill="#64748b">Buffer & Replay</text>
+        </g>
+
+        <g class="component" data-id="source" data-tooltip="Data Sources: databases (CDC via Debezium), log files, metrics collectors, APIs, cloud events. The origin of documents that flow into Elasticsearch.">
+          <rect x="865" y="450" width="160" height="55" rx="8" fill="#fff" stroke="#10b981" stroke-width="2"/>
+          <text x="945" y="475" text-anchor="middle" font-size="11" font-weight="600">Data Sources</text>
+          <text x="945" y="493" text-anchor="middle" font-size="9" fill="#64748b">DB / Logs / APIs</text>
+        </g>
+
+        <!-- Connections -->
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/>
+          </marker>
+        </defs>
+
+        <!-- Client to Coordinator -->
+        <line class="connection" x1="240" y1="120" x2="355" y2="110" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line class="connection" x1="240" y1="210" x2="355" y2="120" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <!-- Coordinator to Data Nodes -->
+        <line class="connection" x1="420" y1="140" x2="410" y2="185" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line class="connection" x1="470" y1="140" x2="570" y2="185" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line class="connection" x1="490" y1="140" x2="720" y2="185" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <!-- Master to nodes -->
+        <line class="connection" x1="595" y1="110" x2="540" y2="110" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="4" marker-end="url(#arrow)"/>
+
+        <!-- Data to Shards -->
+        <line class="connection" x1="410" y1="270" x2="420" y2="305" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line class="connection" x1="570" y1="270" x2="580" y2="305" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <!-- Shards to Lucene -->
+        <line class="connection" x1="425" y1="380" x2="460" y2="415" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line class="connection" x1="585" y1="380" x2="550" y2="415" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <!-- Logstash/Beats to Ingest/Coordinator -->
+        <line class="connection" x1="240" y1="390" x2="355" y2="552" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line class="connection" x1="240" y1="480" x2="355" y2="555" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <!-- Storage connections -->
+        <line class="connection" x1="800" y1="230" x2="870" y2="130" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line class="connection" x1="800" y1="250" x2="865" y2="230" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <!-- Kafka to Logstash -->
+        <line class="connection" x1="865" y1="380" x2="240" y2="385" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4" marker-end="url(#arrow)"/>
+
+        <!-- Source to Kafka -->
+        <line class="connection" x1="945" y1="450" x2="945" y2="410" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Section 2: Components -->
+  <section id="components">
+    <div class="section-header">
+      <h2>Component Breakdown</h2>
+      <p>Key components and their roles in the Elasticsearch ecosystem</p>
+    </div>
+    <div class="card-grid">
+      <div class="card animate-in">
+        <h3>Coordinating Node</h3>
+        <p>The gateway for all client requests. Parses queries, identifies target shards via routing, scatters requests to data nodes, gathers partial results, and performs final reduction (sorting, aggregation merge).</p>
+        <div class="card-meta">
+          <span class="badge badge-info">Stateless</span>
+          <span class="badge badge-primary">CPU-bound</span>
+        </div>
+      </div>
+      <div class="card animate-in delay-1">
+        <h3>Master Node</h3>
+        <p>Manages cluster metadata: index settings, mappings, shard allocation table, node membership. Elected via Raft-like consensus. Should be dedicated (3+ nodes) and never hold data in production.</p>
+        <div class="card-meta">
+          <span class="badge badge-purple">Cluster State</span>
+          <span class="badge badge-accent">Lightweight</span>
+        </div>
+      </div>
+      <div class="card animate-in delay-2">
+        <h3>Data Node (Hot/Warm/Cold)</h3>
+        <p>Stores shard data on local disk, executes search and indexing operations. Hot tier uses SSDs for recent writes; warm tier for read-heavy older data; cold/frozen for archives with searchable snapshots.</p>
+        <div class="card-meta">
+          <span class="badge badge-danger">I/O Heavy</span>
+          <span class="badge badge-info">Memory Critical</span>
+        </div>
+      </div>
+      <div class="card animate-in delay-3">
+        <h3>Ingest Node</h3>
+        <p>Runs ingest pipelines — ordered sequences of processors (grok parsing, date extraction, GeoIP lookup, script transforms) — on documents before they reach the indexing stage.</p>
+        <div class="card-meta">
+          <span class="badge badge-primary">Pre-processing</span>
+          <span class="badge badge-accent">Extensible</span>
+        </div>
+      </div>
+      <div class="card animate-in">
+        <h3>Shard (Primary + Replica)</h3>
+        <p>Each index is divided into primary shards (default 1). Each primary has configurable replicas (default 1). Primary handles writes; replicas serve reads and provide failover. Rebalanced on node join/leave.</p>
+        <div class="card-meta">
+          <span class="badge badge-info">Lucene Instance</span>
+          <span class="badge badge-accent">Replicable</span>
+        </div>
+      </div>
+      <div class="card animate-in delay-1">
+        <h3>Lucene Engine</h3>
+        <p>Each shard wraps a Lucene index: immutable segments containing inverted index (term→doc mapping), BKD trees (numerics/geo), doc values (columnar), stored fields. Segments merge in background for efficiency.</p>
+        <div class="card-meta">
+          <span class="badge badge-purple">Inverted Index</span>
+          <span class="badge badge-primary">Segment Merge</span>
+        </div>
+      </div>
+      <div class="card animate-in delay-2">
+        <h3>Translog</h3>
+        <p>Write-ahead log ensuring durability between Lucene commits. Every index/delete/update is appended to the translog. On crash recovery, uncommitted operations are replayed from the translog.</p>
+        <div class="card-meta">
+          <span class="badge badge-danger">Durability</span>
+          <span class="badge badge-info">WAL</span>
+        </div>
+      </div>
+      <div class="card animate-in delay-3">
+        <h3>Cluster State</h3>
+        <p>Single source of truth for the cluster: index metadata, shard routing table, node membership, templates, pipelines, and ILM policies. Published by the master node and synced to all nodes.</p>
+        <div class="card-meta">
+          <span class="badge badge-purple">Centralized</span>
+          <span class="badge badge-primary">Replicated</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Sequence Diagram -->
+  <section id="sequence">
+    <div class="section-header">
+      <h2>Request Flow</h2>
+      <p>Animated sequence showing how requests traverse the cluster</p>
+    </div>
+    <div class="sequence-container">
+      <div class="seq-controls">
+        <select id="flowSelect">
+          <option value="search">Search Flow</option>
+          <option value="index">Index (Write) Flow</option>
+          <option value="bulk">Bulk Indexing Flow</option>
+        </select>
+        <button id="seqPlay" class="active">Play</button>
+        <button id="seqPause">Pause</button>
+        <button id="seqStep">Step</button>
+        <button id="seqReset">Reset</button>
+        <label style="font-size:0.85rem;color:var(--text-muted)">Speed:
+          <input type="range" id="seqSpeed" min="1" max="5" value="3" style="width:80px;vertical-align:middle;">
+        </label>
+      </div>
+      <div class="seq-narration" id="seqNarration">Select a flow and press Play to see the request sequence.</div>
+      <div class="seq-svg" id="seqSvgContainer"></div>
+    </div>
+  </section>
+
+  <!-- Section 4: Comparisons -->
+  <section id="comparisons">
+    <div class="section-header">
+      <h2>Comparisons with Alternatives</h2>
+      <p>How Elasticsearch stacks up against other search and analytics engines</p>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Engine</th>
+            <th>Core Strength</th>
+            <th>Pros</th>
+            <th>Cons</th>
+            <th>Best For</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="chosen">
+            <td><strong>Elasticsearch</strong><span class="chosen-badge">CHOSEN</span></td>
+            <td>Full-text search + analytics in one system</td>
+            <td>Rich query DSL, aggregations, ecosystem (ELK), schema-on-read flexibility, real-time</td>
+            <td>Expensive at scale (RAM), complex tuning, not ACID, eventual consistency</td>
+            <td>Log analytics, product search, observability, security analytics</td>
+          </tr>
+          <tr>
+            <td><strong>Apache Solr</strong></td>
+            <td>Mature Lucene-based search</td>
+            <td>Battle-tested, strong faceting, SolrCloud for distributed, open governance</td>
+            <td>Slower innovation, XML-heavy config, smaller ecosystem, less analytics</td>
+            <td>Enterprise search, e-commerce catalogs, legacy Java shops</td>
+          </tr>
+          <tr>
+            <td><strong>OpenSearch</strong></td>
+            <td>Fork of Elasticsearch (Apache 2.0)</td>
+            <td>License freedom, AWS-managed option, compatible APIs, active community</td>
+            <td>Feature lag vs ES, split ecosystem, fewer commercial plugins</td>
+            <td>AWS-native deployments, cost-sensitive teams, vendor-neutral requirements</td>
+          </tr>
+          <tr>
+            <td><strong>Meilisearch / Typesense</strong></td>
+            <td>Developer-friendly instant search</td>
+            <td>Simple setup, typo-tolerant out of box, fast for small datasets, great DX</td>
+            <td>No aggregations, limited scale (single-node or small clusters), fewer features</td>
+            <td>Site search, autocomplete, small-to-medium datasets, prototypes</td>
+          </tr>
+          <tr>
+            <td><strong>ClickHouse</strong></td>
+            <td>Columnar analytics at petabyte scale</td>
+            <td>Blazing OLAP queries, compression, SQL interface, cheap storage</td>
+            <td>No full-text search, append-mostly (poor updates), no built-in replication UI</td>
+            <td>Time-series analytics, BI dashboards, event analytics, data warehousing</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:2rem;">
+      <h3 style="margin-bottom:1rem;">When to Pick Each</h3>
+      <div class="card-grid">
+        <div class="card">
+          <h3>Choose Elasticsearch when...</h3>
+          <p>You need full-text search AND analytics on the same data. Complex queries with fuzzy matching, geo-spatial, nested objects. Observability/logging at scale. Rich ecosystem matters (Kibana, Beats, ML).</p>
+        </div>
+        <div class="card">
+          <h3>Choose ClickHouse when...</h3>
+          <p>Your workload is purely analytical — GROUP BY, time-series rollups, funnel analysis. You don't need full-text search. You want SQL and petabyte-scale columnar performance at lower cost.</p>
+        </div>
+        <div class="card">
+          <h3>Choose Meilisearch/Typesense when...</h3>
+          <p>You need instant, typo-tolerant search for a product catalog or documentation site. Dataset fits in RAM on one machine. Developer experience and simplicity outweigh enterprise features.</p>
+        </div>
+        <div class="card">
+          <h3>Choose OpenSearch when...</h3>
+          <p>You're on AWS and want managed service without Elastic licensing concerns. Need ES-compatible APIs but prefer Apache 2.0 license. Running in regulated environments requiring open-source guarantees.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:2rem;">
+      <h3 style="margin-bottom:0.5rem;">Real-World Examples</h3>
+      <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">Who uses what in production</p>
+      <div class="card-grid">
+        <div class="card">
+          <h3>Elasticsearch</h3>
+          <p><strong>GitHub</strong> — code search across 200M+ repos. <strong>Netflix</strong> — log and event analytics. <strong>Uber</strong> — ELK for microservices observability. <strong>Wikipedia</strong> — full-text article search.</p>
+        </div>
+        <div class="card">
+          <h3>ClickHouse</h3>
+          <p><strong>Cloudflare</strong> — DNS analytics (30M+ events/sec). <strong>Uber</strong> — real-time dashboards. <strong>GitLab</strong> — product analytics. <strong>Yandex</strong> — originally built by them.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Use Cases & Pitfalls -->
+  <section id="usecases">
+    <div class="section-header">
+      <h2>Use Cases & Common Pitfalls</h2>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="usecases-tab">Use Cases</button>
+      <button class="tab" data-tab="pitfalls-tab">Common Pitfalls</button>
+    </div>
+
+    <div class="tab-content active" id="usecases-tab">
+      <h3 style="margin-bottom:1rem;">Primary Use Cases</h3>
+      <div class="usecase-grid">
+        <div class="usecase-card">
+          <h4>Log & Event Analytics</h4>
+          <p>Centralize logs from thousands of services. Full-text search across billions of log lines with sub-second response. Kibana dashboards for real-time monitoring.</p>
+          <div class="card-meta"><span class="badge badge-info">~100K-1M events/sec</span></div>
+        </div>
+        <div class="usecase-card">
+          <h4>Product / E-Commerce Search</h4>
+          <p>Faceted search with filters (price, category, brand), fuzzy matching for typos, boosting by relevance and popularity, autocomplete suggestions.</p>
+          <div class="card-meta"><span class="badge badge-info">~1K-50K QPS</span></div>
+        </div>
+        <div class="usecase-card">
+          <h4>Application Search (Site/App)</h4>
+          <p>Power search bars for SaaS apps, documentation sites, knowledge bases. Highlight matching terms, filter by metadata, rank by freshness.</p>
+          <div class="card-meta"><span class="badge badge-info">~100-10K QPS</span></div>
+        </div>
+        <div class="usecase-card">
+          <h4>Security Analytics (SIEM)</h4>
+          <p>Correlate security events across firewalls, endpoints, and cloud. Detect anomalies with ML. Alert on threat patterns. Elastic Security / SIEM solution.</p>
+          <div class="card-meta"><span class="badge badge-info">~50K-500K events/sec</span></div>
+        </div>
+        <div class="usecase-card">
+          <h4>APM & Observability</h4>
+          <p>Distributed tracing, metrics, and logs unified in one platform. Correlate traces with logs. Service maps. Elastic APM agents instrument code automatically.</p>
+          <div class="card-meta"><span class="badge badge-purple">Traces + Metrics + Logs</span></div>
+        </div>
+        <div class="usecase-card">
+          <h4>Geo-Spatial Search</h4>
+          <p>Find locations within bounding boxes, radius queries, geo-polygon filters. Power "near me" features, delivery zone matching, and mapping applications.</p>
+          <div class="card-meta"><span class="badge badge-accent">Geo queries</span></div>
+        </div>
+      </div>
+
+      <h3 style="margin:2rem 0 1rem;">Anti-Use-Cases</h3>
+      <div class="usecase-grid">
+        <div class="usecase-card anti">
+          <h4>Primary Database (OLTP)</h4>
+          <p>No ACID transactions, no joins, eventual consistency. Don't use ES as your source of truth for transactional data. Use a proper RDBMS and sync to ES.</p>
+        </div>
+        <div class="usecase-card anti">
+          <h4>Frequent Updates to Same Docs</h4>
+          <p>ES does delete+reindex on every update (immutable segments). Write-heavy update patterns cause massive I/O. Use a database with in-place updates instead.</p>
+        </div>
+        <div class="usecase-card anti">
+          <h4>Exact BI / Aggregation (Large Scale)</h4>
+          <p>Aggregations are approximate at scale (HyperLogLog for cardinality). For exact counts on petabytes or complex joins, use a columnar DB like ClickHouse or BigQuery.</p>
+        </div>
+        <div class="usecase-card anti">
+          <h4>Simple Key-Value Lookups</h4>
+          <p>If you only need get-by-ID without search, Redis or DynamoDB is faster and cheaper. ES overhead (inverted index, segments) adds no value here.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="pitfalls-tab">
+      <div id="pitfalls-container"></div>
+    </div>
+  </section>
+
+  <!-- Section 6: Best Practices -->
+  <section id="practices">
+    <div class="section-header">
+      <h2>Best Practices</h2>
+      <p>Proven guidelines for designing, implementing, and operating Elasticsearch clusters</p>
+    </div>
+    <div id="practices-container"></div>
+  </section>
+
+  <!-- Section 7: Scaling & Trade-offs -->
+  <section id="scaling">
+    <div class="section-header">
+      <h2>Scaling & Trade-offs</h2>
+      <p>Capacity planning, scaling strategies, and fundamental trade-offs</p>
+    </div>
+
+    <h3 style="margin-bottom:1rem;">Capacity Estimation (Back-of-Envelope)</h3>
+    <div class="scale-cards">
+      <div class="scale-card">
+        <h4>Log Analytics Cluster</h4>
+        <div class="metric"><span>Daily ingest volume</span><span>500 GB/day</span></div>
+        <div class="metric"><span>Retention</span><span>30 days (hot 7d, warm 23d)</span></div>
+        <div class="metric"><span>Total storage (1 replica)</span><span>~30 TB</span></div>
+        <div class="metric"><span>Compression ratio</span><span>~7:1 (best_compression)</span></div>
+        <div class="metric"><span>Hot nodes (64GB RAM, 2TB SSD)</span><span>4-6 nodes</span></div>
+        <div class="metric"><span>Warm nodes (64GB RAM, 8TB HDD)</span><span>4-6 nodes</span></div>
+        <div class="metric"><span>Master nodes</span><span>3 (dedicated, 8GB RAM)</span></div>
+      </div>
+      <div class="scale-card">
+        <h4>Product Search Cluster</h4>
+        <div class="metric"><span>Document count</span><span>50M products</span></div>
+        <div class="metric"><span>Avg doc size</span><span>2 KB</span></div>
+        <div class="metric"><span>Index size (1 replica)</span><span>~200 GB</span></div>
+        <div class="metric"><span>Search QPS</span><span>5,000 QPS</span></div>
+        <div class="metric"><span>P99 latency target</span><span>&lt;100ms</span></div>
+        <div class="metric"><span>Data nodes (32GB RAM, 1TB SSD)</span><span>3-4 nodes</span></div>
+        <div class="metric"><span>Shards per index</span><span>5 primary, 1 replica</span></div>
+      </div>
+      <div class="scale-card">
+        <h4>Key Sizing Rules</h4>
+        <div class="metric"><span>Heap per node</span><span>≤ 31GB (compressed oops)</span></div>
+        <div class="metric"><span>Shard size target</span><span>10-50 GB each</span></div>
+        <div class="metric"><span>Shards per node</span><span>≤ 20 per GB heap</span></div>
+        <div class="metric"><span>Disk watermark (high)</span><span>85% (stop allocation)</span></div>
+        <div class="metric"><span>RAM:Disk ratio</span><span>1:30 (hot), 1:100 (warm)</span></div>
+        <div class="metric"><span>CPU per data node</span><span>8-16 cores typical</span></div>
+      </div>
+    </div>
+
+    <h3 style="margin:2.5rem 0 1rem;">Scaling Strategies</h3>
+    <div class="card-grid">
+      <div class="card">
+        <h3>Horizontal Scaling (Add Nodes)</h3>
+        <p>Add data nodes and ES automatically rebalances shards. No downtime. Works well until shard count gets too high (10K+ shards = master bottleneck). Use ILM to rollover indices and control shard growth.</p>
+        <div class="card-meta"><span class="badge badge-accent">Preferred</span><span class="badge badge-info">Auto-rebalance</span></div>
+      </div>
+      <div class="card">
+        <h3>Data Tiering (Hot/Warm/Cold/Frozen)</h3>
+        <p>ILM policies automatically move indices through tiers. Hot: fast SSDs for writes. Warm: read-only on cheaper storage. Cold: reduced replicas. Frozen: searchable snapshots from S3 (no local storage).</p>
+        <div class="card-meta"><span class="badge badge-primary">Cost Optimize</span><span class="badge badge-purple">ILM</span></div>
+      </div>
+      <div class="card">
+        <h3>Index Partitioning (Time-Based)</h3>
+        <p>Use date-based indices (logs-2024.01.15) with rollover. Old indices shrink, force-merge to 1 segment, and move to warm. Enables efficient deletion (drop whole index vs. delete-by-query).</p>
+        <div class="card-meta"><span class="badge badge-info">Time Series</span><span class="badge badge-accent">Efficient Deletes</span></div>
+      </div>
+      <div class="card">
+        <h3>Cross-Cluster Search (CCS)</h3>
+        <p>Federate searches across multiple independent clusters. Each cluster is autonomous. Useful for geographic distribution, team isolation, or very large deployments exceeding single-cluster limits.</p>
+        <div class="card-meta"><span class="badge badge-purple">Multi-Region</span><span class="badge badge-primary">Federation</span></div>
+      </div>
+    </div>
+
+    <h3 style="margin:2.5rem 0 1rem;">Fundamental Trade-offs</h3>
+    <div class="card-grid">
+      <div class="card">
+        <h3>Indexing Speed vs. Search Latency</h3>
+        <p>Faster refresh_interval (default 1s) means more segments = more I/O during search. Increase to 30s-60s for write-heavy workloads. Disable replicas during bulk loads, re-enable after.</p>
+      </div>
+      <div class="card">
+        <h3>Relevance vs. Performance</h3>
+        <p>Complex queries (multi-match with fuzziness, nested, function_score) are expensive. Simple queries on keyword fields are fast. Profile queries and consider pre-computing signals at index time.</p>
+      </div>
+      <div class="card">
+        <h3>Availability vs. Consistency</h3>
+        <p>ES favors availability (AP in CAP). During network partitions, reads may return stale data. write_consistency and wait_for_active_shards give tunable durability at the cost of availability.</p>
+      </div>
+      <div class="card">
+        <h3>Storage Cost vs. Query Speed</h3>
+        <p>Frozen tier (searchable snapshots) cuts storage cost 90%+ but first queries are slow (fetch from S3). Best for data you rarely access but must keep searchable for compliance.</p>
+      </div>
+    </div>
+
+    <h3 style="margin:2.5rem 0 1rem;">Failure Scenarios</h3>
+    <div class="card-grid">
+      <div class="card">
+        <h3>Data Node Failure</h3>
+        <p>Replica shards on surviving nodes promote to primary. Cluster goes YELLOW until new replicas are allocated. If all copies of a shard are lost, that shard's data is gone. Configure allocation awareness for rack/zone distribution.</p>
+      </div>
+      <div class="card">
+        <h3>Master Node Failure</h3>
+        <p>Remaining masters elect a new master (requires quorum: N/2+1). During election (~seconds), no cluster state changes (no new index creation, no shard movement). Reads and writes to existing shards continue unaffected.</p>
+      </div>
+      <div class="card">
+        <h3>Split Brain (Prevented)</h3>
+        <p>ES 7+ uses a voting configuration that prevents split brain by design. Before 7.x, misconfigured discovery.zen.minimum_master_nodes caused dual masters and data corruption.</p>
+      </div>
+      <div class="card">
+        <h3>Disk Full / Circuit Breaker</h3>
+        <p>At 85% disk, new shards won't allocate. At 90%, shards relocate away. At 95%, indices go read-only. Circuit breakers protect against OOM by rejecting requests exceeding heap thresholds.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ===== Navigation Active State =====
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`.nav-links a[href="#${entry.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-80px 0px -60% 0px' });
+
+sections.forEach(s => observer.observe(s));
+
+// ===== Tooltip =====
+const tooltip = document.getElementById('tooltip');
+document.querySelectorAll('.component').forEach(comp => {
+  comp.addEventListener('mouseenter', e => {
+    const text = comp.dataset.tooltip;
+    if (!text) return;
+    tooltip.textContent = text;
+    tooltip.classList.add('visible');
+  });
+  comp.addEventListener('mousemove', e => {
+    tooltip.style.left = e.clientX + 12 + 'px';
+    tooltip.style.top = e.clientY + 12 + 'px';
+  });
+  comp.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('visible');
+  });
+  comp.addEventListener('click', () => {
+    document.getElementById('components').scrollIntoView({ behavior: 'smooth' });
+  });
+});
+
+// ===== Tabs =====
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const tabId = tab.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+  });
+});
+
+// ===== Pitfalls =====
+const pitfalls = [
+  {
+    title: "Mapping Explosion — Too Many Fields",
+    mistake: "Indexing documents with arbitrary, dynamic field names (e.g., user-generated keys) causing the mapping to grow to thousands of fields.",
+    why: "Dynamic mapping makes it easy to just throw JSON at ES. Feels convenient until the cluster slows to a crawl.",
+    consequence: "Massive cluster state, slow updates, high memory usage, potential master instability. Queries become unpredictable.",
+    fix: "Set dynamic: 'strict' or 'runtime'. Use flattened field type for arbitrary key-value pairs. Set index.mapping.total_fields.limit and monitor it."
+  },
+  {
+    title: "Too Many Small Shards",
+    mistake: "Creating one index per tenant/day with default shard count, resulting in thousands of tiny shards (< 1GB each).",
+    why: "Time-based indices feel natural. Default of 1 shard per index seems harmless for small indices.",
+    consequence: "Each shard has overhead (~40MB heap). 10K+ shards = master bottleneck, slow cluster state updates, wasted resources.",
+    fix: "Target 10-50GB per shard. Use rollover API with size/doc_count conditions. Shrink old indices. Use Data Streams for time-series."
+  },
+  {
+    title: "Not Reserving RAM for Filesystem Cache",
+    mistake: "Setting JVM heap to 50%+ of available RAM, leaving no room for the OS filesystem cache.",
+    why: "More heap seems like it should help. Java apps usually benefit from more heap.",
+    consequence: "Lucene segments can't be cached by the OS, causing constant disk reads. Search latency spikes. Counter-intuitively, MORE heap = SLOWER.",
+    fix: "Set heap to max 50% of RAM (≤31GB for compressed oops). The other 50% goes to filesystem cache, which Lucene relies on heavily."
+  },
+  {
+    title: "Using Nested/Parent-Child for Everything",
+    mistake: "Modeling relational data with nested objects or join fields because it 'feels right' coming from SQL.",
+    why: "Developers think in relations. Nested seems like the ES equivalent of a foreign key.",
+    consequence: "Nested docs create hidden Lucene docs (N nested = N+1 Lucene docs). Joins are expensive. Index size explodes. Queries slow down.",
+    fix: "Denormalize aggressively. Duplicate data across documents. Use nested only when you need independent scoring of sub-objects. Avoid join field unless parent-child is truly required."
+  },
+  {
+    title: "No Index Lifecycle Management (ILM)",
+    mistake: "Indexing into a single index forever, or creating time-based indices without automated rollover and deletion.",
+    why: "Simple to start with one index. Nobody sets up ILM during the prototype phase, and it never gets added.",
+    consequence: "Single index grows unbounded (can't efficiently delete old data). Or thousands of stale indices accumulate, wasting resources.",
+    fix: "Configure ILM from day one: rollover at 50GB or 30 days, transition warm→cold on schedule, delete after retention period. Use Data Streams for log-type workloads."
+  },
+  {
+    title: "Ignoring Slow Logs and Query Profiling",
+    mistake: "Running expensive queries (deep pagination, wildcard leading *, large aggregations) without monitoring query performance.",
+    why: "Queries work in dev with small datasets. Nobody checks slow logs until production is on fire.",
+    consequence: "A single expensive query can saturate thread pools, causing timeouts for all other queries. Cascading failures.",
+    fix: "Set slowlog thresholds (index.search.slowlog.threshold.query.warn: 1s). Use Profile API to analyze expensive queries. Implement circuit breakers and timeout settings."
+  }
+];
+
+const pitfallsContainer = document.getElementById('pitfalls-container');
+pitfalls.forEach((p, i) => {
+  const card = document.createElement('div');
+  card.className = 'pitfall-card';
+  card.innerHTML = `
+    <div class="pitfall-header" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.chevron').classList.toggle('open')">
+      <span>${p.title}</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="pitfall-body${i === 0 ? ' open' : ''}">
+      <dl>
+        <dt>The Mistake</dt><dd>${p.mistake}</dd>
+        <dt>Why It Happens</dt><dd>${p.why}</dd>
+        <dt>The Consequence</dt><dd>${p.consequence}</dd>
+        <dt>The Fix</dt><dd>${p.fix}</dd>
+      </dl>
+    </div>
+  `;
+  if (i === 0) card.querySelector('.chevron').classList.add('open');
+  pitfallsContainer.appendChild(card);
+});
+
+// ===== Best Practices =====
+const practices = [
+  {
+    title: "Index Design",
+    items: [
+      "Define explicit mappings — never rely on dynamic mapping in production. Use strict mode to catch unexpected fields early.",
+      "Use keyword type for exact-match fields (IDs, status, tags). Use text type only when you need full-text search.",
+      "Choose the right number of primary shards at index creation (can't change later without reindex). Target 10-50GB per shard.",
+      "Use index aliases for zero-downtime reindexing. Point your app at the alias, swap the underlying index when ready.",
+      "Enable best_compression (DEFLATE) for warm/cold indices. Trades CPU for ~30% less disk.",
+      "Use date_nanos for high-precision timestamps. Use date for human-readable time-based indices."
+    ]
+  },
+  {
+    title: "Query Optimization",
+    items: [
+      "Use filter context (bool.filter) for exact matches — filters are cached and skip scoring, dramatically faster than query context.",
+      "Avoid leading wildcards (*.log) — they can't use the inverted index and scan all terms. Use ngram tokenizer if needed.",
+      "Prefer search_after over from/size for deep pagination. from+size > 10K hits the max_result_window limit and is expensive.",
+      "Use source filtering (_source: ['field1','field2']) to return only needed fields, reducing network transfer.",
+      "Pre-sort indices on commonly filtered fields (e.g., timestamp) using index.sort to enable early termination.",
+      "Use multi-search (_msearch) API to batch multiple queries in a single HTTP round-trip."
+    ]
+  },
+  {
+    title: "Operational Excellence",
+    items: [
+      "Monitor cluster health (green/yellow/red), JVM heap usage, thread pool rejections, and indexing/search latency.",
+      "Set up alerts on: cluster status != green for >5min, heap > 85%, thread pool rejections > 0, disk > 80%.",
+      "Use dedicated master nodes (3 minimum) that don't hold data. Prevents data node GC pauses from destabilizing the cluster.",
+      "Schedule force-merge on read-only indices to 1 segment — reduces file handles and improves search on cold data.",
+      "Take regular snapshots to S3/GCS. Test restores quarterly. Snapshots are incremental and fast after the first one.",
+      "Use rolling restarts for version upgrades. Disable shard allocation before restart, re-enable after node rejoins."
+    ]
+  },
+  {
+    title: "Scaling & Performance",
+    items: [
+      "Scale horizontally by adding data nodes — ES rebalances automatically. Avoid scaling by adding shards (shard count is fixed per index).",
+      "Use index rollover (max_size: 50gb, max_age: 7d) for time-series data to keep shard sizes optimal.",
+      "Set refresh_interval to 30s for write-heavy workloads (default 1s creates many small segments).",
+      "For bulk indexing: disable replicas (number_of_replicas: 0), increase refresh_interval to -1, bulk size 5-15MB, re-enable after.",
+      "Use shard allocation awareness (rack_id, zone) to spread replicas across failure domains.",
+      "Implement cross-cluster replication (CCR) for disaster recovery and geo-local reads."
+    ]
+  }
+];
+
+const practicesContainer = document.getElementById('practices-container');
+practices.forEach((p, i) => {
+  const card = document.createElement('div');
+  card.className = 'practice-card';
+  card.innerHTML = `
+    <div class="practice-header" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.chevron').classList.toggle('open')">
+      <span>${p.title}</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="practice-body${i === 0 ? ' open' : ''}">
+      <ul>${p.items.map(item => `<li>${item}</li>`).join('')}</ul>
+    </div>
+  `;
+  if (i === 0) card.querySelector('.chevron').classList.add('open');
+  practicesContainer.appendChild(card);
+});
+
+// ===== Sequence Diagram =====
+const flows = {
+  search: {
+    actors: ['Client', 'Coord Node', 'Data Node 1', 'Data Node 2', 'Data Node 3'],
+    steps: [
+      { from: 0, to: 1, label: 'GET /index/_search', desc: 'Client sends search request with query DSL to the coordinating node via REST API.' },
+      { from: 1, to: 1, label: 'Parse & Route', desc: 'Coordinating node parses the query, identifies target shards using routing table from cluster state.' },
+      { from: 1, to: 2, label: 'Query (shard 0)', desc: 'Scatter phase: coordinating node sends query to primary/replica of shard 0 on Data Node 1.' },
+      { from: 1, to: 3, label: 'Query (shard 1)', desc: 'Scatter phase: simultaneously sends query to shard 1 on Data Node 2.' },
+      { from: 1, to: 4, label: 'Query (shard 2)', desc: 'Scatter phase: simultaneously sends query to shard 2 on Data Node 3.' },
+      { from: 2, to: 2, label: 'Lucene search', desc: 'Each data node executes Lucene query on its local shard: traverses inverted index, scores docs, applies filters from cache.' },
+      { from: 3, to: 3, label: 'Lucene search', desc: 'Parallel execution: Data Node 2 searches shard 1 using BM25 scoring and cached filters.' },
+      { from: 2, to: 1, label: 'Top-N doc IDs + scores', desc: 'Gather phase: Data Node 1 returns top-N document IDs and scores (not full docs yet).' },
+      { from: 3, to: 1, label: 'Top-N doc IDs + scores', desc: 'Gather phase: Data Node 2 returns its local top-N results.' },
+      { from: 4, to: 1, label: 'Top-N doc IDs + scores', desc: 'Gather phase: Data Node 3 returns its local top-N results.' },
+      { from: 1, to: 1, label: 'Merge & Sort', desc: 'Coordinating node merges all partial results, globally sorts by score, selects final top-N (the "reduce" step).' },
+      { from: 1, to: 2, label: 'Fetch docs', desc: 'Fetch phase: requests full _source for the final top-N documents from the nodes holding them.' },
+      { from: 2, to: 1, label: 'Document bodies', desc: 'Data nodes return the full document source (stored fields) for requested doc IDs.' },
+      { from: 1, to: 0, label: 'JSON response', desc: 'Coordinating node assembles final response with hits, aggregations, and metadata. Returns JSON to client.' }
+    ]
+  },
+  index: {
+    actors: ['Client', 'Coord Node', 'Primary Shard', 'Replica Shard', 'Translog'],
+    steps: [
+      { from: 0, to: 1, label: 'PUT /index/_doc/1', desc: 'Client sends an index request with a JSON document to the coordinating node.' },
+      { from: 1, to: 1, label: 'Route: hash(_id) % shards', desc: 'Coordinating node determines target shard using: shard = hash(routing_value) % number_of_primary_shards.' },
+      { from: 1, to: 2, label: 'Forward to primary', desc: 'Request forwarded to the node hosting the target primary shard.' },
+      { from: 2, to: 2, label: 'Validate & index', desc: 'Primary shard validates the document against mapping, runs ingest pipeline if configured, and adds to in-memory buffer.' },
+      { from: 2, to: 4, label: 'Write translog', desc: 'Document appended to the translog (write-ahead log) for durability. fsync based on durability setting.' },
+      { from: 2, to: 3, label: 'Replicate', desc: 'Primary forwards the indexed document to all replica shards in parallel (in-sync copies).' },
+      { from: 3, to: 3, label: 'Index + translog', desc: 'Replica indexes the document in its own Lucene instance and writes to its own translog.' },
+      { from: 3, to: 2, label: 'ACK', desc: 'Replica acknowledges successful indexing back to the primary shard.' },
+      { from: 2, to: 1, label: 'Success', desc: 'Primary confirms write completion to the coordinating node (all required replicas acknowledged).' },
+      { from: 1, to: 0, label: '201 Created', desc: 'Coordinating node returns success response with _id, _version, and result: "created".' },
+      { from: 2, to: 2, label: 'Refresh (1s)', desc: 'Every refresh_interval (default 1s), the in-memory buffer is written as a new Lucene segment — doc becomes searchable.' }
+    ]
+  },
+  bulk: {
+    actors: ['Client', 'Coord Node', 'Data Node 1', 'Data Node 2', 'ILM'],
+    steps: [
+      { from: 0, to: 1, label: 'POST /_bulk (5-15MB)', desc: 'Client sends a bulk request with hundreds/thousands of index/update/delete actions in NDJSON format.' },
+      { from: 1, to: 1, label: 'Parse & partition', desc: 'Coordinating node parses the bulk body, groups operations by target shard for efficient routing.' },
+      { from: 1, to: 2, label: 'Shard 0,1 ops', desc: 'Batch of operations for shards on Data Node 1 sent as a single internal request.' },
+      { from: 1, to: 3, label: 'Shard 2,3 ops', desc: 'Batch of operations for shards on Data Node 2 sent in parallel.' },
+      { from: 2, to: 2, label: 'Process batch', desc: 'Data Node 1 processes each operation: validate, index to buffer, write translog, replicate to replica shards.' },
+      { from: 3, to: 3, label: 'Process batch', desc: 'Data Node 2 processes its batch in parallel. Each operation succeeds or fails independently.' },
+      { from: 2, to: 1, label: 'Partial results', desc: 'Data Node 1 returns per-item status (some may fail while others succeed — bulk is not atomic).' },
+      { from: 3, to: 1, label: 'Partial results', desc: 'Data Node 2 returns its per-item results. Failed items include error details.' },
+      { from: 1, to: 0, label: 'Bulk response', desc: 'Coordinating node assembles response: items array with per-operation status. errors: true if any failed.' },
+      { from: 4, to: 2, label: 'Rollover check', desc: 'ILM periodically checks rollover conditions (max_size, max_docs, max_age). Triggers new index creation when met.' }
+    ]
+  }
+};
+
+let currentFlow = 'search';
+let currentStep = -1;
+let animInterval = null;
+let speed = 3;
+
+const seqContainer = document.getElementById('seqSvgContainer');
+const seqNarration = document.getElementById('seqNarration');
+
+function getSpeed() {
+  return [2000, 1500, 1000, 700, 400][speed - 1];
+}
+
+function renderSequenceDiagram() {
+  const flow = flows[currentFlow];
+  const actors = flow.actors;
+  const actorWidth = 140;
+  const totalWidth = actors.length * actorWidth + 80;
+  const stepHeight = 45;
+  const headerHeight = 60;
+  const totalHeight = headerHeight + flow.steps.length * stepHeight + 40;
+
+  let svg = `<svg width="100%" viewBox="0 0 ${totalWidth} ${totalHeight}" style="font-family:var(--font);">`;
+
+  // Actor headers
+  actors.forEach((actor, i) => {
+    const x = 40 + i * actorWidth + actorWidth / 2;
+    svg += `<rect x="${x - 55}" y="10" width="110" height="36" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>`;
+    svg += `<text x="${x}" y="33" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">${actor}</text>`;
+    // Lifeline
+    svg += `<line x1="${x}" y1="46" x2="${x}" y2="${totalHeight - 10}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4"/>`;
+  });
+
+  // Steps
+  flow.steps.forEach((step, i) => {
+    const y = headerHeight + i * stepHeight + 20;
+    const fromX = 40 + step.from * actorWidth + actorWidth / 2;
+    const toX = 40 + step.to * actorWidth + actorWidth / 2;
+    const isActive = i <= currentStep;
+    const isCurrent = i === currentStep;
+    const color = isActive ? (isCurrent ? '#f59e0b' : '#3b82f6') : '#cbd5e1';
+    const textColor = isActive ? '#1a202c' : '#94a3b8';
+    const strokeWidth = isCurrent ? 2.5 : 1.5;
+
+    if (step.from === step.to) {
+      // Self-call
+      const loopSize = 25;
+      svg += `<path d="M ${fromX} ${y} C ${fromX + loopSize} ${y}, ${fromX + loopSize} ${y + 15}, ${fromX} ${y + 15}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" marker-end="url(#seqArrow${isActive ? 'Active' : ''})"/>`;
+      svg += `<text x="${fromX + loopSize + 5}" y="${y + 10}" font-size="9" fill="${textColor}">${step.label}</text>`;
+    } else {
+      // Arrow
+      const dir = toX > fromX ? 1 : -1;
+      svg += `<line x1="${fromX + 5 * dir}" y1="${y}" x2="${toX - 8 * dir}" y2="${y}" stroke="${color}" stroke-width="${strokeWidth}" marker-end="url(#seqArrow${isActive ? 'Active' : ''})"/>`;
+      const labelX = (fromX + toX) / 2;
+      svg += `<text x="${labelX}" y="${y - 6}" text-anchor="middle" font-size="9" fill="${textColor}">${step.label}</text>`;
+    }
+
+    if (isCurrent) {
+      // Highlight current step
+      svg += `<rect x="10" y="${y - 12}" width="${totalWidth - 20}" height="${stepHeight - 5}" rx="4" fill="#fef3c7" opacity="0.3"/>`;
+    }
+  });
+
+  // Arrow markers
+  svg += `<defs>
+    <marker id="seqArrow" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0, 6 2.5, 0 5" fill="#cbd5e1"/></marker>
+    <marker id="seqArrowActive" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0, 6 2.5, 0 5" fill="#3b82f6"/></marker>
+  </defs>`;
+
+  svg += '</svg>';
+  seqContainer.innerHTML = svg;
+}
+
+function updateNarration() {
+  const flow = flows[currentFlow];
+  if (currentStep >= 0 && currentStep < flow.steps.length) {
+    seqNarration.textContent = `Step ${currentStep + 1}/${flow.steps.length}: ${flow.steps[currentStep].desc}`;
+  } else if (currentStep >= flow.steps.length) {
+    seqNarration.textContent = 'Flow complete. Press Reset to replay.';
+    stopAnimation();
+  } else {
+    seqNarration.textContent = 'Press Play to animate the request flow step by step.';
+  }
+}
+
+function stepForward() {
+  const flow = flows[currentFlow];
+  if (currentStep < flow.steps.length - 1) {
+    currentStep++;
+    renderSequenceDiagram();
+    updateNarration();
+  } else {
+    currentStep = flow.steps.length;
+    updateNarration();
+    stopAnimation();
+  }
+}
+
+function startAnimation() {
+  stopAnimation();
+  animInterval = setInterval(stepForward, getSpeed());
+  document.getElementById('seqPlay').classList.add('active');
+  document.getElementById('seqPause').classList.remove('active');
+}
+
+function stopAnimation() {
+  if (animInterval) { clearInterval(animInterval); animInterval = null; }
+  document.getElementById('seqPlay').classList.remove('active');
+  document.getElementById('seqPause').classList.add('active');
+}
+
+function resetAnimation() {
+  stopAnimation();
+  currentStep = -1;
+  renderSequenceDiagram();
+  updateNarration();
+}
+
+document.getElementById('seqPlay').addEventListener('click', startAnimation);
+document.getElementById('seqPause').addEventListener('click', stopAnimation);
+document.getElementById('seqStep').addEventListener('click', () => { stopAnimation(); stepForward(); });
+document.getElementById('seqReset').addEventListener('click', resetAnimation);
+document.getElementById('seqSpeed').addEventListener('input', e => {
+  speed = parseInt(e.target.value);
+  if (animInterval) { stopAnimation(); startAnimation(); }
+});
+document.getElementById('flowSelect').addEventListener('change', e => {
+  currentFlow = e.target.value;
+  resetAnimation();
+});
+
+// Initial render
+renderSequenceDiagram();
+updateNarration();
+</script>
+</body>
+</html>

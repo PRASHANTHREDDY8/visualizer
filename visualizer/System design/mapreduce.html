@@ -1,0 +1,1799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MapReduce — Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f3f6f9;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --accent: #2563eb;
+      --accent-light: #dbeafe;
+      --accent-dark: #1d4ed8;
+      --green: #059669;
+      --green-light: #d1fae5;
+      --amber: #d97706;
+      --amber-light: #fef3c7;
+      --red: #dc2626;
+      --red-light: #fee2e2;
+      --purple: #7c3aed;
+      --purple-light: #ede9fe;
+      --teal: #0891b2;
+      --teal-light: #cffafe;
+      --orange: #ea580c;
+      --orange-light: #ffedd5;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
+      --radius: 10px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* Navigation */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      overflow-x: auto;
+    }
+
+    .nav-brand {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--accent);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .nav a {
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .nav a:hover, .nav a.active {
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    /* Sections */
+    .section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+
+    .section-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+
+    .section-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #7c3aed 100%);
+      color: white;
+      padding: 4rem 2rem;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.02em;
+    }
+
+    .hero .subtitle {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      max-width: 700px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .hero .meta {
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+
+    .hero .badges {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 0.35rem 0.9rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .badge-blue { background: rgba(255,255,255,0.2); color: white; }
+    .badge-green { background: var(--green-light); color: var(--green); }
+    .badge-purple { background: var(--purple-light); color: var(--purple); }
+    .badge-amber { background: var(--amber-light); color: var(--amber); }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    /* Architecture Diagram */
+    .arch-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow-lg);
+      overflow-x: auto;
+    }
+
+    .arch-svg {
+      width: 100%;
+      min-width: 900px;
+      height: 550px;
+    }
+
+    .arch-svg text {
+      font-family: var(--font);
+    }
+
+    .arch-svg .component {
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+
+    .arch-svg .component:hover rect,
+    .arch-svg .component:hover ellipse,
+    .arch-svg .component:hover polygon,
+    .arch-svg .component:hover path {
+      filter: brightness(0.92);
+      stroke-width: 2.5;
+    }
+
+    .tooltip {
+      position: fixed;
+      background: var(--text);
+      color: white;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      max-width: 250px;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .tooltip.show { opacity: 1; }
+
+    /* Sequence diagram */
+    .sequence-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+    }
+
+    .sequence-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover { background: var(--accent-dark); }
+
+    .btn-secondary {
+      background: var(--surface-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover { background: var(--border); }
+
+    .btn-active {
+      background: var(--accent-light);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .speed-control input[type="range"] {
+      width: 80px;
+      accent-color: var(--accent);
+    }
+
+    .sequence-svg {
+      width: 100%;
+      min-width: 800px;
+      height: 400px;
+    }
+
+    .step-narration {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--accent-light);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: var(--accent-dark);
+      font-weight: 500;
+      min-height: 3rem;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Comparison table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr.chosen {
+      background: var(--accent-light);
+    }
+
+    .comparison-table tr:hover {
+      background: var(--surface-alt);
+    }
+
+    /* Pitfalls */
+    .pitfall-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--amber);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .pitfall-header {
+      padding: 1rem 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .pitfall-header:hover { background: var(--surface-alt); }
+
+    .pitfall-body {
+      padding: 0 1.25rem 1.25rem;
+      display: none;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .pitfall-body.open { display: block; }
+
+    .pitfall-body strong { color: var(--text); }
+
+    /* Best practices */
+    .practice-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--green);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .practice-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+      color: var(--green);
+    }
+
+    .practice-card ul {
+      padding-left: 1.25rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .practice-card li { margin-bottom: 0.4rem; }
+
+    /* Scaling section */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .metric-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Playground */
+    .playground-container {
+      background: var(--surface-alt);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+    }
+
+    .playground-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .control-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .control-group input, .control-group select {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background: var(--surface);
+    }
+
+    .control-group input:focus, .control-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+
+    .playground-viz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      min-height: 300px;
+    }
+
+    .playground-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+
+    .play-metric {
+      background: var(--surface-alt);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      text-align: center;
+    }
+
+    .play-metric-val {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .play-metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Presets */
+    .presets {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      padding: 0.35rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.8rem;
+      background: var(--surface);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .preset-btn:hover {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Flow tabs */
+    .flow-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-in {
+      animation: fadeIn 0.4s ease-out forwards;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .pulse { animation: pulse 2s infinite; }
+
+    /* Use cases */
+    .usecase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .usecase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+
+    .usecase-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .usecase-card .scale {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .anti {
+      border-left: 4px solid var(--red);
+    }
+
+    /* Worker visualization */
+    .workers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+      gap: 4px;
+      margin: 1rem 0;
+    }
+
+    .worker-cell {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 4px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: white;
+    }
+
+    .worker-idle { background: #e2e8f0; }
+    .worker-map { background: var(--accent); }
+    .worker-reduce { background: var(--purple); }
+    .worker-done { background: var(--green); }
+    .worker-failed { background: var(--red); }
+
+    /* Code block */
+    .code-block {
+      background: #1e293b;
+      border-radius: 8px;
+      padding: 1.25rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: #e2e8f0;
+      overflow-x: auto;
+      line-height: 1.7;
+    }
+
+    .code-block .kw { color: #c084fc; }
+    .code-block .fn { color: #60a5fa; }
+    .code-block .str { color: #34d399; }
+    .code-block .cmt { color: #64748b; }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      .section { padding: 2rem 1rem; }
+      .nav { padding: 0.75rem 1rem; gap: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="tooltip" id="tooltip"></div>
+
+<!-- Navigation -->
+<nav class="nav">
+  <span class="nav-brand">MapReduce</span>
+  <a href="#architecture">Architecture</a>
+  <a href="#components">Components</a>
+  <a href="#flow">Request Flow</a>
+  <a href="#comparisons">Comparisons</a>
+  <a href="#usecases">Use Cases</a>
+  <a href="#pitfalls">Pitfalls</a>
+  <a href="#practices">Best Practices</a>
+  <a href="#scaling">Scaling</a>
+  <a href="#playground">Playground</a>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>MapReduce</h1>
+  <p class="subtitle">Simplified Data Processing on Large Clusters — Google's programming model for processing and generating large data sets with a parallel, distributed algorithm on a cluster.</p>
+  <p class="meta">Jeffrey Dean & Sanjay Ghemawat, OSDI 2004</p>
+  <div class="badges">
+    <span class="badge badge-blue">Distributed Computing</span>
+    <span class="badge badge-blue">Batch Processing</span>
+    <span class="badge badge-blue">Fault Tolerant</span>
+    <span class="badge badge-blue">Horizontal Scaling</span>
+  </div>
+</div>
+
+<!-- Section 1: Architecture -->
+<div class="section" id="architecture">
+  <h2 class="section-title">Architecture Diagram</h2>
+  <p class="section-subtitle">The MapReduce execution overview — from user program to distributed workers</p>
+
+  <div class="arch-container">
+    <svg class="arch-svg" viewBox="0 0 1000 550">
+      <!-- Background groups -->
+      <rect x="10" y="10" width="200" height="120" rx="8" fill="#f0f9ff" stroke="#bae6fd" stroke-width="1.5" stroke-dasharray="4"/>
+      <text x="20" y="30" font-size="11" fill="#0369a1" font-weight="600">Client Layer</text>
+
+      <rect x="250" y="10" width="500" height="530" rx="8" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="1.5" stroke-dasharray="4"/>
+      <text x="260" y="30" font-size="11" fill="#6d28d9" font-weight="600">MapReduce Cluster</text>
+
+      <rect x="790" y="10" width="200" height="530" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" stroke-dasharray="4"/>
+      <text x="800" y="30" font-size="11" fill="#15803d" font-weight="600">Storage Layer (GFS)</text>
+
+      <!-- User Program -->
+      <g class="component" data-tooltip="User Program: Specifies Map and Reduce functions, input/output locations, and tuning parameters">
+        <rect x="30" y="50" width="160" height="60" rx="8" fill="#2563eb" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="110" y="77" text-anchor="middle" fill="white" font-size="12" font-weight="600">User Program</text>
+        <text x="110" y="95" text-anchor="middle" fill="#bfdbfe" font-size="10">map() + reduce()</text>
+      </g>
+
+      <!-- Master -->
+      <g class="component" data-tooltip="Master: Coordinates the entire MapReduce job. Assigns Map and Reduce tasks to workers, tracks progress, handles re-execution of failed tasks">
+        <rect x="400" y="50" width="180" height="70" rx="8" fill="#dc2626" stroke="#b91c1c" stroke-width="1.5"/>
+        <text x="490" y="80" text-anchor="middle" fill="white" font-size="13" font-weight="700">Master</text>
+        <text x="490" y="100" text-anchor="middle" fill="#fecaca" font-size="10">Task Scheduler + Monitor</text>
+      </g>
+
+      <!-- Map Workers -->
+      <g class="component" data-tooltip="Map Workers: Read input splits, apply the user's Map function, buffer intermediate key/value pairs in memory, periodically write to local disk in R partitions">
+        <rect x="280" y="170" width="140" height="55" rx="8" fill="#2563eb" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="350" y="195" text-anchor="middle" fill="white" font-size="11" font-weight="600">Map Worker 1</text>
+        <text x="350" y="212" text-anchor="middle" fill="#bfdbfe" font-size="9">Applies map()</text>
+      </g>
+      <g class="component" data-tooltip="Map Workers: Read input splits, apply the user's Map function, buffer intermediate key/value pairs in memory, periodically write to local disk in R partitions">
+        <rect x="280" y="240" width="140" height="55" rx="8" fill="#2563eb" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="350" y="265" text-anchor="middle" fill="white" font-size="11" font-weight="600">Map Worker 2</text>
+        <text x="350" y="282" text-anchor="middle" fill="#bfdbfe" font-size="9">Applies map()</text>
+      </g>
+      <g class="component" data-tooltip="Map Workers: Read input splits, apply the user's Map function, buffer intermediate key/value pairs in memory, periodically write to local disk in R partitions">
+        <rect x="280" y="310" width="140" height="55" rx="8" fill="#2563eb" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="350" y="335" text-anchor="middle" fill="white" font-size="11" font-weight="600">Map Worker 3</text>
+        <text x="350" y="352" text-anchor="middle" fill="#bfdbfe" font-size="9">Applies map()</text>
+      </g>
+
+      <!-- Intermediate (Local Disk) -->
+      <g class="component" data-tooltip="Intermediate Files: Buffered map output written to local disk, partitioned into R regions by the partitioning function (hash(key) mod R)">
+        <rect x="470" y="190" width="120" height="160" rx="4" fill="#fbbf24" stroke="#d97706" stroke-width="1.5"/>
+        <text x="530" y="215" text-anchor="middle" fill="#78350f" font-size="10" font-weight="600">Intermediate</text>
+        <text x="530" y="232" text-anchor="middle" fill="#78350f" font-size="10" font-weight="600">Files</text>
+        <text x="530" y="255" text-anchor="middle" fill="#92400e" font-size="9">(Local Disk)</text>
+        <line x1="480" y1="270" x2="580" y2="270" stroke="#d97706" stroke-width="0.5"/>
+        <text x="530" y="290" text-anchor="middle" fill="#92400e" font-size="9">Partition 1</text>
+        <text x="530" y="308" text-anchor="middle" fill="#92400e" font-size="9">Partition 2</text>
+        <text x="530" y="326" text-anchor="middle" fill="#92400e" font-size="9">Partition R</text>
+      </g>
+
+      <!-- Reduce Workers -->
+      <g class="component" data-tooltip="Reduce Workers: Read intermediate data via RPC from Map workers' local disks, sort by key, apply user's Reduce function, write output to GFS">
+        <rect x="640" y="180" width="120" height="55" rx="8" fill="#7c3aed" stroke="#6d28d9" stroke-width="1.5"/>
+        <text x="700" y="205" text-anchor="middle" fill="white" font-size="11" font-weight="600">Reduce W. 1</text>
+        <text x="700" y="222" text-anchor="middle" fill="#ddd6fe" font-size="9">sort + reduce()</text>
+      </g>
+      <g class="component" data-tooltip="Reduce Workers: Read intermediate data via RPC from Map workers' local disks, sort by key, apply user's Reduce function, write output to GFS">
+        <rect x="640" y="260" width="120" height="55" rx="8" fill="#7c3aed" stroke="#6d28d9" stroke-width="1.5"/>
+        <text x="700" y="285" text-anchor="middle" fill="white" font-size="11" font-weight="600">Reduce W. 2</text>
+        <text x="700" y="302" text-anchor="middle" fill="#ddd6fe" font-size="9">sort + reduce()</text>
+      </g>
+
+      <!-- GFS Input -->
+      <g class="component" data-tooltip="GFS Input: Input data stored as 64MB chunks in the Google File System, replicated 3x for reliability. Split into M pieces for parallel map processing.">
+        <ellipse cx="890" cy="120" rx="80" ry="35" fill="#059669" stroke="#047857" stroke-width="1.5"/>
+        <text x="890" y="117" text-anchor="middle" fill="white" font-size="11" font-weight="600">Input Files</text>
+        <text x="890" y="133" text-anchor="middle" fill="#d1fae5" font-size="9">(GFS, M splits)</text>
+      </g>
+
+      <!-- GFS Output -->
+      <g class="component" data-tooltip="GFS Output: R output files written by Reduce workers, one per reduce partition. Often used as input to another MapReduce job or a distributed sort.">
+        <ellipse cx="890" cy="290" rx="80" ry="35" fill="#059669" stroke="#047857" stroke-width="1.5"/>
+        <text x="890" y="287" text-anchor="middle" fill="white" font-size="11" font-weight="600">Output Files</text>
+        <text x="890" y="303" text-anchor="middle" fill="#d1fae5" font-size="9">(GFS, R files)</text>
+      </g>
+
+      <!-- Combiner (optional) -->
+      <g class="component" data-tooltip="Combiner: Optional local pre-aggregation on Map workers before sending to Reduce. Reduces network traffic for commutative/associative operations.">
+        <rect x="310" y="400" width="120" height="45" rx="6" fill="#0891b2" stroke="#0e7490" stroke-width="1.5" stroke-dasharray="4"/>
+        <text x="370" y="420" text-anchor="middle" fill="white" font-size="10" font-weight="600">Combiner</text>
+        <text x="370" y="436" text-anchor="middle" fill="#cffafe" font-size="9">(optional)</text>
+      </g>
+
+      <!-- Partitioner -->
+      <g class="component" data-tooltip="Partitioner: Determines which Reduce worker receives each intermediate key. Default is hash(key) mod R, but can be customized for better distribution.">
+        <rect x="470" y="400" width="120" height="45" rx="6" fill="#ea580c" stroke="#c2410c" stroke-width="1.5" stroke-dasharray="4"/>
+        <text x="530" y="420" text-anchor="middle" fill="white" font-size="10" font-weight="600">Partitioner</text>
+        <text x="530" y="436" text-anchor="middle" fill="#ffedd5" font-size="9">hash(key) mod R</text>
+      </g>
+
+      <!-- Backup Tasks -->
+      <g class="component" data-tooltip="Backup Tasks: Near completion, Master schedules backup executions of in-progress tasks. Whichever copy finishes first wins. Eliminates stragglers.">
+        <rect x="640" y="400" width="120" height="45" rx="6" fill="#64748b" stroke="#475569" stroke-width="1.5" stroke-dasharray="4"/>
+        <text x="700" y="420" text-anchor="middle" fill="white" font-size="10" font-weight="600">Backup Tasks</text>
+        <text x="700" y="436" text-anchor="middle" fill="#e2e8f0" font-size="9">(straggler mitigation)</text>
+      </g>
+
+      <!-- Arrows -->
+      <!-- User to Master -->
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6" fill="#64748b"/>
+        </marker>
+        <marker id="arrow-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6" fill="#2563eb"/>
+        </marker>
+        <marker id="arrow-purple" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6" fill="#7c3aed"/>
+        </marker>
+      </defs>
+
+      <path d="M190 80 L395 80" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <text x="290" y="72" text-anchor="middle" fill="#64748b" font-size="9">fork</text>
+
+      <!-- Master to Map Workers -->
+      <path d="M440 120 L370 170" fill="none" stroke="#dc2626" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M470 120 L370 240" fill="none" stroke="#dc2626" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M480 120 L370 310" fill="none" stroke="#dc2626" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="400" y="150" fill="#dc2626" font-size="8">assign map</text>
+
+      <!-- Master to Reduce Workers -->
+      <path d="M550 120 L670 180" fill="none" stroke="#dc2626" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M555 120 L670 260" fill="none" stroke="#dc2626" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="620" y="148" fill="#dc2626" font-size="8">assign reduce</text>
+
+      <!-- GFS to Map Workers -->
+      <path d="M810 120 L425 197" fill="none" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <text x="620" y="150" fill="#059669" font-size="8">read splits</text>
+
+      <!-- Map to Intermediate -->
+      <path d="M420 197 L468 220" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+      <path d="M420 267 L468 267" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+      <path d="M420 337 L468 320" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+      <text x="445" y="308" fill="#2563eb" font-size="8">write</text>
+
+      <!-- Intermediate to Reduce -->
+      <path d="M590 230 L638 207" fill="none" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
+      <path d="M590 290 L638 287" fill="none" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
+      <text x="615" y="250" fill="#7c3aed" font-size="8">RPC read</text>
+
+      <!-- Reduce to GFS Output -->
+      <path d="M760 207 L815 265" fill="none" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <path d="M760 287 L815 287" fill="none" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <text x="790" y="240" fill="#059669" font-size="8">write</text>
+
+      <!-- Legend -->
+      <g transform="translate(30, 470)">
+        <text x="0" y="0" font-size="10" fill="#64748b" font-weight="600">Legend:</text>
+        <rect x="0" y="10" width="16" height="12" rx="2" fill="#2563eb"/>
+        <text x="22" y="20" font-size="9" fill="#64748b">Map Workers</text>
+        <rect x="110" y="10" width="16" height="12" rx="2" fill="#7c3aed"/>
+        <text x="132" y="20" font-size="9" fill="#64748b">Reduce Workers</text>
+        <rect x="230" y="10" width="16" height="12" rx="2" fill="#dc2626"/>
+        <text x="252" y="20" font-size="9" fill="#64748b">Master</text>
+        <ellipse cx="338" cy="16" rx="12" ry="8" fill="#059669"/>
+        <text x="356" y="20" font-size="9" fill="#64748b">GFS Storage</text>
+        <rect x="440" y="10" width="16" height="12" rx="2" fill="#fbbf24" stroke="#d97706"/>
+        <text x="462" y="20" font-size="9" fill="#64748b">Intermediate Data</text>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<!-- Section 2: Components -->
+<div class="section" id="components">
+  <h2 class="section-title">Component Breakdown</h2>
+  <p class="section-subtitle">Deep dive into each component of the MapReduce framework</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3><svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" fill="#dc2626"/></svg> Master</h3>
+      <p><strong>Purpose:</strong> Single coordinator that assigns tasks, monitors progress, and handles failures.</p>
+      <p style="margin-top:0.5rem"><strong>Key data structures:</strong> For each map/reduce task, stores state (idle/in-progress/completed) and identity of the assigned worker. Propagates intermediate file locations from Map to Reduce tasks.</p>
+      <p style="margin-top:0.5rem"><strong>Scaling:</strong> Single point (not a bottleneck since it's coordination-only). Master failure aborts the job — clients retry.</p>
+    </div>
+
+    <div class="card">
+      <h3><svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" fill="#2563eb"/></svg> Map Workers</h3>
+      <p><strong>Purpose:</strong> Read assigned input splits, parse key/value pairs, invoke the user Map function, buffer intermediate output.</p>
+      <p style="margin-top:0.5rem"><strong>Tech:</strong> Intermediate pairs buffered in memory, periodically flushed to local disk partitioned into R regions via the partitioning function.</p>
+      <p style="margin-top:0.5rem"><strong>Scaling:</strong> M map tasks (typically 200,000 for large jobs). Tasks assigned to workers near their input data (locality optimization).</p>
+    </div>
+
+    <div class="card">
+      <h3><svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" fill="#7c3aed"/></svg> Reduce Workers</h3>
+      <p><strong>Purpose:</strong> Fetch intermediate data from Map workers via RPC, sort by key, apply user's Reduce function, write final output to GFS.</p>
+      <p style="margin-top:0.5rem"><strong>Tech:</strong> External sort when intermediate data exceeds memory. Each Reduce task produces one output file. Atomic rename ensures exactly-once semantics.</p>
+      <p style="margin-top:0.5rem"><strong>Scaling:</strong> R reduce tasks (typically 5,000). R is constrained by user since each produces one output file.</p>
+    </div>
+
+    <div class="card">
+      <h3><svg width="16" height="16" viewBox="0 0 16 16"><ellipse cx="8" cy="8" rx="6" ry="6" fill="#059669"/></svg> Google File System (GFS)</h3>
+      <p><strong>Purpose:</strong> Distributed storage for both input and output. Provides fault tolerance via 3x replication of 64MB chunks.</p>
+      <p style="margin-top:0.5rem"><strong>Key design:</strong> Master uses GFS chunk location info to schedule Map tasks on machines that contain replicas of input data — minimizing network transfer.</p>
+      <p style="margin-top:0.5rem"><strong>Scaling:</strong> Horizontal. Thousands of chunk servers. Bandwidth is the primary bottleneck MapReduce works around.</p>
+    </div>
+
+    <div class="card">
+      <h3><svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" fill="#ea580c"/></svg> Partitioner</h3>
+      <p><strong>Purpose:</strong> Determines which of the R Reduce tasks receives each intermediate key. Default: <code>hash(key) mod R</code>.</p>
+      <p style="margin-top:0.5rem"><strong>Customizable:</strong> Users can provide custom partitioners (e.g., <code>hash(hostname(URL)) mod R</code> to group URLs by host).</p>
+      <p style="margin-top:0.5rem"><strong>Trade-off:</strong> Poor partitioning → data skew → some reducers overloaded.</p>
+    </div>
+
+    <div class="card">
+      <h3><svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" fill="#0891b2"/></svg> Combiner</h3>
+      <p><strong>Purpose:</strong> Optional local pre-aggregation on Map workers before network shuffle. Same code as Reduce function for commutative/associative operations.</p>
+      <p style="margin-top:0.5rem"><strong>Example:</strong> Word count — each Map emits (word, 1). Combiner locally sums → (word, N). Dramatically reduces shuffle data.</p>
+      <p style="margin-top:0.5rem"><strong>Constraint:</strong> Only valid when Reduce function is commutative and associative.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Section 3: Request Flow -->
+<div class="section" id="flow">
+  <h2 class="section-title">Execution Flow</h2>
+  <p class="section-subtitle">Step-by-step animation of a MapReduce job execution</p>
+
+  <div class="sequence-container">
+    <div class="sequence-controls">
+      <button class="btn btn-primary" id="seq-play" onclick="toggleSequence()">&#9654; Play</button>
+      <button class="btn btn-secondary" onclick="stepSequence()">&#9654;| Step</button>
+      <button class="btn btn-secondary" onclick="resetSequence()">&#8634; Reset</button>
+      <div class="speed-control">
+        <span>Speed:</span>
+        <input type="range" min="1" max="5" value="2" id="seq-speed">
+        <span id="seq-speed-label">2x</span>
+      </div>
+      <div style="margin-left:auto; font-size:0.85rem; color:var(--text-muted)">
+        Step <span id="seq-step-num">0</span> / <span id="seq-total">9</span>
+      </div>
+    </div>
+
+    <svg class="sequence-svg" id="sequence-svg" viewBox="0 0 900 380">
+      <!-- Lifelines -->
+      <text x="80" y="20" text-anchor="middle" font-size="11" font-weight="600" fill="#1e293b">User Program</text>
+      <line x1="80" y1="30" x2="80" y2="370" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="4"/>
+
+      <text x="240" y="20" text-anchor="middle" font-size="11" font-weight="600" fill="#dc2626">Master</text>
+      <line x1="240" y1="30" x2="240" y2="370" stroke="#fecaca" stroke-width="1.5" stroke-dasharray="4"/>
+
+      <text x="420" y="20" text-anchor="middle" font-size="11" font-weight="600" fill="#2563eb">Map Workers</text>
+      <line x1="420" y1="30" x2="420" y2="370" stroke="#bfdbfe" stroke-width="1.5" stroke-dasharray="4"/>
+
+      <text x="600" y="20" text-anchor="middle" font-size="11" font-weight="600" fill="#fbbf24">Local Disk</text>
+      <line x1="600" y1="30" x2="600" y2="370" stroke="#fde68a" stroke-width="1.5" stroke-dasharray="4"/>
+
+      <text x="760" y="20" text-anchor="middle" font-size="11" font-weight="600" fill="#7c3aed">Reduce Workers</text>
+      <line x1="760" y1="30" x2="760" y2="370" stroke="#ddd6fe" stroke-width="1.5" stroke-dasharray="4"/>
+
+      <text x="880" y="20" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">GFS</text>
+      <line x1="880" y1="30" x2="880" y2="370" stroke="#bbf7d0" stroke-width="1.5" stroke-dasharray="4"/>
+
+      <!-- Steps will be drawn dynamically -->
+      <g id="seq-steps"></g>
+    </svg>
+
+    <div class="step-narration" id="seq-narration">Press Play or Step to begin the MapReduce execution walkthrough.</div>
+  </div>
+</div>
+
+<!-- Section 4: Comparisons -->
+<div class="section" id="comparisons">
+  <h2 class="section-title">Comparisons with Alternatives</h2>
+  <p class="section-subtitle">How MapReduce compares to other parallel data processing paradigms</p>
+
+  <div style="overflow-x:auto">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Approach</th>
+          <th>Key Idea</th>
+          <th>Pros</th>
+          <th>Cons</th>
+          <th>Best For</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="chosen">
+          <td><strong>MapReduce</strong> (chosen)</td>
+          <td>Two-phase: parallel Map then parallel Reduce, with shuffle in between</td>
+          <td>Simple programming model, automatic fault tolerance, scales to 1000s of machines</td>
+          <td>High latency (batch-only), no iteration support, disk I/O between stages</td>
+          <td>Large-scale ETL, indexing, log analysis</td>
+        </tr>
+        <tr>
+          <td><strong>MPI</strong> (Message Passing)</td>
+          <td>Explicit send/receive between processes, arbitrary communication</td>
+          <td>Maximum flexibility, low overhead, iterative algorithms</td>
+          <td>No automatic fault tolerance, complex programming, manual data distribution</td>
+          <td>Scientific computing, simulations, tightly-coupled algorithms</td>
+        </tr>
+        <tr>
+          <td><strong>Bulk Synchronous Parallel (BSP)</strong></td>
+          <td>Supersteps: compute → communicate → barrier synchronize</td>
+          <td>Predictable performance model, works for iterative graph algorithms</td>
+          <td>Barrier overhead, stragglers hold everyone back, less natural for ETL</td>
+          <td>Graph processing (Pregel/Giraph), iterative convergence</td>
+        </tr>
+        <tr>
+          <td><strong>Dataflow / DAG</strong> (Spark, Dryad)</td>
+          <td>Arbitrary DAG of operators, in-memory caching between stages</td>
+          <td>10-100x faster for iterative jobs, flexible pipelines, lazy evaluation</td>
+          <td>Higher memory requirements, more complex scheduling, came later</td>
+          <td>ML pipelines, interactive queries, iterative algorithms</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:2rem">
+    <h3 style="font-size:1.1rem; margin-bottom:1rem;">When to pick each</h3>
+    <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))">
+      <div class="card">
+        <h3 style="color:var(--accent)">Choose MapReduce when...</h3>
+        <ul style="padding-left:1rem; font-size:0.9rem; color:var(--text-muted)">
+          <li>Data is huge (TB+) and job is embarrassingly parallel</li>
+          <li>Fault tolerance matters more than latency</li>
+          <li>Programmers are not distributed systems experts</li>
+          <li>Job fits the Map→Shuffle→Reduce pattern</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--purple)">Choose Spark/DAG when...</h3>
+        <ul style="padding-left:1rem; font-size:0.9rem; color:var(--text-muted)">
+          <li>Iterative algorithms (ML training, PageRank)</li>
+          <li>Interactive exploration of data</li>
+          <li>Multi-stage pipelines that reuse intermediate data</li>
+          <li>Latency matters (seconds, not minutes)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--green)">Choose MPI when...</h3>
+        <ul style="padding-left:1rem; font-size:0.9rem; color:var(--text-muted)">
+          <li>Tightly-coupled computation (simulations)</li>
+          <li>Custom communication patterns needed</li>
+          <li>Hardware is reliable (HPC clusters)</li>
+          <li>Maximum performance per node required</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:2rem">
+    <h3 style="font-size:1.1rem; margin-bottom:0.75rem;">Real-world lineage</h3>
+    <p style="font-size:0.9rem; color:var(--text-muted)">
+      <strong>Google MapReduce</strong> (2004) → <strong>Hadoop</strong> (open-source clone, 2006) → <strong>Spark</strong> (in-memory DAG evolution, 2012) → <strong>Flink</strong> (streaming-first, 2014). The MapReduce paper's influence is foundational — every modern data processing framework builds on or reacts against its design choices.
+    </p>
+  </div>
+</div>
+
+<!-- Section 5: Use Cases & Pitfalls -->
+<div class="section" id="usecases">
+  <h2 class="section-title">Use Cases & Common Pitfalls</h2>
+  <p class="section-subtitle">Where MapReduce excels — and where it doesn't</p>
+
+  <h3 style="font-size:1.1rem; margin-bottom:1rem;">Primary Use Cases (from the paper)</h3>
+  <div class="usecase-grid">
+    <div class="usecase-card">
+      <h4>Web Indexing (Google's core use)</h4>
+      <div class="scale">Scale: Entire web corpus, 20+ TB per run</div>
+      <p style="font-size:0.85rem; color:var(--text-muted)">Building inverted indexes from crawled web pages. Map emits (word, docID) pairs; Reduce builds the posting list per word. Runs over thousands of machines.</p>
+    </div>
+    <div class="usecase-card">
+      <h4>Distributed Grep</h4>
+      <div class="scale">Scale: TB of logs, minutes</div>
+      <p style="font-size:0.85rem; color:var(--text-muted)">Map emits matching lines; Reduce is identity (just copies). Simplest MapReduce job — demonstrates the model's generality.</p>
+    </div>
+    <div class="usecase-card">
+      <h4>URL Access Frequency</h4>
+      <div class="scale">Scale: Billions of log entries</div>
+      <p style="font-size:0.85rem; color:var(--text-muted)">Map extracts (URL, 1) from request logs. Reduce sums per URL. Output: (URL, total_count). Classic word-count pattern applied to web analytics.</p>
+    </div>
+    <div class="usecase-card">
+      <h4>Reverse Web-Link Graph</h4>
+      <div class="scale">Scale: Web-scale, all hyperlinks</div>
+      <p style="font-size:0.85rem; color:var(--text-muted)">Map emits (target, source) for each link found in a source page. Reduce concatenates: (target, list(sources)). Used for PageRank computation.</p>
+    </div>
+    <div class="usecase-card">
+      <h4>Inverted Index</h4>
+      <div class="scale">Scale: Document collections, TB</div>
+      <p style="font-size:0.85rem; color:var(--text-muted)">Map parses documents, emitting (word, docID). Reduce sorts and emits (word, sorted list of docIDs). Foundation of search engines.</p>
+    </div>
+    <div class="usecase-card">
+      <h4>Distributed Sort</h4>
+      <div class="scale">Scale: 1TB sorted in 891 seconds (2004)</div>
+      <p style="font-size:0.85rem; color:var(--text-muted)">Map extracts sort key, emits (key, record). With ordered partitioning and R output files, the concatenation of outputs is globally sorted.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem; margin:2rem 0 1rem; color:var(--red);">Anti-Use Cases</h3>
+  <div class="usecase-grid">
+    <div class="usecase-card anti">
+      <h4>Real-time / Low-latency Queries</h4>
+      <p style="font-size:0.85rem; color:var(--text-muted)">MapReduce has minutes of startup overhead. For sub-second queries, use Dremel/BigQuery/Presto. MapReduce is batch, not interactive.</p>
+    </div>
+    <div class="usecase-card anti">
+      <h4>Iterative Algorithms (ML, PageRank)</h4>
+      <p style="font-size:0.85rem; color:var(--text-muted)">Each iteration writes to disk and re-reads. 10 iterations = 10x disk I/O. Use Spark (caches RDDs in memory) or Pregel (BSP for graphs).</p>
+    </div>
+    <div class="usecase-card anti">
+      <h4>Stream Processing</h4>
+      <p style="font-size:0.85rem; color:var(--text-muted)">MapReduce processes finite, bounded datasets. For continuous event streams, use Kafka Streams, Flink, or Storm.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Pitfalls -->
+<div class="section" id="pitfalls">
+  <h2 class="section-title">Common Pitfalls</h2>
+  <p class="section-subtitle">Mistakes engineers make when designing or using MapReduce systems</p>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span style="color:var(--amber)">&#9888;</span> Data Skew in the Reduce Phase
+    </div>
+    <div class="pitfall-body">
+      <p><strong>The mistake:</strong> Using a naive partitioner when key distribution is highly skewed (e.g., a single popular URL gets 90% of traffic).</p>
+      <p><strong>Why it happens:</strong> Default hash(key) mod R distributes evenly only if key frequencies are uniform.</p>
+      <p><strong>The consequence:</strong> One reducer processes orders of magnitude more data, becoming the bottleneck. Job runtime = slowest reducer.</p>
+      <p><strong>The fix:</strong> Use a Combiner to pre-aggregate. For extreme skew, use a custom partitioner that splits hot keys across multiple reducers, or add a random suffix to hot keys and do a two-pass reduce.</p>
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span style="color:var(--amber)">&#9888;</span> Too Many Small Map Tasks
+    </div>
+    <div class="pitfall-body">
+      <p><strong>The mistake:</strong> Splitting input into millions of tiny tasks when the per-task overhead dominates actual computation.</p>
+      <p><strong>Why it happens:</strong> More parallelism seems better, and the default split size might be too small for the dataset.</p>
+      <p><strong>The consequence:</strong> Master overhead grows (O(M*R) state), task scheduling dominates, and map startup costs overwhelm useful work.</p>
+      <p><strong>The fix:</strong> Ensure each map task processes at least 16-64MB of data. Google's rule of thumb: M should be tuned so each task processes ~64MB (one GFS chunk). Total tasks should be much larger than number of workers for good load balancing.</p>
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span style="color:var(--amber)">&#9888;</span> Not Using a Combiner
+    </div>
+    <div class="pitfall-body">
+      <p><strong>The mistake:</strong> Sending all intermediate data across the network when a local pre-aggregation would reduce shuffle volume by 10-100x.</p>
+      <p><strong>Why it happens:</strong> The Combiner is optional and easily overlooked. The job works without it — just slower.</p>
+      <p><strong>The consequence:</strong> Network bandwidth becomes the bottleneck. For word count on web pages, without a combiner you shuffle every single (word, 1) pair — billions of records.</p>
+      <p><strong>The fix:</strong> If your Reduce function is commutative and associative, always add a Combiner (often the same code as Reduce). Check: can you apply Reduce to partial results and get the same answer?</p>
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span style="color:var(--amber)">&#9888;</span> Non-Deterministic Map Functions
+    </div>
+    <div class="pitfall-body">
+      <p><strong>The mistake:</strong> Writing a Map function that produces different output on re-execution (using timestamps, random numbers, or external state).</p>
+      <p><strong>Why it happens:</strong> Developer doesn't consider that failed tasks are re-executed, possibly on different machines.</p>
+      <p><strong>The consequence:</strong> MapReduce relies on determinism for correctness. A failed Map task re-execution must produce identical output, since some Reduce tasks may have already read its original output.</p>
+      <p><strong>The fix:</strong> Make Map/Reduce functions pure — same input always produces same output. If you need randomness, seed it with the input key. Avoid side effects.</p>
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span style="color:var(--amber)">&#9888;</span> Ignoring Stragglers
+    </div>
+    <div class="pitfall-body">
+      <p><strong>The mistake:</strong> Not enabling backup tasks, or not understanding why the last 1% of tasks takes as long as the first 99%.</p>
+      <p><strong>Why it happens:</strong> On a cluster of 1000s of machines, some will be slow due to bad disks, contention, bugs, or hardware degradation. Without mitigation, job completion time = slowest machine.</p>
+      <p><strong>The consequence:</strong> The paper reports that disabling backup tasks increased a sort benchmark from 891s to 1283s — a 44% increase.</p>
+      <p><strong>The fix:</strong> When a MapReduce operation is close to completion, schedule backup executions of remaining in-progress tasks. Whichever copy finishes first wins. This is the paper's key insight for practical performance.</p>
+    </div>
+  </div>
+
+  <div class="pitfall-card">
+    <div class="pitfall-header" onclick="togglePitfall(this)">
+      <span style="color:var(--amber)">&#9888;</span> Using MapReduce for Everything
+    </div>
+    <div class="pitfall-body">
+      <p><strong>The mistake:</strong> Forcing iterative algorithms, graph traversals, or real-time pipelines into the MapReduce model because "that's what we use."</p>
+      <p><strong>Why it happens:</strong> MapReduce is a hammer, and everything looks like a nail when you have a reliable, well-understood tool.</p>
+      <p><strong>The consequence:</strong> Orders of magnitude performance loss. 10 iterations of PageRank in MapReduce = 10 full read/write cycles. In Spark with cached RDDs = one read + 10 in-memory passes.</p>
+      <p><strong>The fix:</strong> Evaluate if the problem is truly embarrassingly parallel and batch-oriented. For iterative: Spark. For streaming: Flink. For graphs: Pregel/GraphX. For interactive queries: Dremel/BigQuery.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Best Practices -->
+<div class="section" id="practices">
+  <h2 class="section-title">Best Practices</h2>
+  <p class="section-subtitle">Proven patterns for building effective MapReduce jobs</p>
+
+  <div class="practice-card">
+    <h4>Design Phase</h4>
+    <ul>
+      <li><strong>Think in key/value transformations:</strong> Identify what your map key is (the grouping criteria) and what the reduce aggregation is</li>
+      <li><strong>Choose M and R wisely:</strong> M ≈ total_input_size / 64MB. R = number of desired output files × desired parallelism. Rule: M, R >> number of workers</li>
+      <li><strong>Plan your partition function:</strong> Default hash mod R works for uniform distributions. Customize for skewed keys or when output ordering matters</li>
+      <li><strong>Minimize shuffle:</strong> Compute as much as possible in Map. Use Combiners. Emit the smallest possible intermediate values</li>
+    </ul>
+  </div>
+
+  <div class="practice-card">
+    <h4>Implementation</h4>
+    <ul>
+      <li><strong>Keep Map/Reduce functions pure and deterministic:</strong> No side effects, no external state reads, no randomness without input-seeded PRNGs</li>
+      <li><strong>Emit the right intermediate key:</strong> The key determines grouping. If you need (URL, count), the key is URL. If you need (host, URLs), the key is host</li>
+      <li><strong>Use custom input formats:</strong> Not everything is text lines. Structured records, binary formats, or database tables each need their own InputFormat</li>
+      <li><strong>Handle bad records gracefully:</strong> The paper describes a mode that skips records causing crashes after 2 failures — useful for dirty real-world data</li>
+    </ul>
+  </div>
+
+  <div class="practice-card">
+    <h4>Operations</h4>
+    <ul>
+      <li><strong>Monitor counters:</strong> MapReduce provides user-defined counters. Track records processed, bad records skipped, and bytes shuffled to detect anomalies</li>
+      <li><strong>Enable backup tasks:</strong> Always enable straggler mitigation for production jobs. The cost (few % more resources) is negligible vs. the latency improvement</li>
+      <li><strong>Use local execution for testing:</strong> The paper mentions a sequential local implementation for debugging Map/Reduce functions before cluster execution</li>
+      <li><strong>Locality-aware scheduling:</strong> Ensure GFS chunk replicas inform the Master's task assignment. Map tasks should read from local disk, not over the network</li>
+    </ul>
+  </div>
+
+  <div class="practice-card">
+    <h4>Scaling</h4>
+    <ul>
+      <li><strong>Data locality is king:</strong> Moving computation to data is 100x cheaper than moving data to computation. Schedule Map tasks where their input lives</li>
+      <li><strong>Pipeline multiple MapReduce jobs:</strong> Complex computations often need chaining — output of one job is input to the next. Use workflow managers to orchestrate</li>
+      <li><strong>Tune task granularity:</strong> More tasks = better load balancing and faster recovery. But too many = scheduling overhead. Sweet spot: each task takes 1-5 minutes</li>
+      <li><strong>Consider bandwidth:</strong> Google's 2004 cluster: network bisection bandwidth was the scarce resource. Minimize cross-rack traffic by maximizing locality and using Combiners</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Section 7: Scaling -->
+<div class="section" id="scaling">
+  <h2 class="section-title">Scaling & Performance</h2>
+  <p class="section-subtitle">Capacity estimation and performance characteristics from the paper</p>
+
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-value">1,800</div>
+      <div class="metric-label">Machines in test cluster</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">1 TB</div>
+      <div class="metric-label">Sorted in 891 seconds</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">64 MB</div>
+      <div class="metric-label">Per input split (GFS chunk)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">~100K</div>
+      <div class="metric-label">MapReduce jobs/day at Google (2004)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">M=15000</div>
+      <div class="metric-label">Map tasks (grep benchmark)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">30 GB/s</div>
+      <div class="metric-label">Peak input read rate (1800 workers)</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem; margin-bottom:1rem;">Fault Tolerance Model</h3>
+  <div class="card-grid" style="grid-template-columns: 1fr 1fr">
+    <div class="card">
+      <h3>Worker Failure</h3>
+      <p>Master pings every worker periodically. If no response in time, worker is marked failed. All its <strong>completed Map tasks</strong> are re-executed (output was on local disk, now inaccessible). Completed Reduce tasks don't need re-execution (output is on GFS). In-progress tasks on failed workers are reset to idle and rescheduled.</p>
+    </div>
+    <div class="card">
+      <h3>Master Failure</h3>
+      <p>The paper's implementation <strong>aborts the MapReduce job</strong> if the master dies. Clients can check and retry. Alternatively, master could checkpoint its data structures periodically for recovery — but single master failure is unlikely enough that the simple abort approach works in practice.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem; margin:2rem 0 1rem;">Performance Timeline (Sort 1TB)</h3>
+  <div class="card" style="padding:1.5rem">
+    <svg width="100%" height="80" viewBox="0 0 800 80">
+      <!-- Timeline bar -->
+      <rect x="50" y="30" width="700" height="20" rx="10" fill="#e2e8f0"/>
+      <!-- Map phase -->
+      <rect x="50" y="30" width="420" height="20" rx="10" fill="#2563eb"/>
+      <text x="260" y="44" text-anchor="middle" fill="white" font-size="10" font-weight="600">Map Phase (~600s)</text>
+      <!-- Shuffle (overlapping) -->
+      <rect x="300" y="55" width="300" height="8" rx="4" fill="#fbbf24"/>
+      <text x="450" y="75" text-anchor="middle" fill="#92400e" font-size="9">Shuffle (overlaps with Map)</text>
+      <!-- Reduce phase -->
+      <rect x="470" y="30" width="200" height="20" rx="0" fill="#7c3aed" style="border-radius:0 10px 10px 0"/>
+      <text x="570" y="44" text-anchor="middle" fill="white" font-size="10" font-weight="600">Reduce (~250s)</text>
+      <!-- Backup tasks -->
+      <rect x="670" y="30" width="80" height="20" rx="0" fill="#64748b" style="border-radius:0 10px 10px 0"/>
+      <text x="710" y="44" text-anchor="middle" fill="white" font-size="9">Backup</text>
+      <!-- Time markers -->
+      <text x="50" y="20" font-size="9" fill="#64748b">0s</text>
+      <text x="470" y="20" font-size="9" fill="#64748b">~600s</text>
+      <text x="735" y="20" font-size="9" fill="#64748b">891s</text>
+    </svg>
+  </div>
+</div>
+
+<!-- Section 8: Playground -->
+<div class="section" id="playground">
+  <h2 class="section-title">Interactive Playground</h2>
+  <p class="section-subtitle">Simulate a MapReduce job and observe worker behavior, scheduling, and performance</p>
+
+  <div class="playground-container">
+    <div class="presets">
+      <button class="preset-btn" onclick="loadPreset('small')">Small Job (10 tasks)</button>
+      <button class="preset-btn" onclick="loadPreset('medium')">Medium Job (50 tasks)</button>
+      <button class="preset-btn" onclick="loadPreset('large')">Large Job (200 tasks)</button>
+      <button class="preset-btn" onclick="loadPreset('skewed')">Skewed Data</button>
+      <button class="preset-btn" onclick="loadPreset('failures')">With Failures</button>
+    </div>
+
+    <div class="playground-controls">
+      <div class="control-group">
+        <label>Map Tasks (M)</label>
+        <input type="number" id="play-m" min="1" max="500" value="20">
+      </div>
+      <div class="control-group">
+        <label>Reduce Tasks (R)</label>
+        <input type="number" id="play-r" min="1" max="50" value="5">
+      </div>
+      <div class="control-group">
+        <label>Workers</label>
+        <input type="number" id="play-workers" min="1" max="100" value="8">
+      </div>
+      <div class="control-group">
+        <label>Failure Rate (%)</label>
+        <input type="number" id="play-fail" min="0" max="50" value="0">
+      </div>
+      <div class="control-group">
+        <label>Data Skew</label>
+        <select id="play-skew">
+          <option value="uniform">Uniform</option>
+          <option value="moderate">Moderate Skew</option>
+          <option value="extreme">Extreme Skew (Zipf)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Backup Tasks</label>
+        <select id="play-backup">
+          <option value="on">Enabled</option>
+          <option value="off">Disabled</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:0.75rem; margin-bottom:1.5rem; flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="runSimulation()">&#9654; Run Simulation</button>
+      <button class="btn btn-secondary" onclick="pauseSimulation()">&#10074;&#10074; Pause</button>
+      <button class="btn btn-secondary" onclick="resetSimulation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <span>Sim Speed:</span>
+        <input type="range" min="1" max="10" value="5" id="play-speed" oninput="updateSimSpeed(this.value)">
+        <span id="play-speed-label">5x</span>
+      </div>
+    </div>
+
+    <div class="playground-viz">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem">
+        <strong style="font-size:0.9rem;">Worker Status Grid</strong>
+        <div style="display:flex; gap:1rem; font-size:0.75rem; color:var(--text-muted)">
+          <span><span style="display:inline-block;width:10px;height:10px;background:#e2e8f0;border-radius:2px"></span> Idle</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--accent);border-radius:2px"></span> Map</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--purple);border-radius:2px"></span> Reduce</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--green);border-radius:2px"></span> Done</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--red);border-radius:2px"></span> Failed</span>
+        </div>
+      </div>
+      <div class="workers-grid" id="workers-grid"></div>
+
+      <div style="margin-top:1.5rem">
+        <strong style="font-size:0.9rem;">Task Progress</strong>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:0.75rem">
+          <div>
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.3rem">
+              <span>Map Tasks</span>
+              <span id="map-progress-text">0 / 20</span>
+            </div>
+            <div style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden">
+              <div id="map-progress-bar" style="height:100%; background:var(--accent); width:0%; transition:width 0.3s"></div>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.3rem">
+              <span>Reduce Tasks</span>
+              <span id="reduce-progress-text">0 / 5</span>
+            </div>
+            <div style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden">
+              <div id="reduce-progress-bar" style="height:100%; background:var(--purple); width:0%; transition:width 0.3s"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:1rem; padding:0.75rem; background:var(--surface-alt); border-radius:6px; font-size:0.85rem; color:var(--text-muted); min-height:2rem" id="sim-log">
+        Configure parameters and click "Run Simulation" to start.
+      </div>
+    </div>
+
+    <div class="playground-metrics" id="play-metrics">
+      <div class="play-metric">
+        <div class="play-metric-val" id="metric-time">0s</div>
+        <div class="play-metric-label">Total Time</div>
+      </div>
+      <div class="play-metric">
+        <div class="play-metric-val" id="metric-maps">0</div>
+        <div class="play-metric-label">Maps Completed</div>
+      </div>
+      <div class="play-metric">
+        <div class="play-metric-val" id="metric-reduces">0</div>
+        <div class="play-metric-label">Reduces Completed</div>
+      </div>
+      <div class="play-metric">
+        <div class="play-metric-val" id="metric-failures">0</div>
+        <div class="play-metric-label">Failures</div>
+      </div>
+      <div class="play-metric">
+        <div class="play-metric-val" id="metric-reruns">0</div>
+        <div class="play-metric-label">Re-executions</div>
+      </div>
+      <div class="play-metric">
+        <div class="play-metric-val" id="metric-throughput">0</div>
+        <div class="play-metric-label">MB/s (simulated)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MapReduce Code Example -->
+<div class="section">
+  <h2 class="section-title">The Programming Model</h2>
+  <p class="section-subtitle">Word Count — the canonical MapReduce example from the paper</p>
+  <div class="code-block">
+    <span class="cmt">// Map function: emits (word, "1") for each word in the document</span><br>
+    <span class="kw">map</span>(<span class="fn">String</span> key, <span class="fn">String</span> value):<br>
+    &nbsp;&nbsp;<span class="cmt">// key: document name, value: document contents</span><br>
+    &nbsp;&nbsp;<span class="kw">for each</span> word w <span class="kw">in</span> value:<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">EmitIntermediate</span>(w, <span class="str">"1"</span>)<br>
+    <br>
+    <span class="cmt">// Reduce function: sums all counts for a given word</span><br>
+    <span class="kw">reduce</span>(<span class="fn">String</span> key, <span class="fn">Iterator</span> values):<br>
+    &nbsp;&nbsp;<span class="cmt">// key: a word, values: list of counts</span><br>
+    &nbsp;&nbsp;<span class="kw">int</span> result = <span class="str">0</span><br>
+    &nbsp;&nbsp;<span class="kw">for each</span> v <span class="kw">in</span> values:<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;result += <span class="fn">ParseInt</span>(v)<br>
+    &nbsp;&nbsp;<span class="fn">Emit</span>(<span class="fn">AsString</span>(result))
+  </div>
+</div>
+
+<script>
+// Tooltip handling
+const tooltip = document.getElementById('tooltip');
+document.querySelectorAll('.component').forEach(comp => {
+  comp.addEventListener('mouseenter', e => {
+    const text = comp.getAttribute('data-tooltip');
+    if (!text) return;
+    tooltip.textContent = text;
+    tooltip.classList.add('show');
+  });
+  comp.addEventListener('mousemove', e => {
+    tooltip.style.left = (e.clientX + 12) + 'px';
+    tooltip.style.top = (e.clientY + 12) + 'px';
+  });
+  comp.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('show');
+  });
+});
+
+// Pitfall toggle
+function togglePitfall(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// Sequence animation
+const seqSteps = [
+  { y: 50, from: 80, to: 240, label: '1. User program forks, sends job to Master', color: '#64748b' },
+  { y: 85, from: 240, to: 420, label: '2. Master assigns M Map tasks to idle workers', color: '#dc2626' },
+  { y: 120, from: 880, to: 420, label: '3. Map workers read assigned input splits from GFS', color: '#059669' },
+  { y: 155, from: 420, to: 420, label: '4. Map workers apply user Map function, buffer output in memory', color: '#2563eb', self: true },
+  { y: 190, from: 420, to: 600, label: '5. Buffered pairs written to local disk, partitioned into R regions', color: '#2563eb' },
+  { y: 225, from: 420, to: 240, label: '6. Map workers notify Master of intermediate file locations', color: '#2563eb' },
+  { y: 260, from: 240, to: 760, label: '7. Master forwards locations to Reduce workers, assigns tasks', color: '#dc2626' },
+  { y: 295, from: 760, to: 600, label: '8. Reduce workers RPC-read intermediate data, sort by key, apply Reduce', color: '#7c3aed' },
+  { y: 330, from: 760, to: 880, label: '9. Reduce workers write final output to GFS; Master notifies user', color: '#059669' },
+];
+
+let seqCurrent = 0;
+let seqPlaying = false;
+let seqInterval = null;
+
+function renderSeqStep(idx) {
+  const stepsG = document.getElementById('seq-steps');
+  const step = seqSteps[idx];
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.style.opacity = '0';
+  g.style.transition = 'opacity 0.3s';
+
+  if (step.self) {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', step.from);
+    circle.setAttribute('cy', step.y);
+    circle.setAttribute('r', '8');
+    circle.setAttribute('fill', 'none');
+    circle.setAttribute('stroke', step.color);
+    circle.setAttribute('stroke-width', '2');
+    g.appendChild(circle);
+  } else {
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', step.from);
+    line.setAttribute('y1', step.y);
+    line.setAttribute('x2', step.to);
+    line.setAttribute('y2', step.y);
+    line.setAttribute('stroke', step.color);
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('marker-end', 'url(#arrow)');
+    g.appendChild(line);
+  }
+
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.setAttribute('x', Math.min(step.from, step.to) + Math.abs(step.to - step.from) / 2);
+  text.setAttribute('y', step.y - 8);
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('font-size', '9');
+  text.setAttribute('fill', step.color);
+  text.textContent = `Step ${idx + 1}`;
+  g.appendChild(text);
+
+  stepsG.appendChild(g);
+  requestAnimationFrame(() => { g.style.opacity = '1'; });
+
+  document.getElementById('seq-narration').textContent = step.label;
+  document.getElementById('seq-step-num').textContent = idx + 1;
+}
+
+function stepSequence() {
+  if (seqCurrent >= seqSteps.length) return;
+  renderSeqStep(seqCurrent);
+  seqCurrent++;
+}
+
+function toggleSequence() {
+  const btn = document.getElementById('seq-play');
+  if (seqPlaying) {
+    clearInterval(seqInterval);
+    seqPlaying = false;
+    btn.innerHTML = '&#9654; Play';
+  } else {
+    seqPlaying = true;
+    btn.innerHTML = '&#10074;&#10074; Pause';
+    const speed = document.getElementById('seq-speed').value;
+    seqInterval = setInterval(() => {
+      if (seqCurrent >= seqSteps.length) {
+        clearInterval(seqInterval);
+        seqPlaying = false;
+        btn.innerHTML = '&#9654; Play';
+        return;
+      }
+      stepSequence();
+    }, 2000 / speed);
+  }
+}
+
+function resetSequence() {
+  clearInterval(seqInterval);
+  seqPlaying = false;
+  document.getElementById('seq-play').innerHTML = '&#9654; Play';
+  document.getElementById('seq-steps').innerHTML = '';
+  document.getElementById('seq-narration').textContent = 'Press Play or Step to begin the MapReduce execution walkthrough.';
+  document.getElementById('seq-step-num').textContent = '0';
+  seqCurrent = 0;
+}
+
+document.getElementById('seq-speed').addEventListener('input', function() {
+  document.getElementById('seq-speed-label').textContent = this.value + 'x';
+  if (seqPlaying) {
+    clearInterval(seqInterval);
+    seqInterval = setInterval(() => {
+      if (seqCurrent >= seqSteps.length) {
+        clearInterval(seqInterval);
+        seqPlaying = false;
+        document.getElementById('seq-play').innerHTML = '&#9654; Play';
+        return;
+      }
+      stepSequence();
+    }, 2000 / this.value);
+  }
+});
+
+document.getElementById('seq-total').textContent = seqSteps.length;
+
+// Playground simulation
+let simInterval = null;
+let simRunning = false;
+let simTime = 0;
+let simSpeed = 5;
+
+function updateSimSpeed(val) {
+  simSpeed = parseInt(val);
+  document.getElementById('play-speed-label').textContent = val + 'x';
+}
+
+function loadPreset(name) {
+  const presets = {
+    small: { m: 10, r: 3, workers: 4, fail: 0, skew: 'uniform', backup: 'on' },
+    medium: { m: 50, r: 8, workers: 12, fail: 5, skew: 'uniform', backup: 'on' },
+    large: { m: 200, r: 20, workers: 40, fail: 3, skew: 'uniform', backup: 'on' },
+    skewed: { m: 50, r: 8, workers: 12, fail: 0, skew: 'extreme', backup: 'on' },
+    failures: { m: 30, r: 5, workers: 10, fail: 20, skew: 'uniform', backup: 'on' },
+  };
+  const p = presets[name];
+  document.getElementById('play-m').value = p.m;
+  document.getElementById('play-r').value = p.r;
+  document.getElementById('play-workers').value = p.workers;
+  document.getElementById('play-fail').value = p.fail;
+  document.getElementById('play-skew').value = p.skew;
+  document.getElementById('play-backup').value = p.backup;
+  resetSimulation();
+}
+
+let simState = null;
+
+function initSimState() {
+  const M = parseInt(document.getElementById('play-m').value);
+  const R = parseInt(document.getElementById('play-r').value);
+  const W = parseInt(document.getElementById('play-workers').value);
+  const failRate = parseInt(document.getElementById('play-fail').value) / 100;
+  const skew = document.getElementById('play-skew').value;
+  const backup = document.getElementById('play-backup').value === 'on';
+
+  // Generate task durations based on skew
+  const mapDurations = [];
+  for (let i = 0; i < M; i++) {
+    let dur = 3 + Math.random() * 4; // 3-7 time units
+    if (skew === 'moderate') dur *= (1 + Math.random());
+    if (skew === 'extreme') dur *= (1 + Math.pow(Math.random(), 0.3) * 5);
+    mapDurations.push(Math.round(dur));
+  }
+
+  const reduceDurations = [];
+  for (let i = 0; i < R; i++) {
+    let dur = 5 + Math.random() * 6;
+    if (skew === 'moderate') dur *= (1 + Math.random() * 0.5);
+    if (skew === 'extreme') dur *= (1 + Math.pow(Math.random(), 0.3) * 3);
+    reduceDurations.push(Math.round(dur));
+  }
+
+  return {
+    M, R, W, failRate, backup, skew,
+    mapDurations, reduceDurations,
+    mapCompleted: 0, reduceCompleted: 0,
+    mapTasks: mapDurations.map((d, i) => ({ id: i, duration: d, remaining: d, status: 'pending', worker: -1 })),
+    reduceTasks: reduceDurations.map((d, i) => ({ id: i, duration: d, remaining: d, status: 'pending', worker: -1 })),
+    workers: Array.from({ length: W }, (_, i) => ({ id: i, status: 'idle', task: null, type: null })),
+    failures: 0, reruns: 0, time: 0,
+    phase: 'map', // map, reduce, done
+    logs: [],
+  };
+}
+
+function renderWorkerGrid() {
+  const grid = document.getElementById('workers-grid');
+  grid.innerHTML = '';
+  simState.workers.forEach(w => {
+    const cell = document.createElement('div');
+    cell.className = `worker-cell worker-${w.status}`;
+    cell.title = `Worker ${w.id}: ${w.status}${w.task !== null ? ` (task ${w.task})` : ''}`;
+    if (w.status !== 'idle') cell.textContent = w.id;
+    grid.appendChild(cell);
+  });
+}
+
+function updateMetrics() {
+  document.getElementById('metric-time').textContent = simState.time + 's';
+  document.getElementById('metric-maps').textContent = simState.mapCompleted;
+  document.getElementById('metric-reduces').textContent = simState.reduceCompleted;
+  document.getElementById('metric-failures').textContent = simState.failures;
+  document.getElementById('metric-reruns').textContent = simState.reruns;
+  const throughput = simState.time > 0 ? Math.round((simState.mapCompleted * 64) / simState.time) : 0;
+  document.getElementById('metric-throughput').textContent = throughput;
+
+  document.getElementById('map-progress-text').textContent = `${simState.mapCompleted} / ${simState.M}`;
+  document.getElementById('map-progress-bar').style.width = `${(simState.mapCompleted / simState.M) * 100}%`;
+  document.getElementById('reduce-progress-text').textContent = `${simState.reduceCompleted} / ${simState.R}`;
+  document.getElementById('reduce-progress-bar').style.width = `${(simState.reduceCompleted / simState.R) * 100}%`;
+}
+
+function addLog(msg) {
+  simState.logs.push(`[t=${simState.time}] ${msg}`);
+  const logEl = document.getElementById('sim-log');
+  logEl.textContent = simState.logs.slice(-3).join('\n');
+}
+
+function simTick() {
+  simState.time++;
+
+  // Process current workers
+  simState.workers.forEach(w => {
+    if (w.status === 'map' || w.status === 'reduce') {
+      const tasks = w.status === 'map' ? simState.mapTasks : simState.reduceTasks;
+      const task = tasks[w.task];
+
+      // Check for failure
+      if (Math.random() < simState.failRate / 10) {
+        w.status = 'failed';
+        task.status = 'pending';
+        task.remaining = task.duration;
+        task.worker = -1;
+        simState.failures++;
+        simState.reruns++;
+        addLog(`Worker ${w.id} FAILED on ${w.type} task ${w.task} — rescheduling`);
+        setTimeout(() => { w.status = 'idle'; w.task = null; w.type = null; }, 500);
+        return;
+      }
+
+      task.remaining--;
+      if (task.remaining <= 0) {
+        task.status = 'completed';
+        if (w.status === 'map') simState.mapCompleted++;
+        else simState.reduceCompleted++;
+        w.status = 'done';
+        setTimeout(() => { w.status = 'idle'; w.task = null; w.type = null; }, 300);
+      }
+    }
+  });
+
+  // Check phase transition
+  if (simState.phase === 'map' && simState.mapCompleted >= simState.M) {
+    simState.phase = 'reduce';
+    addLog('All Map tasks complete — starting Reduce phase');
+  }
+  if (simState.phase === 'reduce' && simState.reduceCompleted >= simState.R) {
+    simState.phase = 'done';
+    addLog(`Job COMPLETE in ${simState.time}s. ${simState.failures} failures, ${simState.reruns} re-executions.`);
+    pauseSimulation();
+  }
+
+  // Assign tasks to idle workers
+  simState.workers.forEach(w => {
+    if (w.status !== 'idle') return;
+
+    if (simState.phase === 'map') {
+      const task = simState.mapTasks.find(t => t.status === 'pending');
+      if (task) {
+        task.status = 'running';
+        task.worker = w.id;
+        w.status = 'map';
+        w.task = task.id;
+        w.type = 'map';
+      } else if (simState.backup && simState.mapCompleted >= simState.M * 0.9) {
+        // Backup task: re-run a slow in-progress task
+        const slow = simState.mapTasks.find(t => t.status === 'running' && t.remaining > 2);
+        if (slow) {
+          addLog(`Backup task started for slow Map task ${slow.id}`);
+          simState.reruns++;
+        }
+      }
+    } else if (simState.phase === 'reduce') {
+      const task = simState.reduceTasks.find(t => t.status === 'pending');
+      if (task) {
+        task.status = 'running';
+        task.worker = w.id;
+        w.status = 'reduce';
+        w.task = task.id;
+        w.type = 'reduce';
+      }
+    }
+  });
+
+  renderWorkerGrid();
+  updateMetrics();
+}
+
+function runSimulation() {
+  if (simRunning) return;
+  if (!simState || simState.phase === 'done') {
+    simState = initSimState();
+    renderWorkerGrid();
+    updateMetrics();
+    addLog(`Starting MapReduce: M=${simState.M}, R=${simState.R}, Workers=${simState.W}, Failure=${Math.round(simState.failRate*100)}%`);
+  }
+  simRunning = true;
+  simInterval = setInterval(() => {
+    simTick();
+  }, 500 / simSpeed);
+}
+
+function pauseSimulation() {
+  clearInterval(simInterval);
+  simRunning = false;
+}
+
+function resetSimulation() {
+  pauseSimulation();
+  simState = initSimState();
+  simTime = 0;
+  renderWorkerGrid();
+  updateMetrics();
+  document.getElementById('sim-log').textContent = 'Configure parameters and click "Run Simulation" to start.';
+}
+
+// Initialize
+resetSimulation();
+
+// Nav highlight
+const sections = document.querySelectorAll('.section[id]');
+const navLinks = document.querySelectorAll('.nav a');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 100) {
+      current = s.id;
+    }
+  });
+  navLinks.forEach(link => {
+    link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+  });
+});
+</script>
+</body>
+</html>

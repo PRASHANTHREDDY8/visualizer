@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS EBS — Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --accent: #f97316;
+      --accent-light: #fff7ed;
+      --blue: #3b82f6;
+      --blue-light: #eff6ff;
+      --green: #10b981;
+      --green-light: #ecfdf5;
+      --purple: #8b5cf6;
+      --purple-light: #f5f3ff;
+      --red: #ef4444;
+      --red-light: #fef2f2;
+      --amber: #f59e0b;
+      --amber-light: #fffbeb;
+      --cyan: #06b6d4;
+      --cyan-light: #ecfeff;
+      --nav-height: 56px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      height: var(--nav-height);
+      display: flex;
+      align-items: center;
+      padding: 0 2rem;
+      gap: 0.25rem;
+      overflow-x: auto;
+    }
+
+    nav .logo {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--accent);
+      margin-right: 1.5rem;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    nav .logo svg { width: 22px; height: 22px; }
+
+    nav a {
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    nav a:hover, nav a.active {
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    section {
+      margin-bottom: 4rem;
+      scroll-margin-top: calc(var(--nav-height) + 1rem);
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--accent), #ea580c);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    h2 .badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 99px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: var(--text);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+    }
+
+    .pill-blue { background: var(--blue-light); color: var(--blue); }
+    .pill-green { background: var(--green-light); color: var(--green); }
+    .pill-purple { background: var(--purple-light); color: var(--purple); }
+    .pill-red { background: var(--red-light); color: var(--red); }
+    .pill-amber { background: var(--amber-light); color: var(--amber); }
+    .pill-cyan { background: var(--cyan-light); color: var(--cyan); }
+
+    .arch-diagram {
+      width: 100%;
+      min-height: 420px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .arch-diagram svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .component-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+
+    .comp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .comp-card:hover {
+      border-color: var(--accent);
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    .comp-card .comp-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .comp-card .comp-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .comp-card .comp-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .comp-card .comp-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .comp-card .comp-tech {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+
+    .sequence-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+
+    .seq-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .seq-controls button {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .seq-controls button:hover { border-color: var(--accent); color: var(--accent); }
+    .seq-controls button.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .seq-controls select {
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .seq-narration {
+      background: var(--surface-alt);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+      min-height: 2.5rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr:last-child td { border-bottom: none; }
+    .comparison-table tr.chosen { background: var(--accent-light); }
+
+    .pitfall-card {
+      background: var(--surface);
+      border: 1px solid #fde68a;
+      border-left: 4px solid var(--amber);
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      overflow: hidden;
+    }
+
+    .pitfall-header {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .pitfall-header::before { content: ""; }
+    .pitfall-header .chevron { margin-left: auto; transition: transform 0.2s; }
+    .pitfall-card.open .pitfall-header .chevron { transform: rotate(90deg); }
+
+    .pitfall-body {
+      padding: 0 1rem 1rem;
+      display: none;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .pitfall-card.open .pitfall-body { display: block; }
+    .pitfall-body strong { color: var(--text); }
+
+    .best-practice {
+      background: var(--surface);
+      border: 1px solid #a7f3d0;
+      border-left: 4px solid var(--green);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.85rem;
+    }
+
+    .best-practice .bp-title {
+      font-weight: 600;
+      color: var(--green);
+      margin-bottom: 0.25rem;
+    }
+
+    .scaling-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .scaling-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .playground {
+      background: var(--surface-alt);
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+    }
+
+    .playground-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .control-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .control-group select,
+    .control-group input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      font-size: 0.9rem;
+    }
+
+    .control-group input[type="range"] {
+      padding: 0;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--border);
+      border-radius: 3px;
+      margin-top: 0.5rem;
+    }
+
+    .control-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+    }
+
+    .result-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .result-card .result-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .result-card .result-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .presets {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .presets button {
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .presets button:hover { border-color: var(--accent); color: var(--accent); }
+
+    .volume-comparison {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .vol-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      text-align: center;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .vol-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-light);
+    }
+
+    .vol-card .vol-name {
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .vol-card .vol-type {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .vol-card .vol-stat {
+      margin-bottom: 0.5rem;
+    }
+
+    .vol-card .vol-stat-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .vol-card .vol-stat-value {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 120px;
+      padding: 0.5rem 0;
+    }
+
+    .bar-chart .bar {
+      flex: 1;
+      border-radius: 4px 4px 0 0;
+      position: relative;
+      transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      min-width: 20px;
+    }
+
+    .bar-chart .bar-label {
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.65rem;
+      white-space: nowrap;
+      color: var(--text-muted);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0;
+    }
+
+    .tabs button {
+      padding: 0.6rem 1.2rem;
+      border: none;
+      background: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.15s;
+    }
+
+    .tabs button:hover { color: var(--text); }
+    .tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .usecase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+
+    .usecase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+
+    .usecase-card .uc-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .usecase-card .uc-title {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .usecase-card .uc-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .anti-usecase {
+      border-color: #fecaca;
+      background: var(--red-light);
+    }
+
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      h1 { font-size: 1.75rem; }
+      nav { padding: 0 1rem; }
+      .playground-controls { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <span class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <path d="M3 9h18M9 3v18"/>
+      </svg>
+      AWS EBS
+    </span>
+    <a href="#architecture">Architecture</a>
+    <a href="#volume-types">Volume Types</a>
+    <a href="#request-flow">Request Flow</a>
+    <a href="#comparisons">Comparisons</a>
+    <a href="#use-cases">Use Cases</a>
+    <a href="#best-practices">Best Practices</a>
+    <a href="#scaling">Scaling</a>
+    <a href="#playground">Playground</a>
+  </nav>
+
+  <div class="container">
+    <header style="margin-bottom: 3rem; padding-top: 1rem;">
+      <h1>AWS Elastic Block Store (EBS)</h1>
+      <p class="subtitle">High-performance block storage for EC2 instances — persistent, replicated, and snapshottable.</p>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <span class="pill pill-blue">Block Storage</span>
+        <span class="pill pill-green">AZ-Replicated</span>
+        <span class="pill pill-purple">Snapshots to S3</span>
+        <span class="pill pill-amber">99.999% Availability (io2)</span>
+      </div>
+    </header>
+
+    <!-- Section 1: Architecture -->
+    <section id="architecture">
+      <h2>Architecture Diagram</h2>
+      <div class="card">
+        <svg viewBox="0 0 900 460" class="arch-diagram" id="archSvg">
+          <!-- Background groups -->
+          <defs>
+            <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/>
+            </marker>
+            <marker id="arrowOrange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#f97316"/>
+            </marker>
+          </defs>
+
+          <!-- AZ Boundary -->
+          <rect x="20" y="20" width="860" height="420" rx="12" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="6,4"/>
+          <text x="40" y="48" font-size="12" fill="#94a3b8" font-weight="600">Availability Zone (us-east-1a)</text>
+
+          <!-- EC2 Instance -->
+          <g class="arch-node" data-component="ec2" style="cursor:pointer">
+            <rect x="60" y="80" width="180" height="100" rx="10" fill="#fff" stroke="#3b82f6" stroke-width="2"/>
+            <text x="150" y="115" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">EC2 Instance</text>
+            <text x="150" y="135" text-anchor="middle" font-size="10" fill="#64748b">Application / OS</text>
+            <rect x="85" y="148" width="50" height="22" rx="4" fill="#eff6ff" stroke="#3b82f6" stroke-width="1"/>
+            <text x="110" y="163" text-anchor="middle" font-size="9" fill="#3b82f6">NVMe</text>
+            <rect x="145" y="148" width="70" height="22" rx="4" fill="#eff6ff" stroke="#3b82f6" stroke-width="1"/>
+            <text x="180" y="163" text-anchor="middle" font-size="9" fill="#3b82f6">Block Dev</text>
+          </g>
+
+          <!-- EBS Volume -->
+          <g class="arch-node" data-component="ebs-vol" style="cursor:pointer">
+            <rect x="350" y="80" width="200" height="100" rx="10" fill="#fff" stroke="#f97316" stroke-width="2"/>
+            <text x="450" y="115" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">EBS Volume</text>
+            <text x="450" y="135" text-anchor="middle" font-size="10" fill="#64748b">Replicated Block Storage</text>
+            <rect x="370" y="148" width="60" height="22" rx="4" fill="#fff7ed" stroke="#f97316" stroke-width="1"/>
+            <text x="400" y="163" text-anchor="middle" font-size="9" fill="#f97316">gp3</text>
+            <rect x="440" y="148" width="45" height="22" rx="4" fill="#fff7ed" stroke="#f97316" stroke-width="1"/>
+            <text x="462" y="163" text-anchor="middle" font-size="9" fill="#f97316">io2</text>
+            <rect x="495" y="148" width="40" height="22" rx="4" fill="#fff7ed" stroke="#f97316" stroke-width="1"/>
+            <text x="515" y="163" text-anchor="middle" font-size="9" fill="#f97316">st1</text>
+          </g>
+
+          <!-- Connection: EC2 to EBS -->
+          <line x1="240" y1="130" x2="350" y2="130" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+          <text x="280" y="120" font-size="9" fill="#64748b">Network I/O</text>
+
+          <!-- EBS Backend Storage -->
+          <g class="arch-node" data-component="backend" style="cursor:pointer">
+            <ellipse cx="450" cy="280" rx="100" ry="40" fill="#fff" stroke="#8b5cf6" stroke-width="2"/>
+            <text x="450" y="275" text-anchor="middle" font-size="11" font-weight="600" fill="#1e293b">EBS Backend</text>
+            <text x="450" y="295" text-anchor="middle" font-size="9" fill="#64748b">Multi-replica SSD/HDD</text>
+          </g>
+
+          <!-- Connection: Volume to Backend -->
+          <line x1="450" y1="180" x2="450" y2="240" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowhead)"/>
+          <text x="460" y="215" font-size="9" fill="#8b5cf6">Replication</text>
+
+          <!-- S3 for Snapshots -->
+          <g class="arch-node" data-component="s3" style="cursor:pointer">
+            <path d="M680,250 Q680,230 720,230 Q760,230 760,250 L760,310 Q760,330 720,330 Q680,330 680,310 Z" fill="#fff" stroke="#10b981" stroke-width="2"/>
+            <text x="720" y="275" text-anchor="middle" font-size="11" font-weight="600" fill="#1e293b">Amazon S3</text>
+            <text x="720" y="293" text-anchor="middle" font-size="9" fill="#64748b">Snapshots</text>
+          </g>
+
+          <!-- Connection: Backend to S3 -->
+          <line x1="550" y1="280" x2="680" y2="280" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowhead)"/>
+          <text x="600" y="270" font-size="9" fill="#10b981">Snapshot</text>
+
+          <!-- EBS Controller -->
+          <g class="arch-node" data-component="controller" style="cursor:pointer">
+            <rect x="620" y="80" width="180" height="80" rx="10" fill="#fff" stroke="#06b6d4" stroke-width="2"/>
+            <text x="710" y="115" text-anchor="middle" font-size="11" font-weight="600" fill="#1e293b">EBS Control Plane</text>
+            <text x="710" y="135" text-anchor="middle" font-size="9" fill="#64748b">Attach / Detach / Create</text>
+            <text x="710" y="150" text-anchor="middle" font-size="9" fill="#64748b">Modify / Snapshot</text>
+          </g>
+
+          <!-- Connection: Controller to Volume -->
+          <line x1="620" y1="120" x2="550" y2="120" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+          <text x="575" y="110" font-size="9" fill="#06b6d4">API</text>
+
+          <!-- Multi-Attach note -->
+          <g class="arch-node" data-component="multi" style="cursor:pointer">
+            <rect x="60" y="230" width="180" height="70" rx="10" fill="#fff" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <text x="150" y="258" text-anchor="middle" font-size="11" font-weight="600" fill="#1e293b">EC2 Instance #2</text>
+            <text x="150" y="278" text-anchor="middle" font-size="9" fill="#64748b">Multi-Attach (io2 only)</text>
+          </g>
+
+          <line x1="240" y1="265" x2="350" y2="250" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowhead)"/>
+
+          <!-- Cross-AZ note -->
+          <rect x="620" y="360" width="240" height="60" rx="8" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+          <text x="740" y="385" text-anchor="middle" font-size="10" font-weight="600" fill="#ef4444">Cross-AZ: Not Supported</text>
+          <text x="740" y="402" text-anchor="middle" font-size="9" fill="#64748b">Must snapshot &amp; restore to move</text>
+
+          <!-- Encryption note -->
+          <rect x="60" y="360" width="200" height="60" rx="8" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1"/>
+          <text x="160" y="385" text-anchor="middle" font-size="10" font-weight="600" fill="#10b981">Encryption at Rest</text>
+          <text x="160" y="402" text-anchor="middle" font-size="9" fill="#64748b">AES-256, AWS KMS managed</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Section 2: Volume Types / Component Breakdown -->
+    <section id="volume-types">
+      <h2>Volume Types & Component Breakdown</h2>
+      <div class="component-cards">
+        <div class="comp-card" data-vol="gp3">
+          <div class="comp-header">
+            <div class="comp-icon" style="background: var(--accent-light); color: var(--accent);">GP</div>
+            <span class="comp-title">gp3 — General Purpose SSD</span>
+          </div>
+          <div class="comp-desc">Default choice for most workloads. Decoupled IOPS and throughput from capacity. Baseline 3,000 IOPS and 125 MB/s included free.</div>
+          <div class="comp-tech">
+            <span class="pill pill-blue">Up to 16,000 IOPS</span>
+            <span class="pill pill-green">1,000 MB/s</span>
+            <span class="pill pill-purple">1 GiB–16 TiB</span>
+          </div>
+        </div>
+        <div class="comp-card" data-vol="io2">
+          <div class="comp-header">
+            <div class="comp-icon" style="background: var(--purple-light); color: var(--purple);">IO</div>
+            <span class="comp-title">io2 Block Express</span>
+          </div>
+          <div class="comp-desc">Highest performance SSD. Sub-ms latency, multi-attach capable. 99.999% durability. For mission-critical databases (Oracle, SAP HANA).</div>
+          <div class="comp-tech">
+            <span class="pill pill-blue">Up to 256,000 IOPS</span>
+            <span class="pill pill-green">4,000 MB/s</span>
+            <span class="pill pill-amber">Multi-Attach</span>
+          </div>
+        </div>
+        <div class="comp-card" data-vol="gp2">
+          <div class="comp-header">
+            <div class="comp-icon" style="background: var(--blue-light); color: var(--blue);">G2</div>
+            <span class="comp-title">gp2 — Legacy General Purpose</span>
+          </div>
+          <div class="comp-desc">Previous default. IOPS scales with volume size (3 IOPS/GiB). Burst credits for small volumes. Prefer gp3 for new workloads.</div>
+          <div class="comp-tech">
+            <span class="pill pill-blue">Up to 16,000 IOPS</span>
+            <span class="pill pill-green">250 MB/s</span>
+            <span class="pill pill-red">Legacy</span>
+          </div>
+        </div>
+        <div class="comp-card" data-vol="st1">
+          <div class="comp-header">
+            <div class="comp-icon" style="background: var(--green-light); color: var(--green);">ST</div>
+            <span class="comp-title">st1 — Throughput Optimized HDD</span>
+          </div>
+          <div class="comp-desc">Low-cost HDD for frequently accessed, throughput-intensive workloads: big data, data warehouses, log processing.</div>
+          <div class="comp-tech">
+            <span class="pill pill-blue">500 IOPS</span>
+            <span class="pill pill-green">500 MB/s</span>
+            <span class="pill pill-cyan">125 GiB–16 TiB</span>
+          </div>
+        </div>
+        <div class="comp-card" data-vol="sc1">
+          <div class="comp-header">
+            <div class="comp-icon" style="background: var(--cyan-light); color: var(--cyan);">SC</div>
+            <span class="comp-title">sc1 — Cold HDD</span>
+          </div>
+          <div class="comp-desc">Lowest cost. For infrequently accessed data where the lowest storage cost is important. Cannot be a boot volume.</div>
+          <div class="comp-tech">
+            <span class="pill pill-blue">250 IOPS</span>
+            <span class="pill pill-green">250 MB/s</span>
+            <span class="pill pill-cyan">125 GiB–16 TiB</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Request Flow -->
+    <section id="request-flow">
+      <h2>Request Flow — I/O Path</h2>
+      <div class="sequence-container">
+        <div class="seq-controls">
+          <button id="seqPlay" class="active">&#9654; Play</button>
+          <button id="seqPause">&#10074;&#10074; Pause</button>
+          <button id="seqStep">Step &rarr;</button>
+          <button id="seqReset">Reset</button>
+          <select id="flowSelect">
+            <option value="write">Write I/O Flow</option>
+            <option value="read">Read I/O Flow</option>
+            <option value="snapshot">Snapshot Flow</option>
+          </select>
+          <label style="font-size:0.8rem; display:flex; align-items:center; gap:0.4rem; margin-left:auto;">
+            Speed: <input type="range" id="seqSpeed" min="1" max="5" value="3" style="width:80px;">
+          </label>
+        </div>
+        <div class="seq-narration" id="seqNarration">Click Play to see the I/O flow through EBS...</div>
+        <svg viewBox="0 0 850 220" id="seqSvg" style="width:100%; min-height:200px;">
+          <!-- Lifelines -->
+          <g id="seqLifelines">
+            <line x1="100" y1="50" x2="100" y2="210" stroke="#e2e8f0" stroke-width="1.5"/>
+            <line x1="280" y1="50" x2="280" y2="210" stroke="#e2e8f0" stroke-width="1.5"/>
+            <line x1="460" y1="50" x2="460" y2="210" stroke="#e2e8f0" stroke-width="1.5"/>
+            <line x1="640" y1="50" x2="640" y2="210" stroke="#e2e8f0" stroke-width="1.5"/>
+            <line x1="780" y1="50" x2="780" y2="210" stroke="#e2e8f0" stroke-width="1.5"/>
+
+            <!-- Headers -->
+            <rect x="45" y="15" width="110" height="30" rx="6" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="100" y="35" text-anchor="middle" font-size="10" font-weight="600" fill="#3b82f6">Application</text>
+
+            <rect x="220" y="15" width="120" height="30" rx="6" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="280" y="35" text-anchor="middle" font-size="10" font-weight="600" fill="#3b82f6">NVMe Driver</text>
+
+            <rect x="395" y="15" width="130" height="30" rx="6" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+            <text x="460" y="35" text-anchor="middle" font-size="10" font-weight="600" fill="#f97316">EBS Frontend</text>
+
+            <rect x="575" y="15" width="130" height="30" rx="6" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+            <text x="640" y="35" text-anchor="middle" font-size="10" font-weight="600" fill="#8b5cf6">EBS Backend</text>
+
+            <rect x="725" y="15" width="110" height="30" rx="6" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
+            <text x="780" y="35" text-anchor="middle" font-size="10" font-weight="600" fill="#10b981">Storage</text>
+          </g>
+          <!-- Arrows rendered dynamically -->
+          <g id="seqArrows"></g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Section 4: Comparisons -->
+    <section id="comparisons">
+      <h2>Comparisons with Alternatives</h2>
+      <div style="overflow-x: auto;">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Storage Type</th>
+              <th>Key Difference</th>
+              <th>Pros</th>
+              <th>Cons</th>
+              <th>Best For</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="chosen">
+              <td><strong>EBS (Chosen)</strong></td>
+              <td>Network-attached block storage, persists independently</td>
+              <td>Persistent, snapshots, encryption, flexible volume types</td>
+              <td>AZ-scoped, network latency, cost per provisioned GB</td>
+              <td>Boot volumes, databases, general workloads</td>
+            </tr>
+            <tr>
+              <td><strong>Instance Store</strong></td>
+              <td>Physically attached NVMe on the host</td>
+              <td>Highest IOPS (millions), zero network hops, included free</td>
+              <td>Ephemeral — lost on stop/terminate, no snapshots</td>
+              <td>Caches, temp buffers, scratch space</td>
+            </tr>
+            <tr>
+              <td><strong>EFS</strong></td>
+              <td>Managed NFS, multi-AZ, elastic sizing</td>
+              <td>Shared access, auto-scales, no pre-provisioning</td>
+              <td>Higher latency (~ms), more expensive per GB, POSIX only</td>
+              <td>Shared file systems, CMS, ML training data</td>
+            </tr>
+            <tr>
+              <td><strong>FSx (Lustre/NetApp)</strong></td>
+              <td>High-performance parallel filesystem</td>
+              <td>Massive throughput, S3 integration, sub-ms latency</td>
+              <td>Complex, expensive, specialized use cases</td>
+              <td>HPC, genomics, financial modeling</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:1.5rem;">
+        <h3>When to pick each</h3>
+        <div class="card-grid" style="margin-top:0.75rem;">
+          <div class="card" style="border-left: 3px solid var(--accent);">
+            <strong>EBS</strong> when you need persistent block storage for a single instance (databases, boot volumes, apps that need data to survive reboots).
+          </div>
+          <div class="card" style="border-left: 3px solid var(--blue);">
+            <strong>Instance Store</strong> when you need maximum local I/O performance and can tolerate data loss (caches, Kafka broker log dirs, Spark shuffle).
+          </div>
+          <div class="card" style="border-left: 3px solid var(--green);">
+            <strong>EFS</strong> when multiple instances need concurrent read/write access to the same files (shared config, web content, ML datasets).
+          </div>
+          <div class="card" style="border-left: 3px solid var(--purple);">
+            <strong>FSx</strong> when you need HPC-grade parallel I/O with S3 data lake integration (scientific computing, video rendering).
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Use Cases & Pitfalls -->
+    <section id="use-cases">
+      <h2>Use Cases & Common Pitfalls</h2>
+
+      <div class="tabs">
+        <button class="active" data-tab="usecases">Use Cases</button>
+        <button data-tab="pitfalls">Common Pitfalls</button>
+      </div>
+
+      <div class="tab-content active" id="tab-usecases">
+        <h3>Primary Use Cases</h3>
+        <div class="usecase-grid" style="margin-bottom:1.5rem;">
+          <div class="usecase-card">
+            <div class="uc-icon">&#128451;</div>
+            <div class="uc-title">Database Storage</div>
+            <div class="uc-desc">MySQL, PostgreSQL, Oracle on EC2. Use io2 for mission-critical, gp3 for dev/test. Consistent low-latency I/O.</div>
+          </div>
+          <div class="usecase-card">
+            <div class="uc-icon">&#128187;</div>
+            <div class="uc-title">Boot Volumes</div>
+            <div class="uc-desc">OS root filesystem for every EC2 instance. gp3 is the default. Survives stop/start cycles.</div>
+          </div>
+          <div class="usecase-card">
+            <div class="uc-icon">&#128200;</div>
+            <div class="uc-title">Data Warehousing</div>
+            <div class="uc-desc">st1 volumes for sequential scan workloads — Hadoop HDFS, ClickHouse, log aggregation. Optimized for throughput.</div>
+          </div>
+          <div class="usecase-card">
+            <div class="uc-icon">&#128247;</div>
+            <div class="uc-title">Backup & DR via Snapshots</div>
+            <div class="uc-desc">Point-in-time snapshots stored in S3. Cross-region copy for disaster recovery. Incremental = fast & cheap.</div>
+          </div>
+        </div>
+
+        <h3>Anti-Use Cases</h3>
+        <div class="usecase-grid">
+          <div class="usecase-card anti-usecase">
+            <div class="uc-icon">&#10060;</div>
+            <div class="uc-title">Shared Filesystem</div>
+            <div class="uc-desc">EBS is single-attach (except io2 Multi-Attach). Use EFS or FSx for shared access across instances.</div>
+          </div>
+          <div class="usecase-card anti-usecase">
+            <div class="uc-icon">&#10060;</div>
+            <div class="uc-title">Object Storage</div>
+            <div class="uc-desc">Don't use EBS for storing millions of small objects, images, or static assets. Use S3 instead — infinitely scalable and cheaper.</div>
+          </div>
+          <div class="usecase-card anti-usecase">
+            <div class="uc-icon">&#10060;</div>
+            <div class="uc-title">Cross-AZ Persistence</div>
+            <div class="uc-desc">EBS is AZ-scoped. If you need multi-AZ data, use EFS, Aurora, or replicate via snapshots.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-pitfalls">
+        <div class="pitfall-card">
+          <div class="pitfall-header" onclick="this.parentElement.classList.toggle('open')">
+            Under-provisioning IOPS for database workloads
+            <span class="chevron">&#9654;</span>
+          </div>
+          <div class="pitfall-body">
+            <p><strong>The mistake:</strong> Using gp3 defaults (3,000 IOPS) for a production database that needs 10K+ IOPS during peak.</p>
+            <p><strong>Why it happens:</strong> gp3 is cheap and works in dev. Load testing doesn't replicate production patterns.</p>
+            <p><strong>The consequence:</strong> I/O throttling causes latency spikes, query timeouts, and application errors under load.</p>
+            <p><strong>The fix:</strong> Monitor <code>VolumeQueueLength</code> and <code>VolumeReadOps/VolumeWriteOps</code>. Right-size IOPS based on production metrics. Use io2 for latency-critical workloads.</p>
+          </div>
+        </div>
+        <div class="pitfall-card">
+          <div class="pitfall-header" onclick="this.parentElement.classList.toggle('open')">
+            Not enabling encryption on new volumes
+            <span class="chevron">&#9654;</span>
+          </div>
+          <div class="pitfall-body">
+            <p><strong>The mistake:</strong> Creating volumes without encryption, then needing to encrypt later (requires snapshot + copy + restore).</p>
+            <p><strong>Why it happens:</strong> Encryption isn't the default, and there's no performance penalty, so people forget.</p>
+            <p><strong>The consequence:</strong> Compliance failures, painful migration process, downtime to swap volumes.</p>
+            <p><strong>The fix:</strong> Enable "EBS Encryption by Default" at the account level. Zero performance impact, protects data at rest and in transit.</p>
+          </div>
+        </div>
+        <div class="pitfall-card">
+          <div class="pitfall-header" onclick="this.parentElement.classList.toggle('open')">
+            Ignoring burst credit depletion on gp2
+            <span class="chevron">&#9654;</span>
+          </div>
+          <div class="pitfall-body">
+            <p><strong>The mistake:</strong> Running I/O-heavy workloads on small gp2 volumes that depend on burst credits.</p>
+            <p><strong>Why it happens:</strong> Small gp2 volumes burst to 3,000 IOPS but baseline is only 3 IOPS/GiB. A 100GB volume baselines at 300 IOPS.</p>
+            <p><strong>The consequence:</strong> Once credits exhaust, performance drops to baseline. Application slows down unpredictably.</p>
+            <p><strong>The fix:</strong> Migrate to gp3 (always 3,000 IOPS baseline) or size gp2 at 1,000+ GiB for sustained 3,000 IOPS.</p>
+          </div>
+        </div>
+        <div class="pitfall-card">
+          <div class="pitfall-header" onclick="this.parentElement.classList.toggle('open')">
+            Forgetting snapshots are incremental but billed on consumed storage
+            <span class="chevron">&#9654;</span>
+          </div>
+          <div class="pitfall-body">
+            <p><strong>The mistake:</strong> Taking frequent snapshots of large volumes thinking they're cheap because "incremental."</p>
+            <p><strong>Why it happens:</strong> The first snapshot is a full copy. If data churns heavily, incrementals can still be large.</p>
+            <p><strong>The consequence:</strong> Unexpectedly high S3 snapshot costs, especially for write-heavy databases.</p>
+            <p><strong>The fix:</strong> Use Amazon Data Lifecycle Manager (DLM) to automate retention. Monitor snapshot size growth. For databases, prefer native backup tools + S3.</p>
+          </div>
+        </div>
+        <div class="pitfall-card">
+          <div class="pitfall-header" onclick="this.parentElement.classList.toggle('open')">
+            Not pre-warming volumes restored from snapshots
+            <span class="chevron">&#9654;</span>
+          </div>
+          <div class="pitfall-body">
+            <p><strong>The mistake:</strong> Restoring a snapshot and immediately running production traffic on it.</p>
+            <p><strong>Why it happens:</strong> Restored volumes are lazily loaded from S3 — first access to each block has high latency.</p>
+            <p><strong>The consequence:</strong> 5-50x higher latency on first reads until all blocks are fetched from S3.</p>
+            <p><strong>The fix:</strong> Enable Fast Snapshot Restore (FSR) for critical volumes, or run <code>dd</code> / <code>fio</code> to read all blocks before serving traffic.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: Best Practices -->
+    <section id="best-practices">
+      <h2>Best Practices</h2>
+      <div class="best-practice">
+        <div class="bp-title">Enable encryption by default at the account level</div>
+        No performance penalty. Protects data at rest (AES-256) and in transit between EC2 and EBS. Use AWS-managed or customer-managed KMS keys.
+      </div>
+      <div class="best-practice">
+        <div class="bp-title">Use gp3 over gp2 for new workloads</div>
+        gp3 is 20% cheaper per GB, gives 3,000 IOPS and 125 MB/s baseline without burst credit complexity. Provision additional IOPS/throughput independently of size.
+      </div>
+      <div class="best-practice">
+        <div class="bp-title">Monitor CloudWatch EBS metrics continuously</div>
+        Key metrics: VolumeQueueLength (>1 indicates saturation), VolumeReadOps/WriteOps, VolumeThroughput, BurstBalance (gp2). Set alarms before users notice.
+      </div>
+      <div class="best-practice">
+        <div class="bp-title">Use DLM for automated snapshot lifecycle</div>
+        Define backup schedules, retention policies, and cross-region copy rules. Avoids manual snapshot management and controls costs.
+      </div>
+      <div class="best-practice">
+        <div class="bp-title">Right-size volumes using actual I/O patterns</div>
+        Don't guess. Use CloudWatch metrics for 2+ weeks to understand peak IOPS and throughput. EBS Elastic Volumes lets you resize/re-type without downtime.
+      </div>
+      <div class="best-practice">
+        <div class="bp-title">Use io2 with Multi-Attach for shared-storage clustering</div>
+        Supports up to 16 Nitro instances. Requires cluster-aware filesystem (GFS2, OCFS2). For active-passive HA database patterns.
+      </div>
+      <div class="best-practice">
+        <div class="bp-title">Enable Fast Snapshot Restore for production DR</div>
+        Eliminates lazy-loading latency on restored volumes. Costs per AZ per snapshot but essential for low-RTO recovery.
+      </div>
+    </section>
+
+    <!-- Section 7: Scaling & Trade-offs -->
+    <section id="scaling">
+      <h2>Scaling & Trade-offs</h2>
+      <div class="scaling-card">
+        <h4><span class="pill pill-blue">Capacity</span> Sizing Guidance</h4>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.75rem;">EBS volumes range from 1 GiB to 64 TiB (io2 Block Express). You can grow volumes online with Elastic Volumes — no detach needed.</p>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:1rem;">
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:var(--blue);">64 TiB</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">Max volume size (io2 BE)</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:var(--purple);">256,000</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">Max IOPS (io2 BE)</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:var(--green);">4,000 MB/s</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">Max throughput (io2 BE)</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:var(--accent);">40</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">Max volumes per instance</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scaling-card">
+        <h4><span class="pill pill-amber">Trade-offs</span> Key Decisions</h4>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-top:0.75rem; font-size:0.85rem;">
+          <div>
+            <strong>Cost vs. Performance</strong><br/>
+            <span style="color:var(--text-muted)">gp3 ($0.08/GB) is 20% cheaper than gp2 ($0.10/GB). io2 ($0.125/GB + $0.065/IOPS) is for when you need guaranteed sub-ms latency.</span>
+          </div>
+          <div>
+            <strong>IOPS vs. Throughput</strong><br/>
+            <span style="color:var(--text-muted)">Small random I/O (OLTP) needs IOPS. Sequential large I/O (analytics) needs throughput. Pick volume type accordingly.</span>
+          </div>
+          <div>
+            <strong>Durability vs. Cost</strong><br/>
+            <span style="color:var(--text-muted)">gp3/gp2: 99.8-99.9% durability. io2: 99.999%. If a single volume failure is catastrophic, pay for io2.</span>
+          </div>
+          <div>
+            <strong>Simplicity vs. Performance</strong><br/>
+            <span style="color:var(--text-muted)">RAID 0 stripes across volumes for more IOPS/throughput, but adds complexity. Consider if io2 Block Express can handle the load in one volume.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="scaling-card">
+        <h4><span class="pill pill-red">Failures</span> What Happens When...</h4>
+        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.5rem;">
+          <p><strong>Volume impairment:</strong> AWS automatically replaces the underlying hardware. Brief I/O pause (seconds). Data preserved due to replication.</p>
+          <p style="margin-top:0.5rem;"><strong>AZ failure:</strong> All EBS volumes in that AZ become unavailable. Snapshots in S3 are unaffected — restore to a different AZ.</p>
+          <p style="margin-top:0.5rem;"><strong>EC2 instance failure:</strong> EBS volume persists. Re-attach to a new instance in the same AZ. Root volumes with "Delete on Termination" are the exception.</p>
+          <p style="margin-top:0.5rem;"><strong>Network partition:</strong> I/O operations queue and timeout. Application sees I/O errors. EBS retries internally but extended partitions cause volume impairment detection.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 8: Interactive Playground -->
+    <section id="playground">
+      <h2>Interactive Playground</h2>
+      <div class="playground">
+        <h3 style="margin-bottom:0.5rem;">EBS Cost & Performance Calculator</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">Configure your workload parameters to compare volume types and estimate monthly costs.</p>
+
+        <div class="presets">
+          <button onclick="applyPreset('webserver')">Web Server</button>
+          <button onclick="applyPreset('database')">Production DB</button>
+          <button onclick="applyPreset('datawarehouse')">Data Warehouse</button>
+          <button onclick="applyPreset('devtest')">Dev/Test</button>
+          <button onclick="applyPreset('hpc')">High-Perf DB</button>
+        </div>
+
+        <div class="playground-controls">
+          <div class="control-group">
+            <label>Volume Size (GiB)</label>
+            <input type="range" id="pgSize" min="1" max="16384" value="100" oninput="updatePlayground()">
+            <span id="pgSizeVal" style="font-size:0.85rem; font-weight:600;">100 GiB</span>
+          </div>
+          <div class="control-group">
+            <label>Required IOPS</label>
+            <input type="range" id="pgIops" min="100" max="64000" value="3000" step="100" oninput="updatePlayground()">
+            <span id="pgIopsVal" style="font-size:0.85rem; font-weight:600;">3,000</span>
+          </div>
+          <div class="control-group">
+            <label>Required Throughput (MB/s)</label>
+            <input type="range" id="pgThroughput" min="10" max="4000" value="125" step="10" oninput="updatePlayground()">
+            <span id="pgThroughputVal" style="font-size:0.85rem; font-weight:600;">125 MB/s</span>
+          </div>
+          <div class="control-group">
+            <label>Workload Pattern</label>
+            <select id="pgPattern" onchange="updatePlayground()">
+              <option value="random">Random I/O (OLTP)</option>
+              <option value="sequential">Sequential (Analytics)</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </div>
+        </div>
+
+        <h3 style="margin-bottom:0.75rem;">Recommended Volume & Cost Estimate</h3>
+        <div class="volume-comparison" id="volComparison"></div>
+
+        <div style="margin-top:1.5rem;">
+          <h3 style="margin-bottom:0.75rem;">Performance Comparison</h3>
+          <div class="result-panel" id="resultPanel"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Navigation active state
+    const navLinks = document.querySelectorAll('nav a');
+    const sections = document.querySelectorAll('section');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(s => {
+        if (window.scrollY >= s.offsetTop - 80) current = s.id;
+      });
+      navLinks.forEach(l => {
+        l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+      });
+    });
+
+    // Tabs
+    document.querySelectorAll('.tabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+      });
+    });
+
+    // Sequence Diagram Animation
+    const flows = {
+      write: [
+        { from: 0, to: 1, label: "write() syscall", y: 70 },
+        { from: 1, to: 2, label: "NVMe command over network", y: 95 },
+        { from: 2, to: 3, label: "Route to storage node", y: 120 },
+        { from: 3, to: 4, label: "Write to primary replica", y: 145 },
+        { from: 3, to: 4, label: "Write to secondary replica", y: 165 },
+        { from: 4, to: 3, label: "ACK (both replicas)", y: 180 },
+        { from: 3, to: 2, label: "Completion", y: 192 },
+        { from: 2, to: 0, label: "I/O complete", y: 205 }
+      ],
+      read: [
+        { from: 0, to: 1, label: "read() syscall", y: 70 },
+        { from: 1, to: 2, label: "NVMe read command", y: 95 },
+        { from: 2, to: 3, label: "Route to storage node", y: 120 },
+        { from: 3, to: 4, label: "Fetch block from SSD", y: 145 },
+        { from: 4, to: 3, label: "Block data", y: 165 },
+        { from: 3, to: 2, label: "Return data", y: 185 },
+        { from: 2, to: 0, label: "Data returned to app", y: 205 }
+      ],
+      snapshot: [
+        { from: 0, to: 2, label: "CreateSnapshot API call", y: 70 },
+        { from: 2, to: 3, label: "Mark point-in-time", y: 95 },
+        { from: 3, to: 4, label: "Read changed blocks", y: 120 },
+        { from: 4, to: 3, label: "Block data (incremental)", y: 145 },
+        { from: 3, to: 4, label: "Upload to S3 (async)", y: 170 },
+        { from: 4, to: 2, label: "Snapshot complete", y: 195 },
+        { from: 2, to: 0, label: "Snapshot ID returned", y: 205 }
+      ]
+    };
+
+    const xPositions = [100, 280, 460, 640, 780];
+    let seqState = { playing: false, step: 0, timer: null, flow: 'write' };
+
+    const narrations = {
+      write: [
+        "Application issues a write() system call to the block device.",
+        "OS sends an NVMe command over the EC2 network to the EBS frontend.",
+        "EBS frontend routes the write to the correct backend storage node.",
+        "Backend writes the block to the primary SSD replica.",
+        "Backend simultaneously writes to a secondary replica for durability.",
+        "Both replicas acknowledge the write — data is durable.",
+        "EBS frontend sends completion notification back.",
+        "Application receives confirmation — write is persisted."
+      ],
+      read: [
+        "Application issues a read() system call.",
+        "NVMe driver sends the read command over the network.",
+        "EBS frontend routes the request to the backend.",
+        "Backend fetches the block from the SSD.",
+        "Block data is returned to the backend logic.",
+        "Data flows back through the EBS frontend.",
+        "Application receives the data — sub-millisecond for io2."
+      ],
+      snapshot: [
+        "User/automation calls CreateSnapshot via the AWS API.",
+        "Control plane marks a consistent point-in-time on the volume.",
+        "Backend identifies blocks that changed since the last snapshot.",
+        "Changed blocks are read from the storage layer.",
+        "Blocks are compressed and uploaded to S3 asynchronously.",
+        "S3 confirms all blocks stored — snapshot is complete.",
+        "Snapshot ID is returned. Volume remains usable throughout."
+      ]
+    };
+
+    function renderSeqStep(step) {
+      const flow = flows[seqState.flow];
+      const arrows = document.getElementById('seqArrows');
+      arrows.innerHTML = '';
+
+      for (let i = 0; i <= step && i < flow.length; i++) {
+        const s = flow[i];
+        const x1 = xPositions[s.from];
+        const x2 = xPositions[s.to];
+        const opacity = i === step ? 1 : 0.4;
+        const color = i === step ? '#f97316' : '#94a3b8';
+
+        const mid = (x1 + x2) / 2;
+        const dir = x2 > x1 ? 1 : -1;
+        arrows.innerHTML += `
+          <line x1="${x1}" y1="${s.y}" x2="${x2}" y2="${s.y}" stroke="${color}" stroke-width="${i===step?2:1.5}" marker-end="url(#arrow${i===step?'Orange':'head'})" opacity="${opacity}"/>
+          <text x="${mid}" y="${s.y - 5}" text-anchor="middle" font-size="8.5" fill="${color}" opacity="${opacity}">${s.label}</text>
+        `;
+      }
+
+      const narr = narrations[seqState.flow];
+      document.getElementById('seqNarration').textContent = `Step ${step + 1}/${flow.length}: ${narr[step] || ''}`;
+    }
+
+    function seqPlay() {
+      const speed = 6 - document.getElementById('seqSpeed').value;
+      seqState.playing = true;
+      seqState.timer = setInterval(() => {
+        const flow = flows[seqState.flow];
+        if (seqState.step >= flow.length) {
+          seqPause();
+          return;
+        }
+        renderSeqStep(seqState.step);
+        seqState.step++;
+      }, speed * 400);
+    }
+
+    function seqPause() {
+      seqState.playing = false;
+      clearInterval(seqState.timer);
+    }
+
+    function seqReset() {
+      seqPause();
+      seqState.step = 0;
+      document.getElementById('seqArrows').innerHTML = '';
+      document.getElementById('seqNarration').textContent = 'Click Play to see the I/O flow through EBS...';
+    }
+
+    document.getElementById('seqPlay').addEventListener('click', () => { if (!seqState.playing) seqPlay(); });
+    document.getElementById('seqPause').addEventListener('click', seqPause);
+    document.getElementById('seqStep').addEventListener('click', () => {
+      seqPause();
+      const flow = flows[seqState.flow];
+      if (seqState.step < flow.length) {
+        renderSeqStep(seqState.step);
+        seqState.step++;
+      }
+    });
+    document.getElementById('seqReset').addEventListener('click', seqReset);
+    document.getElementById('flowSelect').addEventListener('change', (e) => {
+      seqState.flow = e.target.value;
+      seqReset();
+    });
+
+    // Playground
+    const volTypes = {
+      gp3: { name: 'gp3', label: 'General Purpose SSD', color: '#f97316', baseIops: 3000, maxIops: 16000, baseThroughput: 125, maxThroughput: 1000, costPerGb: 0.08, costPerIops: 0.005, costPerThroughput: 0.04, minSize: 1, maxSize: 16384 },
+      gp2: { name: 'gp2', label: 'Legacy GP SSD', color: '#3b82f6', baseIops: 100, maxIops: 16000, baseThroughput: 128, maxThroughput: 250, costPerGb: 0.10, costPerIops: 0, costPerThroughput: 0, minSize: 1, maxSize: 16384 },
+      io2: { name: 'io2', label: 'Provisioned IOPS', color: '#8b5cf6', baseIops: 100, maxIops: 256000, baseThroughput: 256, maxThroughput: 4000, costPerGb: 0.125, costPerIops: 0.065, costPerThroughput: 0, minSize: 4, maxSize: 65536 },
+      st1: { name: 'st1', label: 'Throughput HDD', color: '#10b981', baseIops: 500, maxIops: 500, baseThroughput: 40, maxThroughput: 500, costPerGb: 0.045, costPerIops: 0, costPerThroughput: 0, minSize: 125, maxSize: 16384 },
+      sc1: { name: 'sc1', label: 'Cold HDD', color: '#06b6d4', baseIops: 250, maxIops: 250, baseThroughput: 12, maxThroughput: 250, costPerGb: 0.015, costPerIops: 0, costPerThroughput: 0, minSize: 125, maxSize: 16384 }
+    };
+
+    function calcCost(type, size, iops, throughput) {
+      const v = volTypes[type];
+      let cost = size * v.costPerGb;
+      if (type === 'gp3') {
+        const extraIops = Math.max(0, iops - 3000);
+        const extraThroughput = Math.max(0, throughput - 125);
+        cost += extraIops * v.costPerIops;
+        cost += extraThroughput * v.costPerThroughput;
+      } else if (type === 'io2') {
+        cost += iops * v.costPerIops;
+      }
+      return cost;
+    }
+
+    function canMeetRequirements(type, size, reqIops, reqThroughput) {
+      const v = volTypes[type];
+      let availIops, availThroughput;
+
+      if (type === 'gp3') {
+        availIops = Math.min(reqIops, v.maxIops);
+        availThroughput = Math.min(reqThroughput, v.maxThroughput);
+      } else if (type === 'gp2') {
+        availIops = Math.min(size * 3, v.maxIops);
+        availThroughput = Math.min(v.maxThroughput, availIops * 0.016);
+      } else if (type === 'io2') {
+        availIops = Math.min(reqIops, v.maxIops);
+        availThroughput = Math.min(v.maxThroughput, availIops * 0.016);
+      } else {
+        availIops = v.maxIops;
+        availThroughput = Math.min(size * 0.04, v.maxThroughput);
+      }
+
+      return {
+        meetsIops: availIops >= reqIops,
+        meetsThroughput: availThroughput >= reqThroughput,
+        availIops: Math.min(availIops, v.maxIops),
+        availThroughput: Math.min(availThroughput, v.maxThroughput)
+      };
+    }
+
+    function updatePlayground() {
+      const size = parseInt(document.getElementById('pgSize').value);
+      const iops = parseInt(document.getElementById('pgIops').value);
+      const throughput = parseInt(document.getElementById('pgThroughput').value);
+      const pattern = document.getElementById('pgPattern').value;
+
+      document.getElementById('pgSizeVal').textContent = size.toLocaleString() + ' GiB';
+      document.getElementById('pgIopsVal').textContent = iops.toLocaleString();
+      document.getElementById('pgThroughputVal').textContent = throughput + ' MB/s';
+
+      const container = document.getElementById('volComparison');
+      let bestType = 'gp3';
+      let bestCost = Infinity;
+
+      const results = Object.keys(volTypes).map(type => {
+        const v = volTypes[type];
+        const effectiveSize = Math.max(size, v.minSize);
+        const check = canMeetRequirements(type, effectiveSize, iops, throughput);
+        const cost = calcCost(type, effectiveSize, Math.min(iops, v.maxIops), Math.min(throughput, v.maxThroughput));
+        const meets = check.meetsIops && check.meetsThroughput;
+
+        if (meets && cost < bestCost) {
+          bestCost = cost;
+          bestType = type;
+        }
+
+        return { type, v, cost, check, meets, effectiveSize };
+      });
+
+      // If pattern is sequential, prefer st1 if it meets requirements
+      if (pattern === 'sequential') {
+        const st1r = results.find(r => r.type === 'st1');
+        if (st1r && st1r.meets) bestType = 'st1';
+      }
+
+      container.innerHTML = results.map(r => `
+        <div class="vol-card ${r.type === bestType ? 'selected' : ''}" style="border-top: 3px solid ${r.v.color};">
+          ${r.type === bestType ? '<div style="position:absolute;top:6px;right:8px;font-size:0.65rem;background:var(--accent-light);color:var(--accent);padding:0.1rem 0.4rem;border-radius:4px;font-weight:600;">RECOMMENDED</div>' : ''}
+          <div class="vol-name" style="color:${r.v.color}">${r.v.name}</div>
+          <div class="vol-type">${r.v.label}</div>
+          <div class="vol-stat">
+            <div class="vol-stat-value">$${r.cost.toFixed(2)}/mo</div>
+            <div class="vol-stat-label">Estimated Cost</div>
+          </div>
+          <div class="vol-stat">
+            <div class="vol-stat-value" style="color:${r.check.meetsIops ? 'var(--green)' : 'var(--red)'}">
+              ${r.check.availIops.toLocaleString()} IOPS
+            </div>
+            <div class="vol-stat-label">${r.check.meetsIops ? '&#10003; Meets' : '&#10007; Below'} requirement</div>
+          </div>
+          <div class="vol-stat">
+            <div class="vol-stat-value" style="color:${r.check.meetsThroughput ? 'var(--green)' : 'var(--red)'}">
+              ${r.check.availThroughput} MB/s
+            </div>
+            <div class="vol-stat-label">${r.check.meetsThroughput ? '&#10003; Meets' : '&#10007; Below'} requirement</div>
+          </div>
+        </div>
+      `).join('');
+
+      // Result panel: cost comparison bar
+      const maxCost = Math.max(...results.map(r => r.cost));
+      document.getElementById('resultPanel').innerHTML = `
+        <div class="result-card" style="grid-column: span 2;">
+          <div style="font-size:0.85rem; font-weight:600; margin-bottom:0.5rem;">Monthly Cost Comparison</div>
+          <div class="bar-chart" style="height:100px;">
+            ${results.map(r => `
+              <div class="bar" style="height:${Math.max(5, (r.cost / maxCost) * 100)}%; background:${r.v.color}; opacity:${r.type === bestType ? 1 : 0.6}">
+                <div class="bar-label">${r.v.name}<br/>$${r.cost.toFixed(0)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="result-card">
+          <div class="result-value">${bestType}</div>
+          <div class="result-label">Best fit for workload</div>
+        </div>
+        <div class="result-card">
+          <div class="result-value">$${bestCost.toFixed(2)}</div>
+          <div class="result-label">Monthly cost</div>
+        </div>
+      `;
+    }
+
+    function applyPreset(name) {
+      const presets = {
+        webserver: { size: 50, iops: 3000, throughput: 125, pattern: 'mixed' },
+        database: { size: 500, iops: 10000, throughput: 250, pattern: 'random' },
+        datawarehouse: { size: 4000, iops: 500, throughput: 400, pattern: 'sequential' },
+        devtest: { size: 20, iops: 1000, throughput: 100, pattern: 'mixed' },
+        hpc: { size: 1000, iops: 64000, throughput: 1000, pattern: 'random' }
+      };
+      const p = presets[name];
+      document.getElementById('pgSize').value = p.size;
+      document.getElementById('pgIops').value = p.iops;
+      document.getElementById('pgThroughput').value = p.throughput;
+      document.getElementById('pgPattern').value = p.pattern;
+      updatePlayground();
+    }
+
+    // Init
+    updatePlayground();
+  </script>
+</body>
+</html>

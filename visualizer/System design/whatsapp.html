@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp System Design — Visualizer</title>
+    <style>
+        :root {
+            --bg: #fafbfc;
+            --surface: #ffffff;
+            --surface-alt: #f3f6f9;
+            --border: #e2e8f0;
+            --border-focus: #25d366;
+            --text: #1a202c;
+            --text-muted: #64748b;
+            --accent: #25d366;
+            --accent-dark: #128c7e;
+            --accent-light: #dcf8c6;
+            --blue: #3b82f6;
+            --purple: #8b5cf6;
+            --orange: #f59e0b;
+            --red: #ef4444;
+            --teal: #075e54;
+            --nav-height: 56px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+            --radius: 10px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--teal);
+            height: var(--nav-height);
+            display: flex;
+            align-items: center;
+            padding: 0 2rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        nav .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            margin-right: 2rem;
+            white-space: nowrap;
+        }
+
+        nav .nav-links {
+            display: flex;
+            gap: 0.25rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        nav .nav-links::-webkit-scrollbar { display: none; }
+
+        nav .nav-links a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.4rem 0.75rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        nav .nav-links a:hover, nav .nav-links a.active {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Section Headers */
+        .section {
+            margin-bottom: 3rem;
+            scroll-margin-top: calc(var(--nav-height) + 1rem);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--teal);
+        }
+
+        .section-header .badge {
+            background: var(--accent-light);
+            color: var(--teal);
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.2s;
+        }
+
+        .card:hover { box-shadow: var(--shadow-md); }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1rem;
+        }
+
+        .card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--teal);
+        }
+
+        .card p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        /* Architecture Diagram */
+        .arch-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            overflow-x: auto;
+        }
+
+        .arch-svg {
+            width: 100%;
+            min-width: 900px;
+            height: 600px;
+        }
+
+        .arch-svg text {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .arch-svg .component {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .arch-svg .component:hover { opacity: 0.85; }
+
+        .arch-svg .connection {
+            stroke-width: 1.5;
+            fill: none;
+            opacity: 0.6;
+        }
+
+        .arch-svg .connection.highlighted { opacity: 1; stroke-width: 2.5; }
+
+        .tooltip {
+            position: absolute;
+            background: var(--text);
+            color: #fff;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            max-width: 250px;
+            z-index: 50;
+        }
+
+        .tooltip.visible { opacity: 1; }
+
+        /* Sequence Diagram */
+        .seq-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .seq-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .seq-controls button {
+            background: var(--teal);
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .seq-controls button:hover { background: var(--accent-dark); }
+        .seq-controls button.active { background: var(--accent); }
+
+        .seq-controls select {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            background: var(--surface);
+        }
+
+        .seq-canvas {
+            width: 100%;
+            min-height: 400px;
+            overflow-x: auto;
+        }
+
+        .seq-narration {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--surface-alt);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: var(--text);
+            min-height: 2.5rem;
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .comparison-table th {
+            background: var(--teal);
+            color: #fff;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .comparison-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .comparison-table tr:hover td { background: var(--surface-alt); }
+        .comparison-table tr.chosen td { background: var(--accent-light); }
+
+        /* Pitfalls */
+        .pitfall {
+            border-left: 4px solid var(--orange);
+            background: #fffbeb;
+            border-radius: 0 var(--radius) var(--radius) 0;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+
+        .pitfall-header {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #92400e;
+        }
+
+        .pitfall-header::after { content: '+'; font-size: 1.2rem; }
+        .pitfall.open .pitfall-header::after { content: '-'; }
+
+        .pitfall-body {
+            padding: 0 1rem 0.75rem;
+            font-size: 0.85rem;
+            display: none;
+            color: var(--text-muted);
+        }
+
+        .pitfall.open .pitfall-body { display: block; }
+
+        /* Best Practices */
+        .practice {
+            border-left: 4px solid var(--accent);
+            background: #f0fdf4;
+            border-radius: 0 var(--radius) var(--radius) 0;
+            margin-bottom: 0.75rem;
+            padding: 0.75rem 1rem;
+        }
+
+        .practice h4 {
+            font-size: 0.9rem;
+            color: var(--teal);
+            margin-bottom: 0.25rem;
+        }
+
+        .practice p { font-size: 0.85rem; color: var(--text-muted); }
+
+        /* Scaling Section */
+        .metric-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .metric-card .value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--teal);
+        }
+
+        .metric-card .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 0.25rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Playground */
+        .playground-container {
+            background: var(--surface-alt);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .playground-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+        }
+
+        .control-group .value-display {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--teal);
+        }
+
+        .playground-output {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+        }
+
+        .playground-output h4 {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .calc-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+
+        .calc-row:last-child { border-bottom: none; }
+        .calc-row .calc-label { color: var(--text-muted); }
+        .calc-row .calc-value { font-weight: 600; color: var(--teal); }
+
+        .preset-btns {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .preset-btns button {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-btns button:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        /* Use Cases */
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .usecase-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+        }
+
+        .usecase-card h4 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .usecase-card p { font-size: 0.8rem; color: var(--text-muted); }
+
+        .usecase-card .tag {
+            display: inline-block;
+            background: var(--accent-light);
+            color: var(--teal);
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        /* Sim visualization */
+        .sim-visual {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            min-height: 60px;
+            padding: 1rem;
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            margin-top: 1rem;
+        }
+
+        .msg-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 0.6s ease-in-out;
+        }
+
+        .msg-dot.delivered { background: var(--accent); }
+        .msg-dot.queued { background: var(--orange); }
+        .msg-dot.failed { background: var(--red); }
+
+        @keyframes pulse {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            nav { padding: 0 1rem; }
+            nav .logo { font-size: 1rem; margin-right: 1rem; }
+            .section-header h2 { font-size: 1.3rem; }
+            .arch-svg { height: 500px; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">WhatsApp Design</div>
+        <div class="nav-links">
+            <a href="#architecture">Architecture</a>
+            <a href="#components">Components</a>
+            <a href="#sequence">Request Flow</a>
+            <a href="#comparisons">Comparisons</a>
+            <a href="#usecases">Use Cases</a>
+            <a href="#pitfalls">Pitfalls</a>
+            <a href="#bestpractices">Best Practices</a>
+            <a href="#scaling">Scaling</a>
+            <a href="#playground">Playground</a>
+        </div>
+    </nav>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <div class="container">
+
+        <!-- Section 1: Architecture Diagram -->
+        <div class="section" id="architecture">
+            <div class="section-header">
+                <h2>Architecture Diagram</h2>
+                <span class="badge">Interactive</span>
+            </div>
+            <div class="arch-container">
+                <svg class="arch-svg" id="archSvg" viewBox="0 0 1000 600">
+                    <!-- Background groups -->
+                    <defs>
+                        <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+                            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+                        </filter>
+                        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                            <polygon points="0 0, 8 3, 0 6" fill="#64748b"/>
+                        </marker>
+                        <marker id="arrowhead-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                            <polygon points="0 0, 8 3, 0 6" fill="#25d366"/>
+                        </marker>
+                    </defs>
+
+                    <!-- Client Layer -->
+                    <rect x="20" y="20" width="200" height="560" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+                    <text x="120" y="50" text-anchor="middle" font-size="11" fill="#166534" font-weight="600">CLIENT LAYER</text>
+
+                    <!-- Gateway Layer -->
+                    <rect x="250" y="20" width="180" height="560" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+                    <text x="340" y="50" text-anchor="middle" font-size="11" fill="#1e40af" font-weight="600">GATEWAY LAYER</text>
+
+                    <!-- Service Layer -->
+                    <rect x="460" y="20" width="280" height="560" rx="8" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1"/>
+                    <text x="600" y="50" text-anchor="middle" font-size="11" fill="#6b21a8" font-weight="600">SERVICE LAYER</text>
+
+                    <!-- Data Layer -->
+                    <rect x="770" y="20" width="210" height="560" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1"/>
+                    <text x="875" y="50" text-anchor="middle" font-size="11" fill="#9a3412" font-weight="600">DATA LAYER</text>
+
+                    <!-- Components -->
+                    <!-- Mobile Client -->
+                    <g class="component" data-id="mobile" data-info="iOS/Android apps using XMPP-based protocol over persistent WebSocket connections">
+                        <rect x="50" y="100" width="140" height="55" rx="8" fill="#ffffff" stroke="#25d366" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="120" y="125" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">Mobile Client</text>
+                        <text x="120" y="143" text-anchor="middle" font-size="9" fill="#64748b">iOS / Android</text>
+                    </g>
+
+                    <!-- Web Client -->
+                    <g class="component" data-id="web" data-info="Web WhatsApp connects via WebSocket, mirrors phone's end-to-end encryption">
+                        <rect x="50" y="180" width="140" height="55" rx="8" fill="#ffffff" stroke="#25d366" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="120" y="205" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">Web Client</text>
+                        <text x="120" y="223" text-anchor="middle" font-size="9" fill="#64748b">Browser / Desktop</text>
+                    </g>
+
+                    <!-- Load Balancer -->
+                    <g class="component" data-id="lb" data-info="Distributes connections across chat servers. Uses consistent hashing by user ID for sticky sessions.">
+                        <polygon points="340,100 395,130 340,160 285,130" fill="#ffffff" stroke="#3b82f6" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="340" y="134" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Load Balancer</text>
+                    </g>
+
+                    <!-- WebSocket Gateway -->
+                    <g class="component" data-id="ws-gateway" data-info="Maintains persistent WebSocket connections. Handles connection lifecycle, heartbeats, and message routing.">
+                        <rect x="270" y="200" width="140" height="55" rx="8" fill="#ffffff" stroke="#3b82f6" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="340" y="225" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">WebSocket Gateway</text>
+                        <text x="340" y="243" text-anchor="middle" font-size="9" fill="#64748b">Connection Mgmt</text>
+                    </g>
+
+                    <!-- API Gateway -->
+                    <g class="component" data-id="api-gw" data-info="REST API for non-realtime operations: profile updates, media upload URLs, contact sync">
+                        <rect x="270" y="290" width="140" height="55" rx="8" fill="#ffffff" stroke="#3b82f6" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="340" y="315" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">API Gateway</text>
+                        <text x="340" y="333" text-anchor="middle" font-size="9" fill="#64748b">REST / HTTP</text>
+                    </g>
+
+                    <!-- Chat Service -->
+                    <g class="component" data-id="chat-service" data-info="Core message handling: routing, delivery receipts (sent/delivered/read), group fanout, offline queuing">
+                        <rect x="490" y="90" width="140" height="55" rx="8" fill="#ffffff" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="560" y="115" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Chat Service</text>
+                        <text x="560" y="133" text-anchor="middle" font-size="9" fill="#64748b">Message Routing</text>
+                    </g>
+
+                    <!-- Presence Service -->
+                    <g class="component" data-id="presence" data-info="Tracks online/offline/last-seen status. Uses in-memory store with pub/sub for real-time updates to contacts.">
+                        <rect x="490" y="170" width="140" height="55" rx="8" fill="#ffffff" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="560" y="195" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Presence Service</text>
+                        <text x="560" y="213" text-anchor="middle" font-size="9" fill="#64748b">Online / Last Seen</text>
+                    </g>
+
+                    <!-- Group Service -->
+                    <g class="component" data-id="group-service" data-info="Manages group metadata, membership, admin roles. Handles fan-out of messages to all group participants.">
+                        <rect x="490" y="250" width="140" height="55" rx="8" fill="#ffffff" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="560" y="275" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Group Service</text>
+                        <text x="560" y="293" text-anchor="middle" font-size="9" fill="#64748b">Membership & Fanout</text>
+                    </g>
+
+                    <!-- Media Service -->
+                    <g class="component" data-id="media-service" data-info="Handles media upload/download. Generates thumbnails, transcodes video, encrypts media with per-message keys.">
+                        <rect x="490" y="330" width="140" height="55" rx="8" fill="#ffffff" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="560" y="355" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Media Service</text>
+                        <text x="560" y="373" text-anchor="middle" font-size="9" fill="#64748b">Upload / Transcode</text>
+                    </g>
+
+                    <!-- Notification Service -->
+                    <g class="component" data-id="notification" data-info="Sends push notifications via APNs/FCM when recipient is offline. Batches notifications to reduce battery drain.">
+                        <rect x="490" y="410" width="140" height="55" rx="8" fill="#ffffff" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="560" y="435" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Notification Service</text>
+                        <text x="560" y="453" text-anchor="middle" font-size="9" fill="#64748b">Push (APNs/FCM)</text>
+                    </g>
+
+                    <!-- Encryption Service -->
+                    <g class="component" data-id="encryption" data-info="Manages Signal Protocol key exchange. Stores public keys, handles pre-key bundles. Server never sees plaintext.">
+                        <rect x="490" y="490" width="140" height="55" rx="8" fill="#ffffff" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="560" y="515" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Key Service</text>
+                        <text x="560" y="533" text-anchor="middle" font-size="9" fill="#64748b">E2E Encryption Keys</text>
+                    </g>
+
+                    <!-- Message Queue -->
+                    <g class="component" data-id="mq" data-info="Kafka for async message processing, delivery retry, offline message queuing. Partitioned by recipient user ID.">
+                        <rect x="680" y="90" width="30" height="55" rx="2" fill="#f59e0b" opacity="0.3"/>
+                        <rect x="685" y="85" width="30" height="55" rx="2" fill="#f59e0b" opacity="0.5"/>
+                        <rect x="690" y="80" width="30" height="55" rx="2" fill="#f59e0b" opacity="0.8"/>
+                        <text x="705" y="155" text-anchor="middle" font-size="9" fill="#92400e" font-weight="500">Message Queue</text>
+                    </g>
+
+                    <!-- Message DB -->
+                    <g class="component" data-id="msg-db" data-info="Cassandra/HBase for message storage. Partitioned by user ID, ordered by timestamp. Messages deleted after delivery (transient store).">
+                        <ellipse cx="875" cy="140" rx="70" ry="18" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+                        <rect x="805" y="140" width="140" height="40" fill="#ffffff" stroke="#f59e0b" stroke-width="2" stroke-dasharray="0,140,140,0,40,0"/>
+                        <ellipse cx="875" cy="180" rx="70" ry="18" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+                        <text x="875" y="165" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Message Store</text>
+                        <text x="875" y="200" text-anchor="middle" font-size="9" fill="#64748b">Cassandra / HBase</text>
+                    </g>
+
+                    <!-- Session Cache -->
+                    <g class="component" data-id="session-cache" data-info="Redis cluster storing active WebSocket session mappings (userId -> serverId). Sub-ms lookups for message routing.">
+                        <rect x="800" y="260" width="150" height="50" rx="8" fill="#ffffff" stroke="#ef4444" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="875" y="283" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Session Cache</text>
+                        <text x="875" y="300" text-anchor="middle" font-size="9" fill="#64748b">Redis Cluster</text>
+                    </g>
+
+                    <!-- User DB -->
+                    <g class="component" data-id="user-db" data-info="MySQL/PostgreSQL for user profiles, contacts, group metadata. Sharded by user ID with read replicas.">
+                        <ellipse cx="875" cy="360" rx="70" ry="18" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+                        <rect x="805" y="360" width="140" height="40" fill="#ffffff" stroke="#f59e0b" stroke-width="2" stroke-dasharray="0,140,140,0,40,0"/>
+                        <ellipse cx="875" cy="400" rx="70" ry="18" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+                        <text x="875" y="385" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">User DB</text>
+                        <text x="875" y="420" text-anchor="middle" font-size="9" fill="#64748b">MySQL (Sharded)</text>
+                    </g>
+
+                    <!-- Media Storage -->
+                    <g class="component" data-id="media-store" data-info="S3/Blob storage for encrypted media files. CDN in front for download acceleration. Media expires after recipient downloads.">
+                        <rect x="800" y="460" width="150" height="50" rx="8" fill="#ffffff" stroke="#f59e0b" stroke-width="2" filter="url(#shadow)"/>
+                        <text x="875" y="483" text-anchor="middle" font-size="11" font-weight="600" fill="#1a202c">Media Storage</text>
+                        <text x="875" y="500" text-anchor="middle" font-size="9" fill="#64748b">S3 + CDN</text>
+                    </g>
+
+                    <!-- Connections -->
+                    <path class="connection" d="M190,127 L285,130" stroke="#64748b" marker-end="url(#arrowhead)"/>
+                    <path class="connection" d="M190,207 L270,225" stroke="#64748b" marker-end="url(#arrowhead)"/>
+                    <path class="connection" d="M340,160 L340,200" stroke="#64748b" marker-end="url(#arrowhead)"/>
+                    <path class="connection" d="M340,160 L340,290" stroke="#64748b" marker-end="url(#arrowhead)" stroke-dasharray="4,4"/>
+                    <path class="connection" d="M410,227 L490,117" stroke="#8b5cf6" marker-end="url(#arrowhead)"/>
+                    <path class="connection" d="M410,227 L490,197" stroke="#8b5cf6" marker-end="url(#arrowhead)"/>
+                    <path class="connection" d="M410,317 L490,357" stroke="#8b5cf6" marker-end="url(#arrowhead)"/>
+                    <path class="connection" d="M410,317 L490,277" stroke="#8b5cf6" marker-end="url(#arrowhead)"/>
+                    <path class="connection" d="M630,117 L680,110" stroke="#f59e0b" marker-end="url(#arrowhead)"/>
+                    <path class="connection" d="M720,110 L805,150" stroke="#f59e0b" marker-end="url(#arrowhead)"/>
+                    <path class="connection" d="M630,197 L800,280" stroke="#ef4444" marker-end="url(#arrowhead)" stroke-dasharray="4,4"/>
+                    <path class="connection" d="M630,277 L805,380" stroke="#f59e0b" marker-end="url(#arrowhead)"/>
+                    <path class="connection" d="M630,357 L800,480" stroke="#f59e0b" marker-end="url(#arrowhead)"/>
+                    <path class="connection" d="M630,437 L490,437" stroke="#8b5cf6" stroke-dasharray="4,4"/>
+                    <text x="555" y="425" font-size="8" fill="#64748b">offline push</text>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Section 2: Component Breakdown -->
+        <div class="section" id="components">
+            <div class="section-header">
+                <h2>Component Breakdown</h2>
+            </div>
+            <div class="card-grid">
+                <div class="card">
+                    <h3>WebSocket Gateway</h3>
+                    <p><strong>Purpose:</strong> Maintains millions of persistent connections with clients.</p>
+                    <p><strong>Tech:</strong> Erlang/Elixir (WhatsApp's actual choice) — lightweight processes handle 2M+ connections per server.</p>
+                    <p><strong>Scaling:</strong> Horizontal. Each server holds ~2M connections. Consistent hashing maps users to servers.</p>
+                </div>
+                <div class="card">
+                    <h3>Chat Service</h3>
+                    <p><strong>Purpose:</strong> Routes messages between sender and recipient(s), manages delivery receipts.</p>
+                    <p><strong>Tech:</strong> Erlang with custom XMPP-based protocol for low-overhead message framing.</p>
+                    <p><strong>Key Decision:</strong> Store-and-forward model — messages queued until recipient connects, then deleted from server.</p>
+                </div>
+                <div class="card">
+                    <h3>Presence Service</h3>
+                    <p><strong>Purpose:</strong> Real-time online/offline/typing status.</p>
+                    <p><strong>Tech:</strong> In-memory Redis with pub/sub for broadcasting status changes to contacts.</p>
+                    <p><strong>Trade-off:</strong> Eventually consistent — slight delay is acceptable for presence info.</p>
+                </div>
+                <div class="card">
+                    <h3>Group Service</h3>
+                    <p><strong>Purpose:</strong> Manages groups (up to 1024 members), handles fan-out of messages.</p>
+                    <p><strong>Tech:</strong> Dedicated service with group metadata in MySQL, fan-out via message queue.</p>
+                    <p><strong>Scaling:</strong> Fan-out-on-write for small groups, fan-out-on-read for broadcast lists.</p>
+                </div>
+                <div class="card">
+                    <h3>Media Service</h3>
+                    <p><strong>Purpose:</strong> Upload, transcode, thumbnail generation, and encrypted storage of media.</p>
+                    <p><strong>Tech:</strong> Media encrypted client-side with random AES key. Server stores ciphertext in S3, URL sent in message.</p>
+                    <p><strong>Scaling:</strong> CDN for downloads, separate upload endpoints to avoid blocking chat traffic.</p>
+                </div>
+                <div class="card">
+                    <h3>Key Service (E2E Encryption)</h3>
+                    <p><strong>Purpose:</strong> Manages Signal Protocol key exchange without accessing plaintext.</p>
+                    <p><strong>Tech:</strong> Stores public identity keys, signed pre-keys, and one-time pre-keys per device.</p>
+                    <p><strong>Key Decision:</strong> Server is untrusted — only facilitates key exchange, never holds private keys.</p>
+                </div>
+                <div class="card">
+                    <h3>Message Store (Cassandra)</h3>
+                    <p><strong>Purpose:</strong> Transient storage for undelivered messages.</p>
+                    <p><strong>Tech:</strong> Cassandra with partition key = recipient_user_id, clustering key = timestamp.</p>
+                    <p><strong>Key Decision:</strong> Messages deleted after delivery — server is a mailbox, not an archive.</p>
+                </div>
+                <div class="card">
+                    <h3>Session Cache (Redis)</h3>
+                    <p><strong>Purpose:</strong> Maps user IDs to their current WebSocket server for O(1) message routing.</p>
+                    <p><strong>Tech:</strong> Redis Cluster with replication. TTL-based expiry on disconnect.</p>
+                    <p><strong>Scaling:</strong> Partitioned across Redis nodes by user ID hash.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Sequence Diagram -->
+        <div class="section" id="sequence">
+            <div class="section-header">
+                <h2>Request Flow</h2>
+                <span class="badge">Animated</span>
+            </div>
+            <div class="seq-container">
+                <div class="seq-controls">
+                    <select id="flowSelect">
+                        <option value="send">Send Message (1:1)</option>
+                        <option value="group">Group Message</option>
+                        <option value="offline">Offline Delivery</option>
+                        <option value="media">Media Send</option>
+                    </select>
+                    <button id="seqPlay">Play</button>
+                    <button id="seqStep">Step</button>
+                    <button id="seqReset">Reset</button>
+                    <label style="font-size:0.8rem;color:var(--text-muted);">Speed:
+                        <input type="range" id="seqSpeed" min="1" max="5" value="3" style="width:80px;vertical-align:middle;">
+                    </label>
+                </div>
+                <div class="seq-canvas">
+                    <svg id="seqSvg" width="100%" height="400" viewBox="0 0 900 400"></svg>
+                </div>
+                <div class="seq-narration" id="seqNarration">Select a flow and press Play to see the message journey.</div>
+            </div>
+        </div>
+
+        <!-- Section 4: Comparisons -->
+        <div class="section" id="comparisons">
+            <div class="section-header">
+                <h2>Comparisons with Alternatives</h2>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Approach</th>
+                            <th>Key Difference</th>
+                            <th>Pros</th>
+                            <th>Cons</th>
+                            <th>Used By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="chosen">
+                            <td><strong>XMPP + Custom Protocol (WhatsApp)</strong></td>
+                            <td>Lean binary protocol over persistent TCP/WebSocket</td>
+                            <td>Minimal bandwidth, 2M connections/server, proven at scale</td>
+                            <td>Custom protocol = harder to debug, Erlang expertise required</td>
+                            <td>WhatsApp</td>
+                        </tr>
+                        <tr>
+                            <td><strong>MQTT-based</strong></td>
+                            <td>Pub/sub messaging protocol designed for IoT</td>
+                            <td>Lightweight, well-documented, QoS levels built-in</td>
+                            <td>Not optimized for chat UX (typing, read receipts), limited group support</td>
+                            <td>Facebook Messenger (originally)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>HTTP Long Polling</strong></td>
+                            <td>Client polls server repeatedly for new messages</td>
+                            <td>Simple to implement, works through all firewalls/proxies</td>
+                            <td>High latency, wastes bandwidth, poor battery life on mobile</td>
+                            <td>Early web chat apps</td>
+                        </tr>
+                        <tr>
+                            <td><strong>gRPC Streaming</strong></td>
+                            <td>Bidirectional streams over HTTP/2</td>
+                            <td>Strong typing (protobuf), multiplexing, excellent tooling</td>
+                            <td>Higher overhead than raw TCP, complex reconnection logic</td>
+                            <td>Discord, Slack (internal)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top:1.5rem;">
+                <h3 style="font-size:1rem;margin-bottom:0.75rem;color:var(--teal);">When to Pick Each</h3>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Choose XMPP/Custom when...</h3>
+                        <p>You need extreme efficiency at massive scale (billions of messages/day), can invest in custom infrastructure, and mobile battery life is critical.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Choose MQTT when...</h3>
+                        <p>Building IoT-adjacent messaging, need simple pub/sub with QoS guarantees, and the team is small.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Choose gRPC Streaming when...</h3>
+                        <p>Building a chat feature within a larger microservices ecosystem, need strong contracts, and the client base is primarily desktop/web.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 5: Use Cases & Pitfalls -->
+        <div class="section" id="usecases">
+            <div class="section-header">
+                <h2>Use Cases & Common Pitfalls</h2>
+            </div>
+
+            <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--teal);">Primary Use Cases</h3>
+            <div class="usecase-grid" style="margin-bottom:2rem;">
+                <div class="usecase-card">
+                    <h4>Consumer Messaging App</h4>
+                    <p>1:1 and group chat with media sharing, read receipts, and real-time presence. Scale: 100M-2B users, 100B+ messages/day.</p>
+                    <span class="tag">WhatsApp's core use case</span>
+                </div>
+                <div class="usecase-card">
+                    <h4>Enterprise Team Chat</h4>
+                    <p>Internal communication with channels, threads, file sharing. Needs audit logging and compliance (message retention).</p>
+                    <span class="tag">Slack / Teams pattern</span>
+                </div>
+                <div class="usecase-card">
+                    <h4>Customer Support Chat</h4>
+                    <p>Real-time chat between customers and agents with routing, queue management, and bot integration.</p>
+                    <span class="tag">Intercom / Zendesk</span>
+                </div>
+                <div class="usecase-card">
+                    <h4>Gaming Chat</h4>
+                    <p>Low-latency messaging in game lobbies, voice channel signaling, ephemeral messages.</p>
+                    <span class="tag">Discord pattern</span>
+                </div>
+            </div>
+
+            <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--teal);">Anti-Use-Cases</h3>
+            <div class="usecase-grid" style="margin-bottom:2rem;">
+                <div class="usecase-card" style="border-left:3px solid var(--red);">
+                    <h4>Broadcast-Only (1-to-millions)</h4>
+                    <p>If there's no reply path, use a push notification system or pub/sub (Kafka + SSE), not a full chat architecture.</p>
+                </div>
+                <div class="usecase-card" style="border-left:3px solid var(--red);">
+                    <h4>Async Email-Like Messaging</h4>
+                    <p>If latency tolerance is hours (not seconds), a simpler queue + inbox model is far cheaper to operate.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pitfalls -->
+        <div class="section" id="pitfalls">
+            <div class="section-header">
+                <h2>Common Pitfalls</h2>
+                <span class="badge" style="background:#fef3c7;color:#92400e;">Caution</span>
+            </div>
+
+            <div class="pitfall">
+                <div class="pitfall-header">Not handling message ordering in distributed systems</div>
+                <div class="pitfall-body">
+                    <p><strong>The mistake:</strong> Assuming messages arrive in send order when routed through multiple servers.</p>
+                    <p><strong>Why it happens:</strong> Works in dev with one server; breaks under load with multiple chat servers and network jitter.</p>
+                    <p><strong>Consequence:</strong> Messages appear out of order — "Yes" arrives before "Want to grab lunch?"</p>
+                    <p><strong>Fix:</strong> Use Lamport timestamps or vector clocks. WhatsApp uses server-assigned monotonic IDs per conversation. Client reorders by this ID before displaying.</p>
+                </div>
+            </div>
+            <div class="pitfall">
+                <div class="pitfall-header">Treating group messages like N individual messages</div>
+                <div class="pitfall-body">
+                    <p><strong>The mistake:</strong> Sending a group message as N separate 1:1 messages from the sender to each member.</p>
+                    <p><strong>Why it happens:</strong> Simplest mental model — and works for small groups.</p>
+                    <p><strong>Consequence:</strong> A 1024-member group message creates 1024x write amplification. Sender uploads media 1024 times.</p>
+                    <p><strong>Fix:</strong> Fan-out-on-write at the server level. Store the message once, create delivery records per recipient. Media uploaded once, URL shared.</p>
+                </div>
+            </div>
+            <div class="pitfall">
+                <div class="pitfall-header">Ignoring the "thundering herd" on reconnection</div>
+                <div class="pitfall-body">
+                    <p><strong>The mistake:</strong> All clients reconnect simultaneously after a server restart or network blip.</p>
+                    <p><strong>Why it happens:</strong> Clients use fixed retry intervals (e.g., always retry after 1s).</p>
+                    <p><strong>Consequence:</strong> Server gets slammed with millions of simultaneous connection attempts, cascading failure.</p>
+                    <p><strong>Fix:</strong> Exponential backoff with jitter. Clients add random delay: base_delay * 2^attempt + random(0, base_delay).</p>
+                </div>
+            </div>
+            <div class="pitfall">
+                <div class="pitfall-header">Storing messages permanently on the server</div>
+                <div class="pitfall-body">
+                    <p><strong>The mistake:</strong> Keeping all messages forever server-side "for sync."</p>
+                    <p><strong>Why it happens:</strong> Enables easy multi-device sync and message history.</p>
+                    <p><strong>Consequence:</strong> Storage costs grow unbounded. Privacy/compliance risk. Becomes a high-value target for attacks.</p>
+                    <p><strong>Fix:</strong> WhatsApp model: delete from server after delivery. Client is source of truth. Multi-device sync uses encrypted backup + local transfer protocol.</p>
+                </div>
+            </div>
+            <div class="pitfall">
+                <div class="pitfall-header">Skipping end-to-end encryption for "MVP"</div>
+                <div class="pitfall-body">
+                    <p><strong>The mistake:</strong> Planning to "add E2E encryption later" after launch.</p>
+                    <p><strong>Why it happens:</strong> E2E encryption adds complexity (key management, multi-device, group key rotation).</p>
+                    <p><strong>Consequence:</strong> Retrofitting E2E encryption requires redesigning message format, key exchange, and group protocols. Often requires breaking changes.</p>
+                    <p><strong>Fix:</strong> Design for E2E from day one. Use Signal Protocol (open source, battle-tested). The server should never see plaintext — this constraint simplifies many other decisions.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 6: Best Practices -->
+        <div class="section" id="bestpractices">
+            <div class="section-header">
+                <h2>Best Practices</h2>
+            </div>
+
+            <div class="practice">
+                <h4>Design for offline-first</h4>
+                <p>Assume the user is offline. Queue messages locally, sync when connected. Use message IDs for deduplication on reconnect. This is the single most important UX decision for mobile messaging.</p>
+            </div>
+            <div class="practice">
+                <h4>Use the Signal Protocol for E2E encryption</h4>
+                <p>Don't invent your own crypto. Signal Protocol handles forward secrecy, future secrecy, and multi-device with a proven security model. Libraries exist for all platforms (libsignal).</p>
+            </div>
+            <div class="practice">
+                <h4>Implement delivery receipts as first-class messages</h4>
+                <p>Sent/delivered/read are separate ack messages flowing through the same pipeline. Don't bolt them on as a side channel — they need the same reliability guarantees as content messages.</p>
+            </div>
+            <div class="practice">
+                <h4>Partition by recipient, not sender</h4>
+                <p>All messages destined for a user land on the same partition/shard. This makes "fetch all unread messages for user X" a single-partition read — the most common query pattern.</p>
+            </div>
+            <div class="practice">
+                <h4>Use heartbeats aggressively for mobile connections</h4>
+                <p>Mobile connections drop silently (tunnel into subway, airplane mode). Server-side heartbeat timeout (30-60s) detects dead connections. Client uses adaptive heartbeat intervals to conserve battery.</p>
+            </div>
+            <div class="practice">
+                <h4>Keep the server stateless for chat processing</h4>
+                <p>Session state (which server holds the connection) lives in Redis, not in the chat server's memory. This lets you restart/scale chat servers without losing message routing capability.</p>
+            </div>
+            <div class="practice">
+                <h4>Graceful degradation: shed presence before messages</h4>
+                <p>Under load, stop broadcasting presence/typing indicators first (low-value, high-volume). Message delivery is sacred — never shed it. This buys significant headroom.</p>
+            </div>
+        </div>
+
+        <!-- Section 7: Scaling & Trade-offs -->
+        <div class="section" id="scaling">
+            <div class="section-header">
+                <h2>Scaling & Trade-offs</h2>
+            </div>
+
+            <h3 style="font-size:1rem;margin-bottom:1rem;color:var(--teal);">Capacity Estimates (WhatsApp Scale)</h3>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="value">2B+</div>
+                    <div class="label">Monthly Active Users</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">100B</div>
+                    <div class="label">Messages / Day</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">~1.2M</div>
+                    <div class="label">Messages / Second (avg)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">~5M</div>
+                    <div class="label">Messages / Second (peak)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">~65B</div>
+                    <div class="label">Media Messages / Day</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">~50</div>
+                    <div class="label">Engineers (pre-Meta)</div>
+                </div>
+            </div>
+
+            <h3 style="font-size:1rem;margin:1.5rem 0 1rem;color:var(--teal);">Key Trade-offs</h3>
+            <div class="card-grid">
+                <div class="card">
+                    <h3>Consistency vs. Availability</h3>
+                    <p><strong>Choice: AP (Available + Partition-tolerant).</strong> A message may be delivered twice (at-least-once), but never lost. Client deduplicates by message ID. Presence is eventually consistent.</p>
+                </div>
+                <div class="card">
+                    <h3>Server Storage vs. Client Storage</h3>
+                    <p><strong>Choice: Client is source of truth.</strong> Server is transient mailbox — deletes after delivery. Reduces storage costs dramatically but complicates multi-device sync.</p>
+                </div>
+                <div class="card">
+                    <h3>Privacy vs. Features</h3>
+                    <p><strong>Choice: Privacy first.</strong> E2E encryption means server can't index messages, can't do server-side search, can't moderate content. Features like search must run client-side.</p>
+                </div>
+                <div class="card">
+                    <h3>Erlang BEAM vs. Mainstream Tech</h3>
+                    <p><strong>Choice: Erlang.</strong> 2M connections/server (vs ~100K in Java/Go). Hot code upgrades with zero downtime. Trade-off: smaller talent pool, steeper learning curve.</p>
+                </div>
+            </div>
+
+            <h3 style="font-size:1rem;margin:1.5rem 0 1rem;color:var(--teal);">Failure Scenarios</h3>
+            <div class="card-grid">
+                <div class="card" style="border-left:3px solid var(--red);">
+                    <h3>Chat Server Crash</h3>
+                    <p>Clients on that server reconnect (with jitter) to another server via load balancer. Undelivered messages remain in queue. New server picks them up from Cassandra/queue. No message loss.</p>
+                </div>
+                <div class="card" style="border-left:3px solid var(--red);">
+                    <h3>Redis Session Cache Failure</h3>
+                    <p>Can't route messages to correct server. Fallback: broadcast to all servers (expensive but correct). Or: client reconnects, re-registers session. Messages queued during outage.</p>
+                </div>
+                <div class="card" style="border-left:3px solid var(--red);">
+                    <h3>Cassandra Node Down</h3>
+                    <p>Replication factor 3 — reads/writes continue at CL=QUORUM. If multiple nodes fail, switch to CL=ONE (risk stale reads) or queue writes. Zero data loss with RF=3.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 8: Interactive Playground -->
+        <div class="section" id="playground">
+            <div class="section-header">
+                <h2>Interactive Playground</h2>
+                <span class="badge">Sandbox</span>
+            </div>
+            <div class="playground-container">
+                <h3 style="font-size:1rem;margin-bottom:0.5rem;color:var(--teal);">Capacity Estimator</h3>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">Adjust parameters to see infrastructure requirements for a WhatsApp-like system.</p>
+
+                <div class="preset-btns">
+                    <button onclick="applyPreset('startup')">Startup (1M users)</button>
+                    <button onclick="applyPreset('midscale')">Mid-Scale (50M users)</button>
+                    <button onclick="applyPreset('whatsapp')">WhatsApp Scale (2B users)</button>
+                </div>
+
+                <div class="playground-controls">
+                    <div class="control-group">
+                        <label>Daily Active Users</label>
+                        <input type="range" id="dauSlider" min="100000" max="2000000000" step="100000" value="50000000">
+                        <span class="value-display" id="dauDisplay">50M</span>
+                    </div>
+                    <div class="control-group">
+                        <label>Avg Messages / User / Day</label>
+                        <input type="range" id="msgSlider" min="5" max="200" step="5" value="50">
+                        <span class="value-display" id="msgDisplay">50</span>
+                    </div>
+                    <div class="control-group">
+                        <label>Avg Message Size (bytes)</label>
+                        <input type="range" id="sizeSlider" min="50" max="2000" step="50" value="200">
+                        <span class="value-display" id="sizeDisplay">200 B</span>
+                    </div>
+                    <div class="control-group">
+                        <label>Peak / Avg Ratio</label>
+                        <input type="range" id="peakSlider" min="2" max="10" step="1" value="4">
+                        <span class="value-display" id="peakDisplay">4x</span>
+                    </div>
+                    <div class="control-group">
+                        <label>% Messages with Media</label>
+                        <input type="range" id="mediaSlider" min="5" max="80" step="5" value="40">
+                        <span class="value-display" id="mediaDisplay">40%</span>
+                    </div>
+                    <div class="control-group">
+                        <label>Avg Media Size (KB)</label>
+                        <input type="range" id="mediaSizeSlider" min="50" max="5000" step="50" value="500">
+                        <span class="value-display" id="mediaSizeDisplay">500 KB</span>
+                    </div>
+                </div>
+
+                <div class="playground-output">
+                    <h4>Computed Infrastructure Requirements</h4>
+                    <div id="calcResults"></div>
+                </div>
+
+                <div style="margin-top:1.5rem;">
+                    <h3 style="font-size:1rem;margin-bottom:0.5rem;color:var(--teal);">Message Delivery Simulator</h3>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">Watch messages flow through the system. Adjust QPS to see behavior under load.</p>
+                    <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+                        <div class="control-group">
+                            <label>Messages / Second</label>
+                            <input type="range" id="simQps" min="10" max="500" step="10" value="100">
+                            <span class="value-display" id="simQpsDisplay">100</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Server Count</label>
+                            <input type="range" id="simServers" min="1" max="20" step="1" value="5">
+                            <span class="value-display" id="simServersDisplay">5</span>
+                        </div>
+                        <button onclick="toggleSim()" id="simToggle" style="background:var(--teal);color:#fff;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;">Start</button>
+                    </div>
+                    <div class="sim-visual" id="simVisual"></div>
+                    <div style="margin-top:0.75rem;display:flex;gap:2rem;font-size:0.8rem;color:var(--text-muted);">
+                        <span>Delivered: <strong id="simDelivered" style="color:var(--accent);">0</strong></span>
+                        <span>Queued: <strong id="simQueued" style="color:var(--orange);">0</strong></span>
+                        <span>Dropped: <strong id="simDropped" style="color:var(--red);">0</strong></span>
+                        <span>Avg Latency: <strong id="simLatency" style="color:var(--blue);">0ms</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ============ ARCHITECTURE DIAGRAM INTERACTIVITY ============
+    const tooltip = document.getElementById('tooltip');
+
+    document.querySelectorAll('.component').forEach(comp => {
+        comp.addEventListener('mouseenter', (e) => {
+            const info = comp.getAttribute('data-info');
+            if (!info) return;
+            tooltip.textContent = info;
+            tooltip.classList.add('visible');
+        });
+        comp.addEventListener('mousemove', (e) => {
+            tooltip.style.left = e.pageX + 12 + 'px';
+            tooltip.style.top = e.pageY - 30 + 'px';
+        });
+        comp.addEventListener('mouseleave', () => {
+            tooltip.classList.remove('visible');
+        });
+    });
+
+    // ============ SEQUENCE DIAGRAM ============
+    const flows = {
+        send: {
+            actors: ['Sender', 'WS Gateway', 'Chat Service', 'Session Cache', 'WS Gateway B', 'Receiver'],
+            steps: [
+                { from: 0, to: 1, label: '1. Encrypted message via WebSocket', desc: 'Sender encrypts message with recipient\'s public key using Signal Protocol, sends over persistent WebSocket connection.' },
+                { from: 1, to: 2, label: '2. Route to Chat Service', desc: 'WebSocket Gateway forwards the message to the Chat Service for processing and routing.' },
+                { from: 2, to: 3, label: '3. Lookup recipient session', desc: 'Chat Service queries Redis to find which WebSocket Gateway server holds the recipient\'s connection.' },
+                { from: 3, to: 2, label: '4. Return server ID', desc: 'Redis returns the server ID (e.g., ws-gateway-07) where recipient is connected.' },
+                { from: 2, to: 4, label: '5. Forward to recipient\'s gateway', desc: 'Chat Service routes the encrypted message to the specific gateway server holding the recipient\'s connection.' },
+                { from: 4, to: 5, label: '6. Deliver to recipient', desc: 'Gateway pushes message over the recipient\'s WebSocket. Client decrypts with private key and displays.' },
+                { from: 5, to: 4, label: '7. Delivery ACK', desc: 'Recipient\'s client sends delivery acknowledgment (double gray checkmark).' },
+                { from: 4, to: 2, label: '8. ACK to Chat Service', desc: 'Chat Service records delivery, can now delete the message from transient store.' },
+                { from: 2, to: 1, label: '9. Delivery receipt to sender', desc: 'Chat Service routes delivery receipt back to sender\'s gateway.' },
+                { from: 1, to: 0, label: '10. Update sent status', desc: 'Sender sees double checkmark — message delivered. Single tick = sent to server, double tick = delivered to device.' }
+            ]
+        },
+        group: {
+            actors: ['Sender', 'WS Gateway', 'Chat Service', 'Group Service', 'Message Queue', 'Recipients'],
+            steps: [
+                { from: 0, to: 1, label: '1. Group message', desc: 'Sender encrypts message with each group member\'s key (sender-side fan-out of encryption, not delivery).' },
+                { from: 1, to: 2, label: '2. Route to Chat Service', desc: 'Gateway forwards the group message to Chat Service for fan-out processing.' },
+                { from: 2, to: 3, label: '3. Fetch group members', desc: 'Chat Service queries Group Service for current membership list and each member\'s delivery preferences.' },
+                { from: 3, to: 2, label: '4. Member list (N users)', desc: 'Returns list of member IDs. For groups up to 1024 members, all are included.' },
+                { from: 2, to: 4, label: '5. Enqueue per-recipient delivery', desc: 'Chat Service publishes one delivery job per recipient to Kafka (partitioned by recipient ID).' },
+                { from: 4, to: 5, label: '6. Deliver to each member', desc: 'Consumers pull from queue, lookup each recipient\'s session, and push via their WebSocket gateway. Offline users get queued.' }
+            ]
+        },
+        offline: {
+            actors: ['Sender', 'Chat Service', 'Message Store', 'Notification Svc', 'Receiver (offline)', 'Receiver (online)'],
+            steps: [
+                { from: 0, to: 1, label: '1. Send message', desc: 'Sender sends encrypted message. Recipient is currently offline (no active WebSocket session in Redis).' },
+                { from: 1, to: 2, label: '2. Store in message queue', desc: 'Chat Service persists encrypted message to Cassandra, keyed by recipient\'s user ID + timestamp.' },
+                { from: 1, to: 3, label: '3. Trigger push notification', desc: 'Chat Service fires push notification via APNs (iOS) or FCM (Android). Notification contains no message content (E2E encrypted).' },
+                { from: 3, to: 4, label: '4. Push: "New message"', desc: 'Recipient\'s phone shows push notification. Content just says "New message from [Sender]" — actual content is encrypted.' },
+                { from: 4, to: 5, label: '5. User opens app, reconnects', desc: 'Recipient opens the app, client establishes WebSocket connection to gateway.' },
+                { from: 5, to: 1, label: '6. Sync request', desc: 'Client requests all pending messages since last sync timestamp.' },
+                { from: 1, to: 2, label: '7. Fetch queued messages', desc: 'Chat Service reads all pending messages for this user from Cassandra (single partition read — fast).' },
+                { from: 2, to: 1, label: '8. Return messages', desc: 'All pending messages returned in timestamp order.' },
+                { from: 1, to: 5, label: '9. Deliver batch', desc: 'All pending messages delivered in one batch over WebSocket. Client decrypts and displays.' },
+                { from: 1, to: 2, label: '10. Delete from store', desc: 'After confirmed delivery, messages are deleted from server. Server returns to empty state for this user.' }
+            ]
+        },
+        media: {
+            actors: ['Sender', 'API Gateway', 'Media Service', 'Media Storage', 'Chat Service', 'Receiver'],
+            steps: [
+                { from: 0, to: 1, label: '1. Request upload URL', desc: 'Client generates random AES-256 key, encrypts media locally, then requests a pre-signed upload URL from server.' },
+                { from: 1, to: 2, label: '2. Generate signed URL', desc: 'Media Service generates a time-limited pre-signed S3 URL for direct upload. No media passes through app servers.' },
+                { from: 2, to: 0, label: '3. Return upload URL', desc: 'Signed URL returned to client. Valid for ~15 minutes.' },
+                { from: 0, to: 3, label: '4. Upload encrypted media', desc: 'Client uploads encrypted blob directly to S3 via signed URL. Server never sees plaintext media.' },
+                { from: 3, to: 0, label: '5. Upload confirmed', desc: 'S3 returns success. Client now has the media URL.' },
+                { from: 0, to: 4, label: '6. Send message with media ref', desc: 'Client sends a chat message containing: media URL + AES key (encrypted with recipient\'s Signal key) + thumbnail.' },
+                { from: 4, to: 5, label: '7. Deliver to recipient', desc: 'Normal message delivery. Recipient receives URL + encrypted AES key.' },
+                { from: 5, to: 3, label: '8. Download encrypted media', desc: 'Recipient downloads encrypted blob from S3/CDN, decrypts with the AES key from the message.' }
+            ]
+        }
+    };
+
+    let seqState = { currentStep: -1, playing: false, interval: null };
+
+    function drawSequenceDiagram(flowName) {
+        const svg = document.getElementById('seqSvg');
+        const flow = flows[flowName];
+        const actorCount = flow.actors.length;
+        const spacing = 850 / (actorCount + 1);
+
+        let html = '';
+
+        // Draw actors
+        flow.actors.forEach((actor, i) => {
+            const x = spacing * (i + 1);
+            html += `<rect x="${x - 45}" y="10" width="90" height="32" rx="4" fill="#075e54" />`;
+            html += `<text x="${x}" y="31" text-anchor="middle" font-size="9" fill="#fff" font-weight="500">${actor}</text>`;
+            html += `<line x1="${x}" y1="42" x2="${x}" y2="390" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>`;
+        });
+
+        // Draw steps
+        flow.steps.forEach((step, i) => {
+            const fromX = spacing * (step.from + 1);
+            const toX = spacing * (step.to + 1);
+            const y = 70 + i * 32;
+            const isReverse = step.to < step.from;
+
+            html += `<g class="seq-step" id="seq-step-${i}" opacity="0.2">`;
+            html += `<line x1="${fromX}" y1="${y}" x2="${toX}" y2="${y}" stroke="${isReverse ? '#8b5cf6' : '#25d366'}" stroke-width="1.5" marker-end="url(#arrowhead${isReverse ? '' : '-green'})"/>`;
+            const labelX = (fromX + toX) / 2;
+            html += `<text x="${labelX}" y="${y - 6}" text-anchor="middle" font-size="8" fill="#475569">${step.label}</text>`;
+            html += `</g>`;
+        });
+
+        svg.innerHTML = `
+            <defs>
+                <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#64748b"/></marker>
+                <marker id="arrowhead-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#25d366"/></marker>
+            </defs>
+            ${html}`;
+    }
+
+    function showStep(flowName, stepIndex) {
+        const flow = flows[flowName];
+        if (stepIndex < 0 || stepIndex >= flow.steps.length) return;
+
+        document.querySelectorAll('.seq-step').forEach((el, i) => {
+            el.setAttribute('opacity', i <= stepIndex ? '1' : '0.2');
+        });
+
+        document.getElementById('seqNarration').innerHTML = `<strong>Step ${stepIndex + 1}:</strong> ${flow.steps[stepIndex].desc}`;
+        seqState.currentStep = stepIndex;
+    }
+
+    function playSequence() {
+        const flowName = document.getElementById('flowSelect').value;
+        const flow = flows[flowName];
+        const speed = 1500 / parseInt(document.getElementById('seqSpeed').value);
+
+        if (seqState.playing) {
+            clearInterval(seqState.interval);
+            seqState.playing = false;
+            document.getElementById('seqPlay').textContent = 'Play';
+            return;
+        }
+
+        seqState.playing = true;
+        document.getElementById('seqPlay').textContent = 'Pause';
+
+        if (seqState.currentStep >= flow.steps.length - 1) {
+            seqState.currentStep = -1;
+            document.querySelectorAll('.seq-step').forEach(el => el.setAttribute('opacity', '0.2'));
+        }
+
+        seqState.interval = setInterval(() => {
+            seqState.currentStep++;
+            if (seqState.currentStep >= flow.steps.length) {
+                clearInterval(seqState.interval);
+                seqState.playing = false;
+                document.getElementById('seqPlay').textContent = 'Play';
+                return;
+            }
+            showStep(flowName, seqState.currentStep);
+        }, speed);
+    }
+
+    document.getElementById('seqPlay').addEventListener('click', playSequence);
+
+    document.getElementById('seqStep').addEventListener('click', () => {
+        const flowName = document.getElementById('flowSelect').value;
+        const flow = flows[flowName];
+        if (seqState.currentStep < flow.steps.length - 1) {
+            showStep(flowName, seqState.currentStep + 1);
+        }
+    });
+
+    document.getElementById('seqReset').addEventListener('click', () => {
+        clearInterval(seqState.interval);
+        seqState.playing = false;
+        seqState.currentStep = -1;
+        document.getElementById('seqPlay').textContent = 'Play';
+        document.querySelectorAll('.seq-step').forEach(el => el.setAttribute('opacity', '0.2'));
+        document.getElementById('seqNarration').textContent = 'Select a flow and press Play to see the message journey.';
+    });
+
+    document.getElementById('flowSelect').addEventListener('change', () => {
+        clearInterval(seqState.interval);
+        seqState.playing = false;
+        seqState.currentStep = -1;
+        document.getElementById('seqPlay').textContent = 'Play';
+        drawSequenceDiagram(document.getElementById('flowSelect').value);
+        document.getElementById('seqNarration').textContent = 'Select a flow and press Play to see the message journey.';
+    });
+
+    // Initial draw
+    drawSequenceDiagram('send');
+
+    // ============ PITFALLS TOGGLE ============
+    document.querySelectorAll('.pitfall-header').forEach(header => {
+        header.addEventListener('click', () => {
+            header.parentElement.classList.toggle('open');
+        });
+    });
+
+    // ============ PLAYGROUND: CAPACITY ESTIMATOR ============
+    function formatNumber(n) {
+        if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
+        if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+        if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+        if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+        return Math.round(n).toString();
+    }
+
+    function formatBytes(bytes) {
+        if (bytes >= 1e15) return (bytes / 1e15).toFixed(1) + ' PB';
+        if (bytes >= 1e12) return (bytes / 1e12).toFixed(1) + ' TB';
+        if (bytes >= 1e9) return (bytes / 1e9).toFixed(1) + ' GB';
+        if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + ' MB';
+        return (bytes / 1e3).toFixed(1) + ' KB';
+    }
+
+    function calculate() {
+        const dau = parseInt(document.getElementById('dauSlider').value);
+        const msgPerUser = parseInt(document.getElementById('msgSlider').value);
+        const msgSize = parseInt(document.getElementById('sizeSlider').value);
+        const peakRatio = parseInt(document.getElementById('peakSlider').value);
+        const mediaPct = parseInt(document.getElementById('mediaSlider').value) / 100;
+        const mediaSize = parseInt(document.getElementById('mediaSizeSlider').value) * 1024;
+
+        // Update displays
+        document.getElementById('dauDisplay').textContent = formatNumber(dau);
+        document.getElementById('msgDisplay').textContent = msgPerUser;
+        document.getElementById('sizeDisplay').textContent = msgSize + ' B';
+        document.getElementById('peakDisplay').textContent = peakRatio + 'x';
+        document.getElementById('mediaDisplay').textContent = Math.round(mediaPct * 100) + '%';
+        document.getElementById('mediaSizeDisplay').textContent = (mediaSize / 1024) + ' KB';
+
+        const totalMsgsDay = dau * msgPerUser;
+        const avgQps = totalMsgsDay / 86400;
+        const peakQps = avgQps * peakRatio;
+        const textBandwidthDay = totalMsgsDay * msgSize;
+        const mediaMsgsDay = totalMsgsDay * mediaPct;
+        const mediaBandwidthDay = mediaMsgsDay * mediaSize;
+        const totalBandwidthDay = textBandwidthDay + mediaBandwidthDay;
+        const connectionsNeeded = dau * 0.3; // ~30% concurrent
+        const wsServers = Math.ceil(connectionsNeeded / 2000000); // 2M per server
+        const chatServers = Math.ceil(peakQps / 50000); // 50K msgs/sec per server
+        const cassandraNodes = Math.ceil((textBandwidthDay * 1) / (500e9)); // 500GB per node, 1 day retention
+        const redisNodes = Math.ceil((dau * 0.3 * 200) / (25e9)); // 200 bytes per session, 25GB per Redis node
+
+        const results = [
+            ['Total Messages / Day', formatNumber(totalMsgsDay)],
+            ['Average QPS', formatNumber(avgQps) + ' msg/s'],
+            ['Peak QPS', formatNumber(peakQps) + ' msg/s'],
+            ['Text Bandwidth / Day', formatBytes(textBandwidthDay)],
+            ['Media Bandwidth / Day', formatBytes(mediaBandwidthDay)],
+            ['Total Bandwidth / Day', formatBytes(totalBandwidthDay)],
+            ['Concurrent Connections (~30%)', formatNumber(connectionsNeeded)],
+            ['WebSocket Servers (2M conn/server)', wsServers],
+            ['Chat Servers (50K msg/s each)', chatServers],
+            ['Cassandra Nodes (1-day retention)', cassandraNodes],
+            ['Redis Nodes (session cache)', redisNodes],
+        ];
+
+        document.getElementById('calcResults').innerHTML = results.map(([label, value]) =>
+            `<div class="calc-row"><span class="calc-label">${label}</span><span class="calc-value">${value}</span></div>`
+        ).join('');
+    }
+
+    function applyPreset(name) {
+        const presets = {
+            startup: { dau: 1000000, msg: 30, size: 150, peak: 3, media: 20, mediaSize: 300 },
+            midscale: { dau: 50000000, msg: 50, size: 200, peak: 4, media: 35, mediaSize: 500 },
+            whatsapp: { dau: 2000000000, msg: 50, size: 200, peak: 4, media: 65, mediaSize: 600 }
+        };
+        const p = presets[name];
+        document.getElementById('dauSlider').value = p.dau;
+        document.getElementById('msgSlider').value = p.msg;
+        document.getElementById('sizeSlider').value = p.size;
+        document.getElementById('peakSlider').value = p.peak;
+        document.getElementById('mediaSlider').value = p.media;
+        document.getElementById('mediaSizeSlider').value = p.mediaSize;
+        calculate();
+    }
+
+    // Bind sliders
+    ['dauSlider', 'msgSlider', 'sizeSlider', 'peakSlider', 'mediaSlider', 'mediaSizeSlider'].forEach(id => {
+        document.getElementById(id).addEventListener('input', calculate);
+    });
+
+    calculate();
+
+    // ============ PLAYGROUND: MESSAGE SIMULATOR ============
+    let simRunning = false;
+    let simInterval = null;
+    let simStats = { delivered: 0, queued: 0, dropped: 0, latencies: [] };
+
+    function toggleSim() {
+        if (simRunning) {
+            clearInterval(simInterval);
+            simRunning = false;
+            document.getElementById('simToggle').textContent = 'Start';
+            return;
+        }
+
+        simRunning = true;
+        simStats = { delivered: 0, queued: 0, dropped: 0, latencies: [] };
+        document.getElementById('simVisual').innerHTML = '';
+        document.getElementById('simToggle').textContent = 'Stop';
+
+        simInterval = setInterval(() => {
+            const qps = parseInt(document.getElementById('simQps').value);
+            const servers = parseInt(document.getElementById('simServers').value);
+            const capacity = servers * 100; // 100 msg/s per server in sim
+
+            document.getElementById('simQpsDisplay').textContent = qps;
+            document.getElementById('simServersDisplay').textContent = servers;
+
+            const batch = Math.min(qps / 10, 20); // simulate 100ms batch
+
+            for (let i = 0; i < batch; i++) {
+                const load = qps / capacity;
+                const rand = Math.random();
+
+                let status;
+                if (load > 1.5 && rand < 0.3) {
+                    status = 'failed';
+                    simStats.dropped++;
+                } else if (load > 0.8 && rand < 0.2) {
+                    status = 'queued';
+                    simStats.queued++;
+                } else {
+                    status = 'delivered';
+                    simStats.delivered++;
+                    simStats.latencies.push(Math.round(10 + load * 50 + Math.random() * 20));
+                }
+
+                const dot = document.createElement('div');
+                dot.className = `msg-dot ${status}`;
+                const container = document.getElementById('simVisual');
+                container.appendChild(dot);
+
+                // Keep visual manageable
+                if (container.children.length > 200) {
+                    container.removeChild(container.firstChild);
+                }
+            }
+
+            document.getElementById('simDelivered').textContent = simStats.delivered;
+            document.getElementById('simQueued').textContent = simStats.queued;
+            document.getElementById('simDropped').textContent = simStats.dropped;
+
+            if (simStats.latencies.length > 0) {
+                const avgLat = simStats.latencies.slice(-50).reduce((a, b) => a + b, 0) / Math.min(simStats.latencies.length, 50);
+                document.getElementById('simLatency').textContent = Math.round(avgLat) + 'ms';
+            }
+        }, 100);
+    }
+
+    document.getElementById('simQps').addEventListener('input', () => {
+        document.getElementById('simQpsDisplay').textContent = document.getElementById('simQps').value;
+    });
+    document.getElementById('simServers').addEventListener('input', () => {
+        document.getElementById('simServersDisplay').textContent = document.getElementById('simServers').value;
+    });
+
+    // ============ NAV ACTIVE STATE ============
+    const sections = document.querySelectorAll('.section');
+    const navLinks = document.querySelectorAll('.nav-links a');
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                navLinks.forEach(link => link.classList.remove('active'));
+                const activeLink = document.querySelector(`.nav-links a[href="#${entry.target.id}"]`);
+                if (activeLink) activeLink.classList.add('active');
+            }
+        });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+
+    sections.forEach(section => observer.observe(section));
+    </script>
+</body>
+</html>

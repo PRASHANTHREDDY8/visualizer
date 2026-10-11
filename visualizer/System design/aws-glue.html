@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS Glue — System Design Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f4f6f9;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --primary: #6366f1;
+      --primary-light: #e0e7ff;
+      --accent: #f59e0b;
+      --accent-light: #fef3c7;
+      --success: #10b981;
+      --success-light: #d1fae5;
+      --danger: #ef4444;
+      --danger-light: #fee2e2;
+      --info: #3b82f6;
+      --info-light: #dbeafe;
+      --purple: #8b5cf6;
+      --purple-light: #ede9fe;
+      --teal: #14b8a6;
+      --teal-light: #ccfbf1;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Navigation */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+    }
+
+    .nav-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--primary);
+      margin-right: 16px;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-title svg { width: 24px; height: 24px; }
+
+    .nav-link {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      text-decoration: none;
+      color: var(--text-muted);
+      white-space: nowrap;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .nav-link:hover { background: var(--primary-light); color: var(--primary); }
+    .nav-link.active { background: var(--primary); color: white; }
+
+    /* Sections */
+    .section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+
+    .section-header {
+      margin-bottom: 32px;
+    }
+
+    .section-number {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .section-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.2s;
+    }
+
+    .card:hover { box-shadow: var(--shadow-lg); }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    /* Architecture Diagram */
+    .arch-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .arch-svg {
+      width: 100%;
+      height: 500px;
+    }
+
+    .arch-svg text {
+      font-family: var(--font);
+      pointer-events: none;
+    }
+
+    .arch-component {
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+
+    .arch-component:hover { opacity: 0.85; }
+
+    .arch-tooltip {
+      position: absolute;
+      background: var(--text);
+      color: white;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      max-width: 250px;
+      z-index: 50;
+    }
+
+    .arch-tooltip.visible { opacity: 1; }
+
+    /* Component Cards */
+    .comp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .comp-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .comp-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .comp-card-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .comp-card-purpose {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .tech-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin: 2px;
+    }
+
+    .tech-badge.primary { background: var(--primary-light); color: var(--primary); }
+    .tech-badge.success { background: var(--success-light); color: #065f46; }
+    .tech-badge.info { background: var(--info-light); color: #1e40af; }
+    .tech-badge.purple { background: var(--purple-light); color: #5b21b6; }
+    .tech-badge.accent { background: var(--accent-light); color: #92400e; }
+
+    /* Sequence Diagram */
+    .seq-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .seq-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .seq-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .seq-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .seq-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .seq-svg {
+      width: 100%;
+      height: 400px;
+    }
+
+    .seq-narration {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      color: var(--text);
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Comparison Table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr.chosen { background: var(--primary-light); }
+    .comparison-table tr:hover { background: var(--surface-alt); }
+
+    .chosen-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 8px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+
+    /* Pitfalls */
+    .pitfall-card {
+      border: 1px solid #fbbf24;
+      border-left: 4px solid #f59e0b;
+      border-radius: var(--radius-sm);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    .pitfall-header {
+      padding: 14px 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      background: var(--accent-light);
+      transition: background 0.2s;
+    }
+
+    .pitfall-header:hover { background: #fde68a; }
+
+    .pitfall-body {
+      padding: 0 18px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s, padding 0.3s;
+    }
+
+    .pitfall-body.open {
+      padding: 16px 18px;
+      max-height: 500px;
+    }
+
+    .pitfall-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .pitfall-label.mistake { color: var(--danger); }
+    .pitfall-label.why { color: var(--accent); }
+    .pitfall-label.consequence { color: #dc2626; }
+    .pitfall-label.fix { color: var(--success); }
+
+    /* Best Practices */
+    .practice-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .practice-item:last-child { border-bottom: none; }
+
+    .practice-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--success-light);
+      color: var(--success);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* Playground */
+    .playground-container {
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+    }
+
+    .playground-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .control-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .control-group input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+
+    .control-group select, .control-group input[type="number"] {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      background: var(--surface);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .metric-card {
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .preset-btns {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      padding: 6px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .preset-btn:hover { background: var(--primary-light); border-color: var(--primary); }
+
+    /* Scaling Section */
+    .scale-bar {
+      height: 8px;
+      background: var(--surface-alt);
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+
+    .scale-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      padding: 10px 18px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Use Case Cards */
+    .usecase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      margin-bottom: 12px;
+    }
+
+    .usecase-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .usecase-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Flow selector */
+    .flow-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .flow-tab {
+      padding: 6px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .flow-tab:hover { border-color: var(--primary); }
+    .flow-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-in {
+      animation: fadeIn 0.4s ease forwards;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    @media (max-width: 768px) {
+      .section { padding: 32px 16px; }
+      .section-title { font-size: 1.4rem; }
+      .arch-svg { height: 350px; }
+      .card-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="nav" id="nav">
+  <div class="nav-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    AWS Glue
+  </div>
+  <a class="nav-link active" onclick="scrollToSection('architecture')">Architecture</a>
+  <a class="nav-link" onclick="scrollToSection('components')">Components</a>
+  <a class="nav-link" onclick="scrollToSection('flow')">Request Flow</a>
+  <a class="nav-link" onclick="scrollToSection('comparison')">Comparisons</a>
+  <a class="nav-link" onclick="scrollToSection('usecases')">Use Cases</a>
+  <a class="nav-link" onclick="scrollToSection('practices')">Best Practices</a>
+  <a class="nav-link" onclick="scrollToSection('scaling')">Scaling</a>
+  <a class="nav-link" onclick="scrollToSection('playground')">Playground</a>
+</nav>
+
+<!-- Tooltip -->
+<div class="arch-tooltip" id="tooltip"></div>
+
+<!-- Section 1: Architecture -->
+<section class="section" id="architecture">
+  <div class="section-header">
+    <div class="section-number">Section 01</div>
+    <h2 class="section-title">Architecture Diagram</h2>
+    <p class="section-subtitle">AWS Glue is a serverless data integration service for ETL (Extract, Transform, Load) at scale</p>
+  </div>
+  <div class="arch-container">
+    <svg class="arch-svg" id="archSvg" viewBox="0 0 1100 480"></svg>
+  </div>
+</section>
+
+<!-- Section 2: Components -->
+<section class="section" id="components">
+  <div class="section-header">
+    <div class="section-number">Section 02</div>
+    <h2 class="section-title">Component Breakdown</h2>
+    <p class="section-subtitle">Core services and their responsibilities in the AWS Glue ecosystem</p>
+  </div>
+  <div class="card-grid" id="componentGrid"></div>
+</section>
+
+<!-- Section 3: Request Flow -->
+<section class="section" id="flow">
+  <div class="section-header">
+    <div class="section-number">Section 03</div>
+    <h2 class="section-title">Request Flow</h2>
+    <p class="section-subtitle">How data flows through an AWS Glue ETL pipeline</p>
+  </div>
+  <div class="seq-container">
+    <div class="flow-tabs" id="flowTabs">
+      <div class="flow-tab active" data-flow="etl">ETL Job Flow</div>
+      <div class="flow-tab" data-flow="crawler">Crawler Flow</div>
+      <div class="flow-tab" data-flow="streaming">Streaming Flow</div>
+    </div>
+    <div class="seq-controls">
+      <button class="seq-btn" id="playBtn" onclick="togglePlay()">&#9654; Play</button>
+      <button class="seq-btn" onclick="stepForward()">Step &rarr;</button>
+      <button class="seq-btn" onclick="resetFlow()">Reset</button>
+      <input type="range" min="1" max="5" value="3" id="speedSlider" style="width:120px" title="Speed">
+      <span style="font-size:0.8rem;color:var(--text-muted)" id="stepCounter">Step 0/0</span>
+    </div>
+    <svg class="seq-svg" id="seqSvg" viewBox="0 0 1100 380"></svg>
+    <div class="seq-narration" id="seqNarration">Click Play or Step to begin the flow animation.</div>
+  </div>
+</section>
+
+<!-- Section 4: Comparisons -->
+<section class="section" id="comparison">
+  <div class="section-header">
+    <div class="section-number">Section 04</div>
+    <h2 class="section-title">Comparisons with Alternatives</h2>
+    <p class="section-subtitle">How AWS Glue compares to other data integration solutions</p>
+  </div>
+  <div class="card" style="overflow-x:auto">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Approach</th>
+          <th>Key Idea</th>
+          <th>Pros</th>
+          <th>Cons</th>
+          <th>Best For</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="chosen">
+          <td><strong>AWS Glue</strong><span class="chosen-badge">Chosen</span></td>
+          <td>Serverless, managed Spark ETL with auto-schema discovery</td>
+          <td>No infra management, pay-per-use, integrated Data Catalog, auto-scaling</td>
+          <td>Cold start latency, limited language support (Python/Scala), vendor lock-in</td>
+          <td>AWS-native workloads, schema evolution, catalog-driven pipelines</td>
+        </tr>
+        <tr>
+          <td><strong>Apache Airflow (MWAA)</strong></td>
+          <td>DAG-based orchestration with pluggable operators</td>
+          <td>Flexible orchestration, rich ecosystem, open-source</td>
+          <td>Orchestrator not processor, requires separate compute, operational overhead</td>
+          <td>Complex multi-step pipelines, hybrid/multi-cloud</td>
+        </tr>
+        <tr>
+          <td><strong>AWS EMR</strong></td>
+          <td>Managed Hadoop/Spark clusters with full control</td>
+          <td>Full Spark control, persistent clusters, broad ecosystem (Hive, Presto, Flink)</td>
+          <td>Cluster management, cost when idle, longer setup</td>
+          <td>Large-scale processing, custom Spark tuning, long-running workloads</td>
+        </tr>
+        <tr>
+          <td><strong>Databricks</strong></td>
+          <td>Unified analytics with optimized Spark and Delta Lake</td>
+          <td>Superior performance (Photon), collaborative notebooks, Delta Lake built-in</td>
+          <td>Higher cost, separate billing, not natively AWS-integrated</td>
+          <td>Data science + engineering unified, lakehouse architecture</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card-grid" style="margin-top:24px">
+    <div class="card">
+      <h4 style="margin-bottom:12px;font-size:0.95rem">When to Pick Each</h4>
+      <ul style="font-size:0.85rem;color:var(--text-muted);list-style:none;padding:0">
+        <li style="margin-bottom:8px"><strong style="color:var(--primary)">AWS Glue</strong> when you need serverless ETL tightly integrated with S3, Redshift, and the AWS ecosystem</li>
+        <li style="margin-bottom:8px"><strong style="color:var(--accent)">Airflow</strong> when you need complex workflow orchestration across heterogeneous systems</li>
+        <li style="margin-bottom:8px"><strong style="color:var(--success)">EMR</strong> when you need full cluster control, custom libraries, or persistent Spark sessions</li>
+        <li><strong style="color:var(--purple)">Databricks</strong> when you need unified data engineering + science with Delta Lake</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:12px;font-size:0.95rem">Real-World Examples</h4>
+      <ul style="font-size:0.85rem;color:var(--text-muted);list-style:none;padding:0">
+        <li style="margin-bottom:8px"><strong>Netflix</strong> uses Spark on EMR for large-scale content analytics</li>
+        <li style="margin-bottom:8px"><strong>Lyft</strong> uses Airflow + custom operators for ride data pipelines</li>
+        <li style="margin-bottom:8px"><strong>Shell</strong> uses Databricks for IoT sensor data processing</li>
+        <li><strong>Capital One</strong> uses AWS Glue for regulatory data transformations</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Section 5: Use Cases & Pitfalls -->
+<section class="section" id="usecases">
+  <div class="section-header">
+    <div class="section-number">Section 05</div>
+    <h2 class="section-title">Use Cases & Common Pitfalls</h2>
+    <p class="section-subtitle">Where AWS Glue shines and where teams commonly stumble</p>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="usecases-tab">Use Cases</div>
+    <div class="tab" data-tab="pitfalls-tab">Common Pitfalls</div>
+  </div>
+
+  <div class="tab-content active" id="usecases-tab">
+    <h4 style="margin-bottom:16px;color:var(--success)">Primary Use Cases</h4>
+    <div class="card-grid">
+      <div class="usecase-card">
+        <h4>&#128202; Data Lake ETL</h4>
+        <p>Extract from RDS/DynamoDB, transform with Spark, load into S3-based data lake in Parquet/ORC format. Scale: 100GB-10TB daily.</p>
+      </div>
+      <div class="usecase-card">
+        <h4>&#128269; Schema Discovery & Cataloging</h4>
+        <p>Crawlers auto-detect schema across S3, JDBC sources, and streaming. Maintains a centralized Hive-compatible metastore.</p>
+      </div>
+      <div class="usecase-card">
+        <h4>&#128640; Data Warehouse Loading</h4>
+        <p>Transform and load data into Redshift, cleaning and deduplicating along the way. CDC support via bookmarks.</p>
+      </div>
+      <div class="usecase-card">
+        <h4>&#9889; Real-time Streaming ETL</h4>
+        <p>Process Kinesis/Kafka streams with micro-batch windows. Useful for near-real-time analytics and enrichment.</p>
+      </div>
+    </div>
+
+    <h4 style="margin:24px 0 16px;color:var(--danger)">Anti-Use-Cases</h4>
+    <div class="card-grid">
+      <div class="usecase-card" style="border-color:#fca5a5">
+        <h4>&#10060; Sub-second Latency</h4>
+        <p>Glue jobs have cold start of 30-90s. Use Lambda, Kinesis Analytics, or Flink for real-time (&lt;1s) processing.</p>
+      </div>
+      <div class="usecase-card" style="border-color:#fca5a5">
+        <h4>&#10060; Small File Processing</h4>
+        <p>Spark overhead makes Glue inefficient for many tiny files. Use Lambda or Step Functions for file-at-a-time processing.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="pitfalls-tab">
+    <div id="pitfallsList"></div>
+  </div>
+</section>
+
+<!-- Section 6: Best Practices -->
+<section class="section" id="practices">
+  <div class="section-header">
+    <div class="section-number">Section 06</div>
+    <h2 class="section-title">Best Practices</h2>
+    <p class="section-subtitle">Proven patterns for building reliable AWS Glue pipelines</p>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="bp-design">Design</div>
+    <div class="tab" data-tab="bp-implement">Implementation</div>
+    <div class="tab" data-tab="bp-ops">Operations</div>
+    <div class="tab" data-tab="bp-scale">Scaling</div>
+  </div>
+
+  <div class="tab-content active" id="bp-design">
+    <div class="card">
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Start with data profiling</strong> — Run crawlers first to understand schema, volume, and data quality before writing transforms</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Design for idempotency</strong> — Use job bookmarks and partition-based overwrites to make re-runs safe</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Separate extraction from transformation</strong> — Use a raw/staged/curated lake pattern; don't transform in the same job that extracts</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Define SLAs on data freshness</strong> — Choose batch vs. streaming Glue based on whether minutes or hours of latency is acceptable</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Use Glue Data Catalog as the single source of truth</strong> — All consumers (Athena, Redshift Spectrum, EMR) read from the same catalog</div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="bp-implement">
+    <div class="card">
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Use DynamicFrames for schema flexibility</strong> — They handle schema inconsistencies that break regular Spark DataFrames</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Enable job bookmarks for incremental processing</strong> — Avoids reprocessing the entire dataset on each run</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Coalesce output files</strong> — Use <code>repartition()</code> or <code>coalesce()</code> to avoid thousands of tiny output files</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Use Glue 4.0+ with Ray for Python-heavy workloads</strong> — Better Python performance than PySpark for certain transforms</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Test locally with Docker containers</strong> — AWS provides Glue Docker images for local development and unit testing</div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="bp-ops">
+    <div class="card">
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Set up CloudWatch alarms on job failures</strong> — Alert on <code>glue.driver.aggregate.numFailedTasks</code> and job duration anomalies</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Use Glue Workflows for orchestration</strong> — Or Step Functions for complex conditional logic beyond linear DAGs</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Enable continuous logging</strong> — Send driver/executor logs to CloudWatch with <code>--enable-continuous-cloudwatch-log</code></div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Version control all job scripts in Git</strong> — Store in S3 with versioning; deploy via CI/CD, not console edits</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Set max retry and timeout limits</strong> — Prevent runaway jobs from consuming DPUs indefinitely</div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="bp-scale">
+    <div class="card">
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Right-size DPUs</strong> — Start with 10 DPUs and scale based on Spark UI metrics; over-provisioning wastes cost</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Use Glue Auto Scaling (Glue 3.0+)</strong> — Dynamically adjusts workers based on workload; set max workers as a cost guardrail</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Partition data by time</strong> — S3 partitioning (year/month/day) enables pushdown predicates and reduces scan volume</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Use columnar formats (Parquet/ORC)</strong> — 10x compression and predicate pushdown vs. CSV/JSON</div></div>
+      <div class="practice-item"><div class="practice-check">&#10003;</div><div><strong>Split large jobs into stages</strong> — Use Glue Workflows to break monolithic jobs into parallelizable stages</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 7: Scaling & Trade-offs -->
+<section class="section" id="scaling">
+  <div class="section-header">
+    <div class="section-number">Section 07</div>
+    <h2 class="section-title">Scaling & Trade-offs</h2>
+    <p class="section-subtitle">Capacity planning and architectural trade-offs for AWS Glue pipelines</p>
+  </div>
+  <div class="card-grid">
+    <div class="card">
+      <h4 style="margin-bottom:16px">Capacity Estimation</h4>
+      <div style="font-size:0.85rem;color:var(--text-muted)">
+        <p style="margin-bottom:8px"><strong>DPU (Data Processing Unit):</strong> 4 vCPUs + 16GB RAM</p>
+        <p style="margin-bottom:8px"><strong>Throughput:</strong> ~50-100 GB/hour per 10 DPUs (varies by transform complexity)</p>
+        <p style="margin-bottom:8px"><strong>Cost:</strong> $0.44/DPU-hour (standard), $0.29/DPU-hour (flex)</p>
+        <p><strong>Min billing:</strong> 1 minute (Glue 2.0+), 10 minutes (Glue 0.9/1.0)</p>
+      </div>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:16px">Scaling Strategies</h4>
+      <div style="font-size:0.85rem;color:var(--text-muted)">
+        <div style="margin-bottom:12px">
+          <strong>10x data growth:</strong>
+          <div class="scale-bar"><div class="scale-bar-fill" style="width:40%;background:var(--success)"></div></div>
+          Increase max DPUs, enable auto-scaling, optimize partitioning
+        </div>
+        <div style="margin-bottom:12px">
+          <strong>100x data growth:</strong>
+          <div class="scale-bar"><div class="scale-bar-fill" style="width:75%;background:var(--accent)"></div></div>
+          Split into multi-stage workflows, consider EMR for largest jobs, add Glue Flex for non-urgent loads
+        </div>
+        <div>
+          <strong>1000x data growth:</strong>
+          <div class="scale-bar"><div class="scale-bar-fill" style="width:95%;background:var(--danger)"></div></div>
+          Hybrid: Glue for orchestration + catalog, EMR/Databricks for heavy compute, Redshift for serving
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:16px">Trade-off Analysis</h4>
+      <div style="font-size:0.85rem;color:var(--text-muted)">
+        <p style="margin-bottom:10px"><strong>Cost vs. Latency:</strong> Flex execution is 34% cheaper but can be delayed up to 20 minutes during peak demand</p>
+        <p style="margin-bottom:10px"><strong>Simplicity vs. Control:</strong> Glue abstracts Spark but limits tuning options vs. self-managed EMR</p>
+        <p style="margin-bottom:10px"><strong>Freshness vs. Cost:</strong> Streaming Glue provides seconds of latency but costs more than hourly batch jobs</p>
+        <p><strong>Vendor Lock-in vs. Productivity:</strong> Deep AWS integration accelerates development but makes multi-cloud harder</p>
+      </div>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:16px">Failure Scenarios</h4>
+      <div style="font-size:0.85rem;color:var(--text-muted)">
+        <p style="margin-bottom:10px"><strong>DPU capacity exhausted:</strong> Jobs queue until DPUs free up. Mitigation: use Flex for non-critical jobs, request limit increases.</p>
+        <p style="margin-bottom:10px"><strong>S3 throttling (503s):</strong> Too many requests to same prefix. Mitigation: randomize prefixes, use S3 request metrics.</p>
+        <p style="margin-bottom:10px"><strong>OOM on driver:</strong> Too much data collected to driver. Mitigation: avoid <code>collect()</code>, increase driver memory class.</p>
+        <p><strong>Schema drift breaks jobs:</strong> Source adds/removes columns. Mitigation: DynamicFrames + schema evolution in Catalog.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 8: Playground -->
+<section class="section" id="playground">
+  <div class="section-header">
+    <div class="section-number">Section 08</div>
+    <h2 class="section-title">Interactive Playground</h2>
+    <p class="section-subtitle">Estimate costs and capacity for your AWS Glue workload</p>
+  </div>
+
+  <div class="playground-container">
+    <div class="preset-btns">
+      <button class="preset-btn" onclick="setPreset('startup')">Small Startup</button>
+      <button class="preset-btn" onclick="setPreset('midscale')">Mid-Scale</button>
+      <button class="preset-btn" onclick="setPreset('enterprise')">Enterprise</button>
+      <button class="preset-btn" onclick="setPreset('reset')">Reset Defaults</button>
+    </div>
+
+    <div class="playground-controls">
+      <div class="control-group">
+        <label>Daily Data Volume (GB)</label>
+        <input type="range" id="dataVolume" min="1" max="5000" value="100" oninput="updatePlayground()">
+        <span id="dataVolumeVal" style="font-size:0.8rem;color:var(--text-muted)">100 GB</span>
+      </div>
+      <div class="control-group">
+        <label>Number of DPUs</label>
+        <input type="range" id="dpuCount" min="2" max="100" value="10" oninput="updatePlayground()">
+        <span id="dpuCountVal" style="font-size:0.8rem;color:var(--text-muted)">10 DPUs</span>
+      </div>
+      <div class="control-group">
+        <label>Job Execution Type</label>
+        <select id="execType" onchange="updatePlayground()">
+          <option value="standard">Standard ($0.44/DPU-hr)</option>
+          <option value="flex">Flex ($0.29/DPU-hr)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Runs Per Day</label>
+        <input type="number" id="runsPerDay" min="1" max="1440" value="4" oninput="updatePlayground()">
+      </div>
+      <div class="control-group">
+        <label>Transform Complexity</label>
+        <select id="complexity" onchange="updatePlayground()">
+          <option value="simple">Simple (filter, select)</option>
+          <option value="moderate" selected>Moderate (joins, agg)</option>
+          <option value="complex">Complex (ML, UDFs)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Output Format</label>
+        <select id="outputFormat" onchange="updatePlayground()">
+          <option value="parquet" selected>Parquet</option>
+          <option value="orc">ORC</option>
+          <option value="json">JSON</option>
+          <option value="csv">CSV</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="metric-grid" id="metricsGrid"></div>
+
+    <div style="margin-top:24px;padding:16px;background:var(--surface-alt);border-radius:var(--radius-sm)">
+      <strong style="font-size:0.85rem">What's happening:</strong>
+      <p id="playgroundNarration" style="font-size:0.85rem;color:var(--text-muted);margin-top:6px"></p>
+    </div>
+  </div>
+</section>
+
+<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:0.8rem">
+  AWS Glue System Design Visualizer &mdash; Interactive educational reference
+</div>
+
+<script>
+// =================== Architecture Diagram ===================
+const archComponents = [
+  { id: 'sources', x: 50, y: 40, w: 160, h: 400, label: 'Data Sources', type: 'group', color: '#e0e7ff' },
+  { id: 's3-source', x: 70, y: 80, w: 120, h: 50, label: 'Amazon S3', type: 'cylinder', color: '#6366f1', tooltip: 'Object storage for raw data files (CSV, JSON, Parquet, ORC). Primary source and target for Glue ETL jobs.' },
+  { id: 'rds', x: 70, y: 150, w: 120, h: 50, label: 'RDS / Aurora', type: 'cylinder', color: '#3b82f6', tooltip: 'Relational databases. Glue connects via JDBC to extract structured data.' },
+  { id: 'dynamodb', x: 70, y: 220, w: 120, h: 50, label: 'DynamoDB', type: 'cylinder', color: '#f59e0b', tooltip: 'NoSQL database. Glue exports full table or incremental data via DynamoDB export to S3.' },
+  { id: 'kinesis', x: 70, y: 290, w: 120, h: 50, label: 'Kinesis', type: 'parallelogram', color: '#14b8a6', tooltip: 'Real-time data streams. Glue Streaming ETL consumes Kinesis Data Streams for near-real-time processing.' },
+  { id: 'kafka', x: 70, y: 360, w: 120, h: 50, label: 'MSK / Kafka', type: 'parallelogram', color: '#8b5cf6', tooltip: 'Event streaming platform. Glue reads from Kafka topics for streaming ETL.' },
+
+  { id: 'glue-core', x: 300, y: 40, w: 480, h: 400, label: 'AWS Glue', type: 'group', color: '#d1fae5' },
+  { id: 'crawler', x: 330, y: 80, w: 130, h: 55, label: 'Crawlers', type: 'rect', color: '#10b981', tooltip: 'Automatically discover schemas from data sources. Populate the Data Catalog with table definitions and statistics.' },
+  { id: 'catalog', x: 490, y: 80, w: 130, h: 55, label: 'Data Catalog', type: 'rect', color: '#059669', tooltip: 'Centralized metadata store (Hive-compatible). Stores table schemas, partitions, statistics. Used by Athena, Redshift Spectrum, EMR.' },
+  { id: 'etl-engine', x: 330, y: 170, w: 290, h: 65, label: 'ETL Engine (Spark)', type: 'rect', color: '#14b8a6', tooltip: 'Apache Spark-based processing engine. Runs PySpark/Scala jobs with auto-scaling DPUs. Supports DynamicFrames for schema-flexible transformations.' },
+  { id: 'studio', x: 650, y: 80, w: 110, h: 55, label: 'Glue Studio', type: 'rect', color: '#6ee7b7', tooltip: 'Visual job authoring interface. Drag-and-drop DAG builder that generates PySpark code. Includes monitoring and debugging tools.' },
+  { id: 'workflows', x: 330, y: 270, w: 130, h: 55, label: 'Workflows', type: 'rect', color: '#34d399', tooltip: 'Orchestration layer for chaining crawlers, jobs, and triggers. Supports conditional branching and scheduling.' },
+  { id: 'quality', x: 490, y: 270, w: 130, h: 55, label: 'Data Quality', type: 'rect', color: '#a7f3d0', tooltip: 'Define and enforce data quality rules (completeness, uniqueness, freshness). Halts pipelines on quality violations.' },
+  { id: 'classifiers', x: 650, y: 170, w: 110, h: 55, label: 'Classifiers', type: 'rect', color: '#6ee7b7', tooltip: 'Determine the schema of data (CSV, JSON, Avro, etc.). Custom classifiers use grok patterns or XML tags.' },
+  { id: 'connections', x: 650, y: 270, w: 110, h: 55, label: 'Connections', type: 'rect', color: '#a7f3d0', tooltip: 'Managed connection objects storing JDBC strings, credentials (via Secrets Manager), and VPC networking info.' },
+  { id: 'bookmarks', x: 330, y: 360, w: 130, h: 55, label: 'Job Bookmarks', type: 'rect', color: '#bbf7d0', tooltip: 'Track processed data state for incremental ETL. Prevents reprocessing by remembering the last committed checkpoint.' },
+  { id: 'security', x: 490, y: 360, w: 130, h: 55, label: 'Security (IAM/KMS)', type: 'rect', color: '#bbf7d0', tooltip: 'IAM roles for job execution, KMS for encryption at rest and in transit. Fine-grained Lake Formation permissions.' },
+
+  { id: 'targets', x: 860, y: 40, w: 180, h: 400, label: 'Targets / Consumers', type: 'group', color: '#fef3c7' },
+  { id: 's3-target', x: 880, y: 80, w: 140, h: 50, label: 'S3 Data Lake', type: 'cylinder', color: '#f59e0b', tooltip: 'Processed data stored in optimized formats (Parquet/ORC) with partitioning for downstream consumption.' },
+  { id: 'redshift', x: 880, y: 150, w: 140, h: 50, label: 'Redshift', type: 'cylinder', color: '#ef4444', tooltip: 'Data warehouse. Glue loads transformed data via COPY or direct write for analytics queries.' },
+  { id: 'athena', x: 880, y: 220, w: 140, h: 50, label: 'Athena', type: 'rect', color: '#f97316', tooltip: 'Serverless SQL on S3. Reads table definitions from Glue Data Catalog. No data movement needed.' },
+  { id: 'quicksight', x: 880, y: 290, w: 140, h: 50, label: 'QuickSight', type: 'rect', color: '#fbbf24', tooltip: 'BI dashboards. Connects to Athena/Redshift tables defined in Glue Catalog for visualization.' },
+  { id: 'lakeformation', x: 880, y: 360, w: 140, h: 50, label: 'Lake Formation', type: 'rect', color: '#fcd34d', tooltip: 'Centralized governance layer. Uses Glue Catalog for fine-grained column-level access control.' },
+];
+
+const archConnections = [
+  { from: 's3-source', to: 'crawler', label: 'crawl' },
+  { from: 'rds', to: 'etl-engine', label: 'JDBC' },
+  { from: 'dynamodb', to: 'etl-engine', label: 'export' },
+  { from: 'kinesis', to: 'etl-engine', label: 'stream' },
+  { from: 'kafka', to: 'etl-engine', label: 'stream' },
+  { from: 'crawler', to: 'catalog', label: 'schema' },
+  { from: 'catalog', to: 'etl-engine', label: 'metadata' },
+  { from: 'etl-engine', to: 's3-target', label: 'write' },
+  { from: 'etl-engine', to: 'redshift', label: 'load' },
+  { from: 'catalog', to: 'athena', label: 'query' },
+  { from: 'catalog', to: 'lakeformation', label: 'govern' },
+  { from: 'workflows', to: 'etl-engine', label: 'trigger' },
+];
+
+function drawArchitecture() {
+  const svg = document.getElementById('archSvg');
+  let html = '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/></marker></defs>';
+
+  // Draw groups first
+  archComponents.filter(c => c.type === 'group').forEach(c => {
+    html += `<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="16" fill="${c.color}" stroke="none" opacity="0.5"/>`;
+    html += `<text x="${c.x + c.w/2}" y="${c.y + 25}" text-anchor="middle" font-size="12" font-weight="700" fill="#374151">${c.label}</text>`;
+  });
+
+  // Draw connections
+  archConnections.forEach(conn => {
+    const from = archComponents.find(c => c.id === conn.from);
+    const to = archComponents.find(c => c.id === conn.to);
+    if (!from || !to) return;
+    const fx = from.x + from.w;
+    const fy = from.y + from.h / 2;
+    const tx = to.x;
+    const ty = to.y + to.h / 2;
+    const mx = (fx + tx) / 2;
+    html += `<path d="M${fx},${fy} C${mx},${fy} ${mx},${ty} ${tx},${ty}" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" opacity="0.6"/>`;
+    html += `<text x="${mx}" y="${(fy+ty)/2 - 6}" text-anchor="middle" font-size="9" fill="#64748b">${conn.label}</text>`;
+  });
+
+  // Draw components
+  archComponents.filter(c => c.type !== 'group').forEach(c => {
+    const group = `<g class="arch-component" data-id="${c.id}" onmouseenter="showTooltip(event,'${c.id}')" onmouseleave="hideTooltip()" onclick="scrollToComponent('${c.id}')">`;
+    let shape = '';
+    if (c.type === 'cylinder') {
+      shape = `<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="8" fill="${c.color}" opacity="0.15" stroke="${c.color}" stroke-width="2"/>`;
+      shape += `<ellipse cx="${c.x + c.w/2}" cy="${c.y + 8}" rx="${c.w/2}" ry="8" fill="${c.color}" opacity="0.3"/>`;
+    } else if (c.type === 'parallelogram') {
+      const offset = 10;
+      shape = `<polygon points="${c.x+offset},${c.y} ${c.x+c.w},${c.y} ${c.x+c.w-offset},${c.y+c.h} ${c.x},${c.y+c.h}" fill="${c.color}" opacity="0.15" stroke="${c.color}" stroke-width="2"/>`;
+    } else {
+      shape = `<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="8" fill="${c.color}" opacity="0.15" stroke="${c.color}" stroke-width="2"/>`;
+    }
+    shape += `<text x="${c.x + c.w/2}" y="${c.y + c.h/2 + 4}" text-anchor="middle" font-size="11" font-weight="600" fill="${c.color}">${c.label}</text>`;
+    html += group + shape + '</g>';
+  });
+
+  svg.innerHTML = html;
+}
+
+function showTooltip(event, id) {
+  const comp = archComponents.find(c => c.id === id);
+  if (!comp || !comp.tooltip) return;
+  const tooltip = document.getElementById('tooltip');
+  tooltip.textContent = comp.tooltip;
+  tooltip.classList.add('visible');
+  tooltip.style.left = event.pageX + 12 + 'px';
+  tooltip.style.top = event.pageY - 30 + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').classList.remove('visible');
+}
+
+function scrollToComponent(id) {
+  document.getElementById('components').scrollIntoView({ behavior: 'smooth' });
+}
+
+// =================== Components Grid ===================
+const componentData = [
+  { name: 'Data Catalog', icon: '&#128218;', iconBg: 'var(--success-light)', purpose: 'Centralized Hive-compatible metadata store', tech: ['Apache Hive Metastore', 'AWS Lake Formation'], techType: ['success', 'info'], decisions: 'Acts as the single source of truth for all data assets. Enables separation of storage and compute.', scaling: 'Fully managed, auto-scales. Supports millions of tables. Replicated across AZs.' },
+  { name: 'ETL Engine (Spark)', icon: '&#9889;', iconBg: 'var(--teal-light)', purpose: 'Apache Spark-based serverless data processing', tech: ['Apache Spark 3.x', 'DynamicFrames', 'PySpark/Scala'], techType: ['primary', 'success', 'purple'], decisions: 'DynamicFrames handle schema inconsistencies without failing. Falls back to native DataFrames when needed.', scaling: 'Auto-scales DPUs (2-100 workers). Each DPU = 4 vCPU + 16GB. Flex execution for cost savings.' },
+  { name: 'Crawlers', icon: '&#128375;', iconBg: 'var(--primary-light)', purpose: 'Automatic schema discovery and catalog population', tech: ['Custom classifiers', 'Built-in (JSON, CSV, Parquet)'], techType: ['info', 'primary'], decisions: 'Trade-off: automatic schema detection vs. explicit schema definition. Crawlers reduce boilerplate but can create unwanted tables.', scaling: 'Runs on-demand or on schedule. Concurrent crawlers limited per account (soft limit 50).' },
+  { name: 'Workflows', icon: '&#128736;', iconBg: 'var(--accent-light)', purpose: 'Pipeline orchestration and scheduling', tech: ['Event triggers', 'Schedule triggers', 'Conditional triggers'], techType: ['accent', 'success', 'purple'], decisions: 'Simpler than Step Functions for linear Glue-only pipelines. Use Step Functions for complex branching or non-Glue steps.', scaling: 'Managed service. For complex DAGs, consider MWAA (Managed Airflow) or Step Functions.' },
+  { name: 'Data Quality', icon: '&#9989;', iconBg: 'var(--success-light)', purpose: 'Rule-based data validation and monitoring', tech: ['DQDL (Data Quality Definition Language)', 'CloudWatch integration'], techType: ['success', 'info'], decisions: 'Define rules declaratively. Can halt pipeline on failures or continue with quality metrics. Integrated into Glue Studio visual editor.', scaling: 'Runs within Glue job context. No additional infrastructure. Rules evaluated per partition.' },
+  { name: 'Job Bookmarks', icon: '&#128278;', iconBg: 'var(--purple-light)', purpose: 'Incremental processing state management', tech: ['Checkpoint-based', 'S3 manifest tracking'], techType: ['purple', 'primary'], decisions: 'Enables exactly-once semantics for batch ETL. Stores high-water marks for JDBC sources and S3 file lists.', scaling: 'Bookmark state stored in Glue service. Reset bookmarks to reprocess historical data.' },
+];
+
+function renderComponents() {
+  const grid = document.getElementById('componentGrid');
+  grid.innerHTML = componentData.map(c => `
+    <div class="comp-card">
+      <div class="comp-card-header">
+        <div class="comp-icon" style="background:${c.iconBg}">${c.icon}</div>
+        <div>
+          <div class="comp-card-title">${c.name}</div>
+          <div class="comp-card-purpose">${c.purpose}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">${c.tech.map((t,i) => `<span class="tech-badge ${c.techType[i]}">${t}</span>`).join('')}</div>
+      <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:8px"><strong>Design:</strong> ${c.decisions}</p>
+      <p style="font-size:0.83rem;color:var(--text-muted)"><strong>Scaling:</strong> ${c.scaling}</p>
+    </div>
+  `).join('');
+}
+
+// =================== Sequence Diagram ===================
+const flows = {
+  etl: {
+    actors: ['Client', 'Glue Studio', 'Data Catalog', 'ETL Engine', 'S3 Source', 'S3 Target'],
+    steps: [
+      { from: 0, to: 1, label: 'Submit job', desc: '1. Developer defines ETL job in Glue Studio with source, transforms, and target' },
+      { from: 1, to: 2, label: 'Fetch schema', desc: '2. Glue Studio reads table definitions from the Data Catalog to configure the job' },
+      { from: 1, to: 3, label: 'Launch job', desc: '3. Job is submitted to the Glue ETL Engine, which provisions Spark cluster (DPUs)' },
+      { from: 3, to: 4, label: 'Read data', desc: '4. Spark executors read source data from S3 using DynamicFrames with pushdown predicates' },
+      { from: 3, to: 3, label: 'Transform', desc: '5. Data is transformed in-memory: filter, join, aggregate, map custom UDFs' },
+      { from: 3, to: 5, label: 'Write output', desc: '6. Transformed data written to target S3 location in Parquet format with partitioning' },
+      { from: 3, to: 2, label: 'Update catalog', desc: '7. ETL engine updates Data Catalog with new partition metadata and statistics' },
+      { from: 3, to: 0, label: 'Job complete', desc: '8. Job reports success with metrics: rows processed, duration, bytes written' },
+    ]
+  },
+  crawler: {
+    actors: ['Scheduler', 'Crawler', 'S3 Source', 'Classifiers', 'Data Catalog'],
+    steps: [
+      { from: 0, to: 1, label: 'Trigger crawl', desc: '1. Scheduler triggers crawler on a cron schedule or via event trigger' },
+      { from: 1, to: 2, label: 'List objects', desc: '2. Crawler lists S3 objects in the configured path to find new/modified files' },
+      { from: 1, to: 3, label: 'Classify format', desc: '3. Built-in and custom classifiers determine data format (CSV, JSON, Parquet, etc.)' },
+      { from: 3, to: 1, label: 'Return schema', desc: '4. Classifiers return inferred schema: column names, types, partition keys' },
+      { from: 1, to: 4, label: 'Create/update tables', desc: '5. Crawler creates new tables or updates existing ones in the Data Catalog' },
+      { from: 1, to: 4, label: 'Add partitions', desc: '6. New partitions discovered are registered in the catalog for query engines' },
+      { from: 1, to: 0, label: 'Crawl complete', desc: '7. Crawler reports completion: tables created/updated, partitions added, time elapsed' },
+    ]
+  },
+  streaming: {
+    actors: ['Kinesis', 'Glue Streaming', 'Data Catalog', 'Transform', 'S3 Target'],
+    steps: [
+      { from: 0, to: 1, label: 'Consume records', desc: '1. Glue Streaming job continuously consumes records from Kinesis Data Stream shards' },
+      { from: 1, to: 2, label: 'Lookup schema', desc: '2. Job reads the stream schema from Data Catalog (or Schema Registry) for deserialization' },
+      { from: 1, to: 3, label: 'Micro-batch', desc: '3. Records buffered into micro-batches (configurable window: 1s to 15min) for processing' },
+      { from: 3, to: 3, label: 'Apply transforms', desc: '4. Transformations applied to micro-batch: deduplication, enrichment, aggregation' },
+      { from: 3, to: 4, label: 'Write batch', desc: '5. Processed micro-batch written to S3 target with automatic file compaction' },
+      { from: 1, to: 2, label: 'Checkpoint', desc: '6. Checkpoint committed to track shard iterator positions for exactly-once semantics' },
+      { from: 1, to: 0, label: 'Continue', desc: '7. Job continues consuming next batch of records — runs continuously until stopped' },
+    ]
+  }
+};
+
+let currentFlow = 'etl';
+let currentStep = -1;
+let isPlaying = false;
+let playInterval = null;
+
+function drawSequence() {
+  const svg = document.getElementById('seqSvg');
+  const flow = flows[currentFlow];
+  const actorCount = flow.actors.length;
+  const gap = 1050 / (actorCount + 1);
+  let html = '';
+
+  // Actors
+  flow.actors.forEach((actor, i) => {
+    const x = gap * (i + 1);
+    html += `<rect x="${x-45}" y="10" width="90" height="32" rx="6" fill="var(--primary-light)" stroke="var(--primary)" stroke-width="1.5"/>`;
+    html += `<text x="${x}" y="30" text-anchor="middle" font-size="10" font-weight="600" fill="var(--primary)">${actor}</text>`;
+    html += `<line x1="${x}" y1="42" x2="${x}" y2="370" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4"/>`;
+  });
+
+  // Steps
+  flow.steps.forEach((step, i) => {
+    const fromX = gap * (step.from + 1);
+    const toX = gap * (step.to + 1);
+    const y = 70 + i * 42;
+    const isActive = i <= currentStep;
+    const isCurrent = i === currentStep;
+    const color = isCurrent ? 'var(--primary)' : isActive ? '#94a3b8' : '#e2e8f0';
+    const textColor = isCurrent ? 'var(--primary)' : isActive ? '#64748b' : '#cbd5e1';
+    const strokeWidth = isCurrent ? 2.5 : 1.5;
+
+    if (step.from === step.to) {
+      // Self-arrow
+      html += `<path d="M${fromX+5},${y} C${fromX+40},${y-15} ${fromX+40},${y+15} ${fromX+5},${y+5}" fill="none" stroke="${color}" stroke-width="${strokeWidth}"/>`;
+      html += `<text x="${fromX+45}" y="${y+3}" font-size="9" fill="${textColor}">${step.label}</text>`;
+    } else {
+      const dir = toX > fromX ? 1 : -1;
+      html += `<line x1="${fromX}" y1="${y}" x2="${toX - dir*8}" y2="${y}" stroke="${color}" stroke-width="${strokeWidth}" marker-end="url(#arrowhead)"/>`;
+      html += `<text x="${(fromX+toX)/2}" y="${y-6}" text-anchor="middle" font-size="9" fill="${textColor}">${step.label}</text>`;
+    }
+
+    if (isCurrent) {
+      html += `<circle cx="${fromX}" cy="${y}" r="4" fill="var(--primary)"/>`;
+    }
+  });
+
+  svg.innerHTML = '<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/></marker></defs>' + html;
+
+  // Update narration
+  const narration = document.getElementById('seqNarration');
+  if (currentStep >= 0 && currentStep < flow.steps.length) {
+    narration.textContent = flow.steps[currentStep].desc;
+  } else {
+    narration.textContent = 'Click Play or Step to begin the flow animation.';
+  }
+
+  document.getElementById('stepCounter').textContent = `Step ${Math.max(0, currentStep + 1)}/${flow.steps.length}`;
+}
+
+function togglePlay() {
+  isPlaying = !isPlaying;
+  document.getElementById('playBtn').innerHTML = isPlaying ? '&#10074;&#10074; Pause' : '&#9654; Play';
+  if (isPlaying) {
+    const speed = [2000, 1500, 1000, 600, 300][document.getElementById('speedSlider').value - 1];
+    playInterval = setInterval(() => {
+      const flow = flows[currentFlow];
+      if (currentStep >= flow.steps.length - 1) {
+        togglePlay();
+        return;
+      }
+      currentStep++;
+      drawSequence();
+    }, speed);
+  } else {
+    clearInterval(playInterval);
+  }
+}
+
+function stepForward() {
+  const flow = flows[currentFlow];
+  if (currentStep < flow.steps.length - 1) {
+    currentStep++;
+    drawSequence();
+  }
+}
+
+function resetFlow() {
+  if (isPlaying) togglePlay();
+  currentStep = -1;
+  drawSequence();
+}
+
+// Flow tabs
+document.getElementById('flowTabs').addEventListener('click', e => {
+  const tab = e.target.closest('.flow-tab');
+  if (!tab) return;
+  document.querySelectorAll('.flow-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  currentFlow = tab.dataset.flow;
+  currentStep = -1;
+  if (isPlaying) togglePlay();
+  drawSequence();
+});
+
+// =================== Pitfalls ===================
+const pitfalls = [
+  { title: 'Running crawlers on the entire S3 bucket', mistake: 'Configuring crawlers to scan s3://my-bucket/ instead of specific prefixes', why: 'Seems easier than specifying individual paths. "Just let it discover everything."', consequence: 'Creates hundreds of unwanted tables, long crawl times (hours), and high S3 LIST API costs.', fix: 'Scope crawlers to specific prefixes (s3://bucket/raw/events/) and use exclusion patterns. One crawler per logical data source.' },
+  { title: 'Not coalescing output files', mistake: 'Letting Spark write thousands of tiny files (one per partition/task) to S3', why: 'Default Spark behavior writes one file per task. With 200 DPUs, you get 200+ files per partition.', consequence: 'Downstream queries (Athena, Redshift Spectrum) become extremely slow due to S3 LIST overhead and tiny file reads.', fix: 'Use repartition(N) or coalesce(N) before writing. Target 128MB-512MB per output file. Use Glue\'s groupFiles option for input.' },
+  { title: 'Ignoring job bookmarks for incremental loads', mistake: 'Reprocessing the entire dataset on every job run instead of using bookmarks', why: 'Full reprocessing is simpler to implement and reason about. "We\'ll optimize later."', consequence: 'Costs scale linearly with total data size, not new data. A daily job on 10TB costs 100x more than processing only new 100GB.', fix: 'Enable job bookmarks from day one. For S3: tracks processed files. For JDBC: tracks a timestamp/ID column. Test bookmark reset for reprocessing.' },
+  { title: 'Using collect() or toPandas() on large datasets', mistake: 'Calling .collect() or .toPandas() to bring distributed data to the driver node', why: 'Familiar pattern from pandas/local development. Works fine in local testing with small data.', consequence: 'Driver OOM crash when data exceeds driver memory (16GB default). Job fails after processing most data, wasting DPU-hours.', fix: 'Keep data distributed. Use Spark aggregations, window functions, and broadcast joins. If you must collect, add .limit(N) first.' },
+  { title: 'Not setting concurrency limits', mistake: 'Allowing unlimited concurrent job runs without max concurrency or max retries', why: 'Default settings allow 3 concurrent runs. But upstream triggers can queue dozens of jobs during catch-up.', consequence: 'Account DPU limit exhausted. All Glue jobs across the account throttled. Cascading failures across unrelated pipelines.', fix: 'Set MaxConcurrentRuns per job. Use Glue Workflows with concurrency controls. Request DPU limit increases proactively.' },
+  { title: 'Hardcoding schemas instead of using the Catalog', mistake: 'Defining schemas in job code rather than reading from Data Catalog', why: 'Faster initial development. Avoids crawler setup. "We know what the schema is."', consequence: 'Schema drift in sources silently breaks jobs or produces incorrect results. Changes require code deployment instead of catalog update.', fix: 'Always read schemas from the Data Catalog. Use DynamicFrames which handle schema evolution. Set up crawlers or explicit catalog updates in CI/CD.' },
+];
+
+function renderPitfalls() {
+  const list = document.getElementById('pitfallsList');
+  list.innerHTML = pitfalls.map((p, i) => `
+    <div class="pitfall-card">
+      <div class="pitfall-header" onclick="togglePitfall(${i})">
+        <span>&#9888;&#65039;</span>
+        <span>${p.title}</span>
+        <span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted)" id="pitfall-arrow-${i}">&#9660;</span>
+      </div>
+      <div class="pitfall-body" id="pitfall-body-${i}">
+        <div style="margin-bottom:10px"><div class="pitfall-label mistake">The Mistake</div><p style="font-size:0.85rem">${p.mistake}</p></div>
+        <div style="margin-bottom:10px"><div class="pitfall-label why">Why It Happens</div><p style="font-size:0.85rem">${p.why}</p></div>
+        <div style="margin-bottom:10px"><div class="pitfall-label consequence">Consequence</div><p style="font-size:0.85rem">${p.consequence}</p></div>
+        <div><div class="pitfall-label fix">The Fix</div><p style="font-size:0.85rem">${p.fix}</p></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function togglePitfall(i) {
+  const body = document.getElementById(`pitfall-body-${i}`);
+  const arrow = document.getElementById(`pitfall-arrow-${i}`);
+  body.classList.toggle('open');
+  arrow.innerHTML = body.classList.contains('open') ? '&#9650;' : '&#9660;';
+}
+
+// =================== Tabs ===================
+document.querySelectorAll('.tabs').forEach(tabGroup => {
+  tabGroup.addEventListener('click', e => {
+    const tab = e.target.closest('.tab');
+    if (!tab) return;
+    const tabId = tab.dataset.tab;
+    tabGroup.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const section = tabGroup.parentElement;
+    section.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    section.querySelector(`#${tabId}`).classList.add('active');
+  });
+});
+
+// =================== Playground ===================
+function updatePlayground() {
+  const volume = parseInt(document.getElementById('dataVolume').value);
+  const dpus = parseInt(document.getElementById('dpuCount').value);
+  const execType = document.getElementById('execType').value;
+  const runs = parseInt(document.getElementById('runsPerDay').value) || 1;
+  const complexity = document.getElementById('complexity').value;
+  const format = document.getElementById('outputFormat').value;
+
+  document.getElementById('dataVolumeVal').textContent = volume >= 1000 ? (volume/1000).toFixed(1) + ' TB' : volume + ' GB';
+  document.getElementById('dpuCountVal').textContent = dpus + ' DPUs';
+
+  // Calculate throughput based on complexity
+  const throughputPerDPU = { simple: 12, moderate: 8, complex: 4 }[complexity]; // GB/hr per DPU
+  const totalThroughput = dpus * throughputPerDPU;
+  const hoursPerRun = volume / totalThroughput;
+  const minutesPerRun = Math.ceil(hoursPerRun * 60);
+
+  // Cost calculation
+  const rate = execType === 'standard' ? 0.44 : 0.29;
+  const costPerRun = dpus * Math.max(hoursPerRun, 1/60) * rate; // Min 1 minute billing
+  const dailyCost = costPerRun * runs;
+  const monthlyCost = dailyCost * 30;
+
+  // Compression ratio by format
+  const compression = { parquet: 0.15, orc: 0.14, json: 0.9, csv: 0.85 }[format];
+  const outputSize = volume * compression;
+
+  // S3 storage cost
+  const s3CostPerGB = 0.023;
+  const monthlyStorageCost = outputSize * runs * 30 * s3CostPerGB;
+
+  const metrics = [
+    { value: minutesPerRun < 60 ? minutesPerRun + 'min' : (hoursPerRun).toFixed(1) + 'hr', label: 'Job Duration' },
+    { value: '$' + costPerRun.toFixed(2), label: 'Cost / Run' },
+    { value: '$' + dailyCost.toFixed(2), label: 'Daily Cost' },
+    { value: '$' + monthlyCost.toFixed(0), label: 'Monthly Glue Cost' },
+    { value: totalThroughput + ' GB/hr', label: 'Throughput' },
+    { value: outputSize.toFixed(1) + ' GB', label: 'Output Size / Run' },
+    { value: '$' + monthlyStorageCost.toFixed(0), label: 'Monthly S3 Cost' },
+    { value: '$' + (monthlyCost + monthlyStorageCost).toFixed(0), label: 'Total Monthly' },
+  ];
+
+  document.getElementById('metricsGrid').innerHTML = metrics.map(m => `
+    <div class="metric-card">
+      <div class="metric-value">${m.value}</div>
+      <div class="metric-label">${m.label}</div>
+    </div>
+  `).join('');
+
+  // Narration
+  const formatName = { parquet: 'Parquet (columnar, compressed)', orc: 'ORC (columnar, compressed)', json: 'JSON (row-based, verbose)', csv: 'CSV (row-based, no types)' }[format];
+  document.getElementById('playgroundNarration').textContent =
+    `Processing ${volume}GB daily across ${runs} run(s) with ${dpus} DPUs (${execType} execution). ` +
+    `${complexity.charAt(0).toUpperCase() + complexity.slice(1)} transforms at ~${throughputPerDPU}GB/hr per DPU yield ${totalThroughput}GB/hr total throughput. ` +
+    `Output in ${formatName} achieves ${Math.round((1-compression)*100)}% compression. ` +
+    (monthlyCost > 500 ? 'Consider Flex execution or reducing DPUs for cost savings.' : 'Cost-efficient at this scale.');
+}
+
+function setPreset(name) {
+  const presets = {
+    startup: { volume: 50, dpus: 5, exec: 'flex', runs: 2, complexity: 'simple', format: 'parquet' },
+    midscale: { volume: 500, dpus: 20, exec: 'standard', runs: 6, complexity: 'moderate', format: 'parquet' },
+    enterprise: { volume: 3000, dpus: 80, exec: 'standard', runs: 12, complexity: 'complex', format: 'orc' },
+    reset: { volume: 100, dpus: 10, exec: 'standard', runs: 4, complexity: 'moderate', format: 'parquet' },
+  };
+  const p = presets[name];
+  document.getElementById('dataVolume').value = p.volume;
+  document.getElementById('dpuCount').value = p.dpus;
+  document.getElementById('execType').value = p.exec;
+  document.getElementById('runsPerDay').value = p.runs;
+  document.getElementById('complexity').value = p.complexity;
+  document.getElementById('outputFormat').value = p.format;
+  updatePlayground();
+}
+
+// =================== Navigation ===================
+function scrollToSection(id) {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+}
+
+// Highlight active nav on scroll
+const sections = ['architecture', 'components', 'flow', 'comparison', 'usecases', 'practices', 'scaling', 'playground'];
+window.addEventListener('scroll', () => {
+  const scrollPos = window.scrollY + 100;
+  let activeIdx = 0;
+  sections.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el && el.offsetTop <= scrollPos) activeIdx = i;
+  });
+  document.querySelectorAll('.nav-link').forEach((link, i) => {
+    link.classList.toggle('active', i === activeIdx);
+  });
+});
+
+// =================== Init ===================
+drawArchitecture();
+renderComponents();
+drawSequence();
+renderPitfalls();
+updatePlayground();
+</script>
+</body>
+</html>

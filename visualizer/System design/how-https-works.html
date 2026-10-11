@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How HTTPS Works — Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f0f4f8;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #4a5568;
+      --text-light: #718096;
+      --accent: #2563eb;
+      --accent-light: #dbeafe;
+      --accent-dark: #1d4ed8;
+      --green: #059669;
+      --green-light: #d1fae5;
+      --green-dark: #047857;
+      --amber: #d97706;
+      --amber-light: #fef3c7;
+      --red: #dc2626;
+      --red-light: #fee2e2;
+      --purple: #7c3aed;
+      --purple-light: #ede9fe;
+      --teal: #0891b2;
+      --teal-light: #cffafe;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+      --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Navigation */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+
+    .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .nav-inner::-webkit-scrollbar { display: none; }
+
+    .nav-brand {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--accent);
+      white-space: nowrap;
+      padding: 1rem 0.5rem 1rem 0;
+      border-right: 1px solid var(--border);
+      margin-right: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-link {
+      padding: 0.75rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover { color: var(--accent); }
+    .nav-link.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* Hero */
+    .hero {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 4rem 2rem 3rem;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .badge-row {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .badge-blue { background: var(--accent-light); color: var(--accent-dark); }
+    .badge-green { background: var(--green-light); color: var(--green-dark); }
+    .badge-purple { background: var(--purple-light); color: var(--purple); }
+
+    /* Sections */
+    section {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+
+    .section-header {
+      margin-bottom: 2.5rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* Architecture Diagram */
+    .arch-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .arch-svg {
+      width: 100%;
+      height: 500px;
+    }
+
+    .arch-svg text {
+      font-family: var(--font);
+    }
+
+    .arch-component {
+      cursor: pointer;
+      transition: transform 0.2s, filter 0.2s;
+    }
+
+    .arch-component:hover {
+      filter: brightness(1.05);
+    }
+
+    .arch-tooltip {
+      position: absolute;
+      background: var(--text);
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      max-width: 280px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 50;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .arch-tooltip.visible { opacity: 1; }
+
+    /* Sequence Diagram */
+    .seq-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .seq-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-alt);
+      flex-wrap: wrap;
+    }
+
+    .seq-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--text);
+    }
+
+    .seq-btn:hover {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .seq-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .seq-speed {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .seq-speed input[type="range"] {
+      width: 80px;
+      accent-color: var(--accent);
+    }
+
+    .seq-flow-tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-left: auto;
+    }
+
+    .seq-flow-tab {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--text-muted);
+    }
+
+    .seq-flow-tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .seq-canvas {
+      padding: 2rem;
+      min-height: 450px;
+      position: relative;
+    }
+
+    .seq-narration {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface-alt);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      min-height: 3rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .seq-step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-right: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    /* Component Cards */
+    .comp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .comp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+
+    .comp-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .comp-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+    }
+
+    .comp-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .comp-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .comp-tech {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.6rem;
+      background: var(--surface-alt);
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-right: 0.4rem;
+      margin-bottom: 0.4rem;
+    }
+
+    /* Comparison Table */
+    .compare-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .compare-table th {
+      background: var(--surface-alt);
+      padding: 1rem 1.25rem;
+      text-align: left;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .compare-table td {
+      padding: 1rem 1.25rem;
+      font-size: 0.85rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .compare-table tr:last-child td { border-bottom: none; }
+
+    .compare-table tr.highlighted {
+      background: var(--accent-light);
+    }
+
+    .chosen-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.5rem;
+      background: var(--accent);
+      color: white;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      margin-left: 0.5rem;
+    }
+
+    /* Pitfalls */
+    .pitfall-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--amber);
+      border-radius: var(--radius-sm);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .pitfall-header {
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .pitfall-header:hover { background: var(--surface-alt); }
+
+    .pitfall-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .pitfall-chevron {
+      transition: transform 0.2s;
+      color: var(--text-muted);
+    }
+
+    .pitfall-card.open .pitfall-chevron { transform: rotate(180deg); }
+
+    .pitfall-body {
+      padding: 0 1.5rem 1.25rem;
+      display: none;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .pitfall-card.open .pitfall-body { display: block; }
+
+    .pitfall-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .pitfall-label.mistake { color: var(--red); }
+    .pitfall-label.why { color: var(--amber); }
+    .pitfall-label.consequence { color: var(--red); }
+    .pitfall-label.fix { color: var(--green); }
+
+    /* Best Practices */
+    .bp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--green);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .bp-card h4 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: var(--green-dark);
+    }
+
+    .bp-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .bp-list li {
+      position: relative;
+      padding-left: 1.5rem;
+      margin-bottom: 0.6rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .bp-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    /* Scaling */
+    .scale-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .scale-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .scale-card h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .scale-card p, .scale-card li {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .scale-card ul {
+      padding-left: 1.25rem;
+      margin-top: 0.5rem;
+    }
+
+    .scale-card li { margin-bottom: 0.4rem; }
+
+    /* Use cases */
+    .usecase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .usecase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .usecase-card h4 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .usecase-card p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .anti-badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      background: var(--red-light);
+      color: var(--red);
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Code block */
+    .code-block {
+      background: #1e1e2e;
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+
+    .code-block code {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: #cdd6f4;
+      line-height: 1.7;
+    }
+
+    .code-keyword { color: #cba6f7; }
+    .code-string { color: #a6e3a1; }
+    .code-comment { color: #6c7086; }
+    .code-func { color: #89b4fa; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .hero h1 { font-size: 2rem; }
+      .arch-svg { height: 380px; }
+      .seq-flow-tabs { margin-left: 0; margin-top: 0.5rem; width: 100%; }
+      .comp-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      section { padding: 2rem 1rem; }
+      .nav { padding: 0 1rem; }
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-in {
+      animation: fadeInUp 0.5s ease-out forwards;
+      opacity: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .pulse { animation: pulse 2s infinite; }
+
+    @keyframes drawLine {
+      from { stroke-dashoffset: 1000; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* Lock icon animation */
+    @keyframes lockClose {
+      0% { transform: translateY(-3px); }
+      100% { transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-brand">HTTPS Visualizer</div>
+      <a href="#architecture" class="nav-link active" data-section="architecture">Architecture</a>
+      <a href="#components" class="nav-link" data-section="components">Components</a>
+      <a href="#sequence" class="nav-link" data-section="sequence">Request Flow</a>
+      <a href="#comparisons" class="nav-link" data-section="comparisons">Comparisons</a>
+      <a href="#usecases" class="nav-link" data-section="usecases">Use Cases</a>
+      <a href="#bestpractices" class="nav-link" data-section="bestpractices">Best Practices</a>
+      <a href="#scaling" class="nav-link" data-section="scaling">Scaling</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <h1>How HTTPS Works</h1>
+    <p>A complete visual guide to secure communication on the web — from the TLS handshake to encrypted data transfer, certificate verification, and beyond.</p>
+    <div class="badge-row">
+      <span class="badge badge-blue">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        TLS 1.3
+      </span>
+      <span class="badge badge-green">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        End-to-End Encryption
+      </span>
+      <span class="badge badge-purple">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+        Certificate Verification
+      </span>
+    </div>
+  </header>
+
+  <!-- Section 1: Architecture -->
+  <section id="architecture">
+    <div class="section-header">
+      <h2>Architecture Overview</h2>
+      <p>The key participants in an HTTPS connection and how they interact to establish trust and secrecy.</p>
+    </div>
+    <div class="arch-container" style="position:relative;">
+      <svg class="arch-svg" id="archSvg" viewBox="0 0 1000 460"></svg>
+      <div class="arch-tooltip" id="archTooltip"></div>
+    </div>
+  </section>
+
+  <!-- Section 2: Components -->
+  <section id="components">
+    <div class="section-header">
+      <h2>Component Breakdown</h2>
+      <p>Each participant in the HTTPS ecosystem serves a critical role in establishing secure communication.</p>
+    </div>
+    <div class="comp-grid">
+      <div class="comp-card">
+        <div class="comp-icon" style="background:var(--accent-light);color:var(--accent);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </div>
+        <h3>Client (Browser)</h3>
+        <p>Initiates the TLS handshake, verifies server certificates against its trusted CA store, negotiates cipher suites, and encrypts/decrypts application data.</p>
+        <div>
+          <span class="comp-tech">Chrome/Firefox/Safari</span>
+          <span class="comp-tech">OS Trust Store</span>
+          <span class="comp-tech">TLS Library</span>
+        </div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon" style="background:var(--green-light);color:var(--green);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="6" cy="6" r="1"/><circle cx="6" cy="18" r="1"/></svg>
+        </div>
+        <h3>Web Server</h3>
+        <p>Holds the private key and TLS certificate. Responds to ClientHello, presents its certificate chain, completes the key exchange, and serves encrypted content.</p>
+        <div>
+          <span class="comp-tech">Nginx / Apache</span>
+          <span class="comp-tech">Private Key</span>
+          <span class="comp-tech">X.509 Certificate</span>
+        </div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon" style="background:var(--purple-light);color:var(--purple);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <h3>Certificate Authority (CA)</h3>
+        <p>A trusted third party that verifies domain ownership and issues digitally signed certificates. The root CAs are pre-installed in operating systems and browsers.</p>
+        <div>
+          <span class="comp-tech">Let's Encrypt</span>
+          <span class="comp-tech">DigiCert</span>
+          <span class="comp-tech">Sectigo</span>
+        </div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon" style="background:var(--teal-light);color:var(--teal);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        </div>
+        <h3>DNS Resolver</h3>
+        <p>Translates the domain name to an IP address before the TCP/TLS connection begins. With DNS-over-HTTPS (DoH), even this lookup can be encrypted.</p>
+        <div>
+          <span class="comp-tech">Cloudflare 1.1.1.1</span>
+          <span class="comp-tech">Google 8.8.8.8</span>
+          <span class="comp-tech">DoH / DoT</span>
+        </div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon" style="background:var(--amber-light);color:var(--amber);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <h3>TLS Handshake Protocol</h3>
+        <p>The negotiation protocol that establishes a shared secret between client and server using asymmetric cryptography, then switches to fast symmetric encryption for data.</p>
+        <div>
+          <span class="comp-tech">ECDHE Key Exchange</span>
+          <span class="comp-tech">AES-256-GCM</span>
+          <span class="comp-tech">SHA-256</span>
+        </div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon" style="background:var(--red-light);color:var(--red);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+        </div>
+        <h3>X.509 Certificate</h3>
+        <p>A digital document binding a public key to a domain. Contains the subject, issuer, validity period, public key, and CA's digital signature for verification.</p>
+        <div>
+          <span class="comp-tech">RSA 2048 / ECDSA P-256</span>
+          <span class="comp-tech">SAN Extension</span>
+          <span class="comp-tech">OCSP Stapling</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Sequence Diagram -->
+  <section id="sequence">
+    <div class="section-header">
+      <h2>Request Flow — TLS 1.3 Handshake</h2>
+      <p>Watch how a secure connection is established step by step, from the initial TCP handshake through key exchange to encrypted data transfer.</p>
+    </div>
+    <div class="seq-container">
+      <div class="seq-controls">
+        <button class="seq-btn" id="seqPrev" title="Previous step">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <button class="seq-btn" id="seqPlay" title="Play/Pause">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+        </button>
+        <button class="seq-btn" id="seqNext" title="Next step">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+        <button class="seq-btn" id="seqReset" title="Reset">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+        </button>
+        <div class="seq-speed">
+          <span>Speed:</span>
+          <input type="range" id="seqSpeed" min="1" max="5" value="3">
+        </div>
+        <div class="seq-flow-tabs">
+          <button class="seq-flow-tab active" data-flow="tls13">TLS 1.3</button>
+          <button class="seq-flow-tab" data-flow="tls12">TLS 1.2</button>
+          <button class="seq-flow-tab" data-flow="resumed">Resumption</button>
+        </div>
+      </div>
+      <div class="seq-canvas">
+        <svg id="seqSvg" width="100%" height="420" viewBox="0 0 900 420"></svg>
+      </div>
+      <div class="seq-narration" id="seqNarration">
+        <span class="seq-step-badge" id="seqStepNum">0</span>
+        <span id="seqNarText">Press play or step through the TLS 1.3 handshake.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Comparisons -->
+  <section id="comparisons">
+    <div class="section-header">
+      <h2>Comparisons with Alternatives</h2>
+      <p>Understanding how HTTPS compares to other secure communication approaches and protocol versions.</p>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin-bottom:1rem;">TLS Version Comparison</h3>
+    <div style="overflow-x:auto;margin-bottom:2.5rem;">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Protocol</th>
+            <th>Handshake RTT</th>
+            <th>Cipher Suites</th>
+            <th>Forward Secrecy</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>SSL 3.0</td>
+            <td>2 RTT</td>
+            <td>Weak (RC4, DES)</td>
+            <td>Optional</td>
+            <td><span style="color:var(--red);font-weight:600;">Deprecated</span></td>
+          </tr>
+          <tr>
+            <td>TLS 1.0 / 1.1</td>
+            <td>2 RTT</td>
+            <td>Mixed legacy</td>
+            <td>Optional</td>
+            <td><span style="color:var(--red);font-weight:600;">Deprecated</span></td>
+          </tr>
+          <tr>
+            <td>TLS 1.2</td>
+            <td>2 RTT</td>
+            <td>Configurable, broad</td>
+            <td>If ECDHE chosen</td>
+            <td><span style="color:var(--amber);font-weight:600;">Still used</span></td>
+          </tr>
+          <tr class="highlighted">
+            <td>TLS 1.3 <span class="chosen-badge">Current Standard</span></td>
+            <td>1 RTT (0-RTT resumption)</td>
+            <td>Only strong (AEAD)</td>
+            <td>Always (mandatory)</td>
+            <td><span style="color:var(--green);font-weight:600;">Recommended</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin-bottom:1rem;">HTTPS vs. Alternatives</h3>
+    <div style="overflow-x:auto;">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Approach</th>
+            <th>What It Does</th>
+            <th>Pros</th>
+            <th>Cons</th>
+            <th>Use When</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlighted">
+            <td>HTTPS (TLS) <span class="chosen-badge">Standard</span></td>
+            <td>Encrypts HTTP over TLS at transport layer</td>
+            <td>Universal browser support, PKI trust model, forward secrecy</td>
+            <td>Requires certificate management, slight latency overhead</td>
+            <td>Every web application — no exceptions</td>
+          </tr>
+          <tr>
+            <td>mTLS (Mutual TLS)</td>
+            <td>Both client and server present certificates</td>
+            <td>Strong bidirectional authentication, zero-trust</td>
+            <td>Complex certificate distribution, not for public web</td>
+            <td>Service-to-service in microservices, API auth</td>
+          </tr>
+          <tr>
+            <td>IPsec / VPN</td>
+            <td>Encrypts all traffic at network layer</td>
+            <td>Transparent to applications, protects all protocols</td>
+            <td>Complex setup, doesn't verify individual services</td>
+            <td>Site-to-site connections, remote access</td>
+          </tr>
+          <tr>
+            <td>SSH Tunneling</td>
+            <td>Encrypted tunnel for port forwarding</td>
+            <td>Simple setup, key-based auth</td>
+            <td>Not designed for web scale, per-connection overhead</td>
+            <td>Developer access, secure admin panels</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Section 5: Use Cases & Pitfalls -->
+  <section id="usecases">
+    <div class="section-header">
+      <h2>Use Cases & Common Pitfalls</h2>
+      <p>Where HTTPS is essential, where it's especially critical, and the mistakes engineers commonly make.</p>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin-bottom:1.25rem;">Primary Use Cases</h3>
+    <div class="usecase-grid">
+      <div class="usecase-card">
+        <h4>E-Commerce & Banking</h4>
+        <p>Protecting payment data, credentials, and PII in transit. PCI-DSS mandates TLS for cardholder data.</p>
+      </div>
+      <div class="usecase-card">
+        <h4>API Communication</h4>
+        <p>REST/GraphQL APIs transmitting auth tokens, user data, and business logic over the public internet.</p>
+      </div>
+      <div class="usecase-card">
+        <h4>Single Page Applications</h4>
+        <p>SPAs that load JS bundles and make XHR requests — HTTPS prevents code injection and data interception.</p>
+      </div>
+      <div class="usecase-card">
+        <h4>Internal Microservices</h4>
+        <p>Service mesh communication using mTLS (Istio, Linkerd) to implement zero-trust networking within clusters.</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin-bottom:1.25rem;">When HTTPS Alone Isn't Enough</h3>
+    <div class="usecase-grid">
+      <div class="usecase-card">
+        <span class="anti-badge">Additional Layers Needed</span>
+        <h4>End-to-End Encrypted Messaging</h4>
+        <p>HTTPS protects client↔server, but for user↔user privacy (Signal, WhatsApp), you need application-layer E2EE so even the server can't read messages.</p>
+      </div>
+      <div class="usecase-card">
+        <span class="anti-badge">Additional Layers Needed</span>
+        <h4>Data at Rest</h4>
+        <p>HTTPS only protects data in transit. Databases, backups, and logs need separate encryption (AES-256, KMS-managed keys).</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin-top:2.5rem;margin-bottom:1.25rem;">Common Pitfalls</h3>
+
+    <div class="pitfall-card">
+      <div class="pitfall-header" onclick="togglePitfall(this)">
+        <span class="pitfall-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Mixed Content — Loading HTTP resources on HTTPS pages
+        </span>
+        <svg class="pitfall-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="pitfall-body">
+        <p class="pitfall-label mistake">The Mistake</p>
+        <p>Serving an HTTPS page but loading images, scripts, or stylesheets over plain HTTP.</p>
+        <p class="pitfall-label why">Why It Happens</p>
+        <p>Developers hardcode `http://` URLs or use CDNs that haven't been configured for HTTPS. Legacy content migrated from HTTP sites retains old URLs.</p>
+        <p class="pitfall-label consequence">The Consequence</p>
+        <p>Browsers block or warn about mixed content. Active mixed content (scripts) is blocked entirely. The lock icon disappears, eroding user trust.</p>
+        <p class="pitfall-label fix">The Fix</p>
+        <p>Use protocol-relative URLs (`//cdn.example.com/...`) or always `https://`. Set Content-Security-Policy header with `upgrade-insecure-requests`. Audit with browser DevTools.</p>
+      </div>
+    </div>
+
+    <div class="pitfall-card">
+      <div class="pitfall-header" onclick="togglePitfall(this)">
+        <span class="pitfall-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Certificate Expiration — Letting certs expire unnoticed
+        </span>
+        <svg class="pitfall-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="pitfall-body">
+        <p class="pitfall-label mistake">The Mistake</p>
+        <p>Not monitoring certificate expiration dates, leading to site outages when browsers reject expired certs.</p>
+        <p class="pitfall-label why">Why It Happens</p>
+        <p>Manual renewal processes, lack of automation, certs issued before Let's Encrypt's 90-day auto-renewal became standard. Teams that "set it and forget it."</p>
+        <p class="pitfall-label consequence">The Consequence</p>
+        <p>Complete site downtime for users who see a full-page browser warning. Search engine deindexing if not fixed quickly. Lost revenue and trust.</p>
+        <p class="pitfall-label fix">The Fix</p>
+        <p>Use Let's Encrypt with certbot auto-renewal. Monitor with tools like cert-manager (K8s) or AWS ACM. Set calendar alerts at 30/14/7 days before expiry.</p>
+      </div>
+    </div>
+
+    <div class="pitfall-card">
+      <div class="pitfall-header" onclick="togglePitfall(this)">
+        <span class="pitfall-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Missing HSTS — Not enforcing HTTPS via Strict-Transport-Security
+        </span>
+        <svg class="pitfall-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="pitfall-body">
+        <p class="pitfall-label mistake">The Mistake</p>
+        <p>Supporting HTTPS but not sending the `Strict-Transport-Security` header, leaving the first request vulnerable to downgrade attacks.</p>
+        <p class="pitfall-label why">Why It Happens</p>
+        <p>Teams focus on getting HTTPS working but skip the enforcement header. Or they're afraid of locking themselves into HTTPS (hint: you should already be committed).</p>
+        <p class="pitfall-label consequence">The Consequence</p>
+        <p>SSL stripping attacks (like sslstrip) can intercept the initial HTTP request before the redirect to HTTPS, capturing credentials or injecting content.</p>
+        <p class="pitfall-label fix">The Fix</p>
+        <p>Add `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`. Submit to the HSTS preload list for protection even on first visit.</p>
+      </div>
+    </div>
+
+    <div class="pitfall-card">
+      <div class="pitfall-header" onclick="togglePitfall(this)">
+        <span class="pitfall-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Weak Cipher Configuration — Allowing outdated algorithms
+        </span>
+        <svg class="pitfall-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="pitfall-body">
+        <p class="pitfall-label mistake">The Mistake</p>
+        <p>Keeping default server configs that allow weak ciphers (RC4, 3DES, SHA-1 for signatures) for "compatibility."</p>
+        <p class="pitfall-label why">Why It Happens</p>
+        <p>Fear of breaking old clients. Copy-pasted configs from 2015 tutorials. Not regularly auditing TLS settings.</p>
+        <p class="pitfall-label consequence">The Consequence</p>
+        <p>Vulnerable to BEAST, SWEET32, and other attacks. Gets a bad grade on SSL Labs. Potential regulatory non-compliance.</p>
+        <p class="pitfall-label fix">The Fix</p>
+        <p>Use Mozilla's SSL Configuration Generator. Regularly test with SSL Labs (aim for A+). Disable TLS 1.0/1.1 entirely. Only allow AEAD ciphers.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 6: Best Practices -->
+  <section id="bestpractices">
+    <div class="section-header">
+      <h2>Best Practices</h2>
+      <p>Proven patterns for implementing and operating HTTPS correctly at every stage.</p>
+    </div>
+
+    <div class="bp-card">
+      <h4>Certificate Management</h4>
+      <ul class="bp-list">
+        <li>Use Let's Encrypt for automated, free certificate issuance and renewal (90-day certs, auto-renewed at 60 days)</li>
+        <li>Use ECDSA P-256 certificates over RSA 2048 — smaller, faster, equally secure</li>
+        <li>Enable OCSP stapling to speed up certificate verification and reduce CA load</li>
+        <li>Use Certificate Transparency logs to detect misissued certificates for your domains</li>
+        <li>Configure CAA DNS records to restrict which CAs can issue certs for your domain</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <h4>Server Configuration</h4>
+      <ul class="bp-list">
+        <li>Only enable TLS 1.2 and 1.3 — disable all older protocol versions</li>
+        <li>Cipher suite order: TLS_AES_256_GCM_SHA384, TLS_CHACHA20_POLY1305_SHA256, TLS_AES_128_GCM_SHA256</li>
+        <li>Enable HTTP/2 (requires HTTPS) for multiplexed connections and header compression</li>
+        <li>Set HSTS with max-age of at least 1 year, includeSubDomains, and submit to the preload list</li>
+        <li>Redirect all HTTP to HTTPS with a 301 permanent redirect</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <h4>Performance Optimization</h4>
+      <ul class="bp-list">
+        <li>Enable TLS 1.3 0-RTT resumption for repeat visitors (with replay protection for non-idempotent requests)</li>
+        <li>Use TLS session tickets for faster reconnections across server instances</li>
+        <li>Place TLS termination at the edge (CDN/load balancer) to reduce latency for global users</li>
+        <li>Keep certificate chains short — 2-3 certificates max in the chain</li>
+        <li>Enable TCP Fast Open alongside TLS 1.3 for minimum-latency connections</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <h4>Security Hardening</h4>
+      <ul class="bp-list">
+        <li>Implement Certificate Pinning (HPKP is deprecated, but use it in mobile apps via native APIs)</li>
+        <li>Set Content-Security-Policy with upgrade-insecure-requests to prevent mixed content</li>
+        <li>Use Expect-CT header to enforce Certificate Transparency compliance</li>
+        <li>Monitor for certificate mis-issuance using CT log monitors (e.g., crt.sh, Facebook CT monitor)</li>
+        <li>Rotate private keys annually and immediately upon suspected compromise</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Section 7: Scaling & Trade-offs -->
+  <section id="scaling">
+    <div class="section-header">
+      <h2>Scaling & Trade-offs</h2>
+      <p>How HTTPS performs at scale and the trade-offs involved in securing connections.</p>
+    </div>
+
+    <div class="scale-grid">
+      <div class="scale-card">
+        <h4>Performance Overhead</h4>
+        <p>Modern TLS adds minimal overhead:</p>
+        <ul>
+          <li><strong>Latency:</strong> 1 extra RTT for TLS 1.3 (0 with resumption)</li>
+          <li><strong>CPU:</strong> ~2% on modern hardware with AES-NI instructions</li>
+          <li><strong>Bandwidth:</strong> ~0.5% overhead from record framing</li>
+          <li><strong>Memory:</strong> ~50KB per TLS session state</li>
+        </ul>
+      </div>
+      <div class="scale-card">
+        <h4>Scaling Strategies</h4>
+        <p>Handling millions of TLS connections:</p>
+        <ul>
+          <li><strong>TLS termination at edge:</strong> CDNs (Cloudflare, AWS CloudFront) handle handshakes close to users</li>
+          <li><strong>Session ticket distribution:</strong> Share tickets across load-balanced servers</li>
+          <li><strong>Hardware acceleration:</strong> Use CPUs with AES-NI, or dedicated TLS offload NICs</li>
+          <li><strong>Connection reuse:</strong> HTTP/2 multiplexing reduces new handshakes</li>
+        </ul>
+      </div>
+      <div class="scale-card">
+        <h4>Trade-offs</h4>
+        <p>Key decisions when deploying HTTPS:</p>
+        <ul>
+          <li><strong>Security vs. Performance:</strong> 0-RTT resumption risks replay attacks for speed gains</li>
+          <li><strong>Compatibility vs. Security:</strong> Supporting TLS 1.2 for old clients vs. TLS 1.3-only</li>
+          <li><strong>Centralization vs. E2E:</strong> TLS termination at LB means internal traffic is unencrypted unless re-encrypted</li>
+          <li><strong>Cost vs. Automation:</strong> Wildcard certs are simpler but wider blast radius on compromise</li>
+        </ul>
+      </div>
+      <div class="scale-card">
+        <h4>Failure Scenarios</h4>
+        <p>What happens when things go wrong:</p>
+        <ul>
+          <li><strong>CA compromise:</strong> Revoke all issued certs, switch CA, update CT monitors</li>
+          <li><strong>Private key leak:</strong> Immediate revocation, rekey, forward secrecy limits damage window</li>
+          <li><strong>Certificate expiry:</strong> Hard outage — browsers refuse all connections until renewed</li>
+          <li><strong>OCSP responder down:</strong> Stapling + must-staple means server handles gracefully; without it, soft-fail in browsers</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer style="text-align:center;padding:3rem 2rem;color:var(--text-light);font-size:0.8rem;">
+    Interactive HTTPS Visualization — Open this file directly in any modern browser
+  </footer>
+
+  <script>
+    // ============ Architecture Diagram ============
+    function renderArchDiagram() {
+      const svg = document.getElementById('archSvg');
+      svg.innerHTML = '';
+
+      const components = [
+        { id: 'client', x: 60, y: 180, w: 140, h: 80, label: 'Client Browser', type: 'rounded', color: '#2563eb', lightColor: '#dbeafe',
+          tip: 'Initiates the connection. Holds a trust store of root CA certificates. Generates random values for key exchange and verifies the server\'s certificate chain.' },
+        { id: 'dns', x: 260, y: 40, w: 130, h: 65, label: 'DNS Resolver', type: 'rounded', color: '#0891b2', lightColor: '#cffafe',
+          tip: 'Resolves the domain (e.g., example.com) to an IP address. This happens before TLS begins. DNS-over-HTTPS encrypts even this step.' },
+        { id: 'ca', x: 260, y: 330, w: 130, h: 70, label: 'Certificate\nAuthority', type: 'shield', color: '#7c3aed', lightColor: '#ede9fe',
+          tip: 'Trusted third party that issues and signs X.509 certificates. Verifies domain ownership (DV), organization identity (OV/EV), and publishes to CT logs.' },
+        { id: 'firewall', x: 460, y: 180, w: 120, h: 80, label: 'Load Balancer\n/ TLS Termination', type: 'hex', color: '#d97706', lightColor: '#fef3c7',
+          tip: 'Terminates TLS connections at the edge. Distributes traffic across backend servers. May re-encrypt traffic internally (TLS bridging).' },
+        { id: 'server', x: 680, y: 180, w: 140, h: 80, label: 'Web Server', type: 'rounded', color: '#059669', lightColor: '#d1fae5',
+          tip: 'Holds the private key and certificate. Responds to TLS handshake, negotiates cipher suites, and serves encrypted application data over the established channel.' },
+        { id: 'db', x: 860, y: 300, w: 100, h: 70, label: 'Database', type: 'cylinder', color: '#6b7280', lightColor: '#f3f4f6',
+          tip: 'Stores application data. Connection from web server to DB should also be encrypted (TLS or internal VPC). Sensitive data should be encrypted at rest.' },
+      ];
+
+      const connections = [
+        { from: 'client', to: 'dns', label: '1. DNS Lookup', color: '#0891b2' },
+        { from: 'client', to: 'firewall', label: '2. TCP + TLS Handshake', color: '#2563eb', thick: true },
+        { from: 'firewall', to: 'server', label: '3. Forward/Re-encrypt', color: '#059669' },
+        { from: 'ca', to: 'client', label: 'Trust Chain', color: '#7c3aed', dashed: true },
+        { from: 'ca', to: 'server', label: 'Issues Cert', color: '#7c3aed', dashed: true },
+        { from: 'server', to: 'db', label: 'Encrypted', color: '#6b7280', dashed: true },
+      ];
+
+      // Draw connections
+      connections.forEach(conn => {
+        const from = components.find(c => c.id === conn.from);
+        const to = components.find(c => c.id === conn.to);
+        const x1 = from.x + from.w / 2;
+        const y1 = from.y + from.h / 2;
+        const x2 = to.x + to.w / 2;
+        const y2 = to.y + to.h / 2;
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', conn.color);
+        line.setAttribute('stroke-width', conn.thick ? '3' : '1.5');
+        line.setAttribute('stroke-opacity', '0.5');
+        if (conn.dashed) line.setAttribute('stroke-dasharray', '6,4');
+        line.setAttribute('data-from', conn.from);
+        line.setAttribute('data-to', conn.to);
+        line.classList.add('arch-line');
+        svg.appendChild(line);
+
+        // Label
+        const mx = (x1 + x2) / 2;
+        const my = (y1 + y2) / 2;
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', mx);
+        text.setAttribute('y', my - 8);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('font-size', '10');
+        text.setAttribute('fill', conn.color);
+        text.setAttribute('font-weight', '600');
+        text.textContent = conn.label;
+        svg.appendChild(text);
+      });
+
+      // Draw components
+      components.forEach(comp => {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.classList.add('arch-component');
+        g.setAttribute('data-id', comp.id);
+        g.setAttribute('data-tip', comp.tip);
+
+        let shape;
+        if (comp.type === 'cylinder') {
+          shape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          const x = comp.x, y = comp.y, w = comp.w, h = comp.h;
+          const ry = 10;
+          shape.setAttribute('d', `M${x},${y+ry} L${x},${y+h-ry} A${w/2},${ry} 0 0,0 ${x+w},${y+h-ry} L${x+w},${y+ry} A${w/2},${ry} 0 0,0 ${x},${y+ry} Z M${x},${y+ry} A${w/2},${ry} 0 0,1 ${x+w},${y+ry}`);
+          shape.setAttribute('fill', comp.lightColor);
+          shape.setAttribute('stroke', comp.color);
+          shape.setAttribute('stroke-width', '2');
+        } else if (comp.type === 'hex') {
+          shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          const cx = comp.x + comp.w/2, cy = comp.y + comp.h/2;
+          const rx = comp.w/2, ry = comp.h/2;
+          const pts = [];
+          for (let i = 0; i < 6; i++) {
+            const angle = Math.PI/6 + (Math.PI*2/6)*i;
+            pts.push(`${cx + rx*Math.cos(angle)},${cy + ry*Math.sin(angle)}`);
+          }
+          shape.setAttribute('points', pts.join(' '));
+          shape.setAttribute('fill', comp.lightColor);
+          shape.setAttribute('stroke', comp.color);
+          shape.setAttribute('stroke-width', '2');
+        } else if (comp.type === 'shield') {
+          shape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          const cx = comp.x + comp.w/2, top = comp.y;
+          const w = comp.w * 0.45, h = comp.h;
+          shape.setAttribute('d', `M${cx},${top} L${cx+w},${top+h*0.2} L${cx+w},${top+h*0.6} Q${cx+w},${top+h} ${cx},${top+h} Q${cx-w},${top+h} ${cx-w},${top+h*0.6} L${cx-w},${top+h*0.2} Z`);
+          shape.setAttribute('fill', comp.lightColor);
+          shape.setAttribute('stroke', comp.color);
+          shape.setAttribute('stroke-width', '2');
+        } else {
+          shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          shape.setAttribute('x', comp.x);
+          shape.setAttribute('y', comp.y);
+          shape.setAttribute('width', comp.w);
+          shape.setAttribute('height', comp.h);
+          shape.setAttribute('rx', '12');
+          shape.setAttribute('fill', comp.lightColor);
+          shape.setAttribute('stroke', comp.color);
+          shape.setAttribute('stroke-width', '2');
+        }
+        g.appendChild(shape);
+
+        // Label
+        const lines = comp.label.split('\n');
+        lines.forEach((line, i) => {
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          text.setAttribute('x', comp.x + comp.w/2);
+          text.setAttribute('y', comp.y + comp.h/2 + (i - (lines.length-1)/2) * 14);
+          text.setAttribute('text-anchor', 'middle');
+          text.setAttribute('dominant-baseline', 'middle');
+          text.setAttribute('font-size', '11');
+          text.setAttribute('font-weight', '700');
+          text.setAttribute('fill', comp.color);
+          text.textContent = line;
+          g.appendChild(text);
+        });
+
+        g.addEventListener('mouseenter', (e) => showTooltip(e, comp.tip));
+        g.addEventListener('mouseleave', hideTooltip);
+        svg.appendChild(g);
+      });
+    }
+
+    function showTooltip(e, text) {
+      const tooltip = document.getElementById('archTooltip');
+      tooltip.textContent = text;
+      tooltip.classList.add('visible');
+      const rect = e.currentTarget.closest('.arch-container').getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
+      tooltip.style.top = (e.clientY - rect.top - 40) + 'px';
+    }
+
+    function hideTooltip() {
+      document.getElementById('archTooltip').classList.remove('visible');
+    }
+
+    // ============ Sequence Diagram ============
+    const flows = {
+      tls13: [
+        { from: 0, to: 1, label: 'TCP SYN', desc: 'Client initiates a TCP connection to the server on port 443.' },
+        { from: 1, to: 0, label: 'TCP SYN-ACK', desc: 'Server acknowledges and responds with SYN-ACK. TCP three-way handshake begins.' },
+        { from: 0, to: 1, label: 'TCP ACK', desc: 'Client completes the TCP handshake. A reliable connection is now established.' },
+        { from: 0, to: 1, label: 'ClientHello + Key Share', desc: 'Client sends supported TLS versions, cipher suites, and its ECDHE key share. In TLS 1.3, the key share is sent immediately (saving 1 RTT).' },
+        { from: 1, to: 0, label: 'ServerHello + Key Share + Certificate + Finished', desc: 'Server picks cipher suite, sends its key share, certificate chain, and Finished message — all in one flight. The session key is now derivable.' },
+        { from: 0, to: 2, label: 'Verify Certificate Chain', desc: 'Client walks the certificate chain: server cert → intermediate CA → root CA (in trust store). Checks signatures, expiry, revocation (OCSP), and that the domain matches the SAN.' },
+        { from: 0, to: 1, label: 'Finished', desc: 'Client confirms it has derived the same session keys. The TLS handshake is complete — total: 1 RTT for TLS (after TCP).' },
+        { from: 0, to: 1, label: 'GET /page (encrypted)', desc: 'Application data flows encrypted with the negotiated symmetric key (e.g., AES-256-GCM). Every packet is authenticated and cannot be tampered with.' },
+        { from: 1, to: 0, label: '200 OK (encrypted)', desc: 'Server responds with encrypted content. Both directions are protected. An eavesdropper sees only opaque ciphertext.' },
+      ],
+      tls12: [
+        { from: 0, to: 1, label: 'TCP Handshake (3-way)', desc: 'Standard TCP SYN → SYN-ACK → ACK. Establishes reliable transport before TLS begins.' },
+        { from: 0, to: 1, label: 'ClientHello', desc: 'Client sends supported TLS versions and cipher suites. No key share yet — TLS 1.2 requires an extra round trip.' },
+        { from: 1, to: 0, label: 'ServerHello + Certificate + ServerKeyExchange + HelloDone', desc: 'Server selects cipher suite, sends its certificate and ECDHE parameters. Client hasn\'t sent its key share yet.' },
+        { from: 0, to: 2, label: 'Verify Certificate', desc: 'Client validates the certificate chain against its trust store. Checks signatures, validity, and domain name.' },
+        { from: 0, to: 1, label: 'ClientKeyExchange + ChangeCipherSpec + Finished', desc: 'Client sends its key exchange value. Both sides can now compute the master secret. Client signals switch to encrypted mode.' },
+        { from: 1, to: 0, label: 'ChangeCipherSpec + Finished', desc: 'Server confirms the switch to encrypted communication. Handshake complete — this took 2 RTTs for TLS (vs. 1 in TLS 1.3).' },
+        { from: 0, to: 1, label: 'GET /page (encrypted)', desc: 'Data flows symmetrically encrypted. TLS 1.2 can use non-AEAD ciphers (like CBC) which are weaker than TLS 1.3\'s mandatory AEAD.' },
+        { from: 1, to: 0, label: '200 OK (encrypted)', desc: 'Server responds with encrypted data. Connection is secured.' },
+      ],
+      resumed: [
+        { from: 0, to: 1, label: 'TCP Handshake', desc: 'TCP connection established. The client has a session ticket from a previous connection.' },
+        { from: 0, to: 1, label: 'ClientHello + Key Share + Early Data (0-RTT)', desc: 'Client sends ClientHello with the previous session ticket and application data encrypted with the resumption key. This is 0-RTT — data sent before the handshake completes!' },
+        { from: 1, to: 0, label: 'ServerHello + Finished', desc: 'Server validates the ticket, derives keys, and responds. If it accepts 0-RTT data, the first request is already being processed.' },
+        { from: 0, to: 1, label: 'Finished', desc: 'Client confirms the new keys. Full forward secrecy is established for subsequent data (0-RTT data has reduced security — no forward secrecy, replay risk).' },
+        { from: 0, to: 1, label: 'Requests (encrypted, full security)', desc: 'All subsequent data uses fresh keys with full forward secrecy. Only the initial 0-RTT data had reduced guarantees.' },
+        { from: 1, to: 0, label: 'Responses (encrypted)', desc: 'Server responds normally. The connection is now indistinguishable from a full handshake in terms of security.' },
+      ]
+    };
+
+    const actors = [
+      { label: 'Client', x: 150 },
+      { label: 'Server', x: 550 },
+      { label: 'CA / Trust Store', x: 750 }
+    ];
+
+    let currentFlow = 'tls13';
+    let currentStep = -1;
+    let isPlaying = false;
+    let playInterval = null;
+
+    function getSpeed() {
+      return [2000, 1500, 1000, 700, 400][document.getElementById('seqSpeed').value - 1];
+    }
+
+    function renderSequence() {
+      const svg = document.getElementById('seqSvg');
+      svg.innerHTML = '';
+
+      // Actor lifelines
+      actors.forEach(actor => {
+        // Header
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', actor.x - 50);
+        rect.setAttribute('y', 10);
+        rect.setAttribute('width', 100);
+        rect.setAttribute('height', 36);
+        rect.setAttribute('rx', 8);
+        rect.setAttribute('fill', '#f0f4f8');
+        rect.setAttribute('stroke', '#e2e8f0');
+        rect.setAttribute('stroke-width', '1.5');
+        svg.appendChild(rect);
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', actor.x);
+        text.setAttribute('y', 33);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('font-size', '12');
+        text.setAttribute('font-weight', '700');
+        text.setAttribute('fill', '#1a202c');
+        text.setAttribute('font-family', 'Segoe UI, system-ui, sans-serif');
+        text.textContent = actor.label;
+        svg.appendChild(text);
+
+        // Lifeline
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', actor.x);
+        line.setAttribute('y1', 50);
+        line.setAttribute('x2', actor.x);
+        line.setAttribute('y2', 410);
+        line.setAttribute('stroke', '#e2e8f0');
+        line.setAttribute('stroke-width', '1.5');
+        line.setAttribute('stroke-dasharray', '4,3');
+        svg.appendChild(line);
+      });
+
+      // Draw steps up to currentStep
+      const steps = flows[currentFlow];
+      const yStart = 70;
+      const yStep = (380 - 70) / Math.max(steps.length, 1);
+
+      steps.forEach((step, i) => {
+        if (i > currentStep) return;
+
+        const y = yStart + i * yStep + yStep / 2;
+        const fromX = actors[step.from].x;
+        const toX = actors[step.to].x;
+        const opacity = i === currentStep ? 1 : 0.4;
+
+        // Arrow line
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', fromX + (fromX < toX ? 50 : -50));
+        line.setAttribute('y1', y);
+        line.setAttribute('x2', toX + (fromX < toX ? -50 : 50));
+        line.setAttribute('y2', y);
+        line.setAttribute('stroke', i === currentStep ? '#2563eb' : '#94a3b8');
+        line.setAttribute('stroke-width', i === currentStep ? '2.5' : '1.5');
+        line.setAttribute('opacity', opacity);
+        line.setAttribute('marker-end', 'url(#arrowhead)');
+        svg.appendChild(line);
+
+        // Label
+        const midX = (fromX + toX) / 2;
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', midX);
+        text.setAttribute('y', y - 8);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('font-size', '10');
+        text.setAttribute('font-weight', '600');
+        text.setAttribute('fill', i === currentStep ? '#2563eb' : '#64748b');
+        text.setAttribute('opacity', opacity);
+        text.setAttribute('font-family', 'Segoe UI, system-ui, sans-serif');
+        text.textContent = step.label;
+        svg.appendChild(text);
+      });
+
+      // Arrowhead marker
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+      marker.setAttribute('id', 'arrowhead');
+      marker.setAttribute('markerWidth', '10');
+      marker.setAttribute('markerHeight', '7');
+      marker.setAttribute('refX', '10');
+      marker.setAttribute('refY', '3.5');
+      marker.setAttribute('orient', 'auto');
+      const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      polygon.setAttribute('points', '0 0, 10 3.5, 0 7');
+      polygon.setAttribute('fill', '#64748b');
+      marker.appendChild(polygon);
+      defs.appendChild(marker);
+      svg.insertBefore(defs, svg.firstChild);
+
+      // Update narration
+      const narText = document.getElementById('seqNarText');
+      const stepNum = document.getElementById('seqStepNum');
+      if (currentStep >= 0 && currentStep < steps.length) {
+        stepNum.textContent = currentStep + 1;
+        narText.textContent = steps[currentStep].desc;
+      } else {
+        stepNum.textContent = '0';
+        narText.textContent = `Press play or step through the ${currentFlow === 'tls13' ? 'TLS 1.3' : currentFlow === 'tls12' ? 'TLS 1.2' : 'Session Resumption'} handshake.`;
+      }
+    }
+
+    function nextStep() {
+      const steps = flows[currentFlow];
+      if (currentStep < steps.length - 1) {
+        currentStep++;
+        renderSequence();
+      } else {
+        stopPlaying();
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 0) {
+        currentStep--;
+        renderSequence();
+      }
+    }
+
+    function resetSequence() {
+      stopPlaying();
+      currentStep = -1;
+      renderSequence();
+    }
+
+    function startPlaying() {
+      isPlaying = true;
+      document.getElementById('seqPlay').classList.add('active');
+      document.getElementById('seqPlay').innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+      playInterval = setInterval(() => {
+        const steps = flows[currentFlow];
+        if (currentStep < steps.length - 1) {
+          currentStep++;
+          renderSequence();
+        } else {
+          stopPlaying();
+        }
+      }, getSpeed());
+    }
+
+    function stopPlaying() {
+      isPlaying = false;
+      document.getElementById('seqPlay').classList.remove('active');
+      document.getElementById('seqPlay').innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>';
+      if (playInterval) clearInterval(playInterval);
+      playInterval = null;
+    }
+
+    document.getElementById('seqPlay').addEventListener('click', () => {
+      if (isPlaying) stopPlaying();
+      else startPlaying();
+    });
+    document.getElementById('seqNext').addEventListener('click', nextStep);
+    document.getElementById('seqPrev').addEventListener('click', prevStep);
+    document.getElementById('seqReset').addEventListener('click', resetSequence);
+
+    document.getElementById('seqSpeed').addEventListener('input', () => {
+      if (isPlaying) {
+        stopPlaying();
+        startPlaying();
+      }
+    });
+
+    document.querySelectorAll('.seq-flow-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.seq-flow-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFlow = tab.dataset.flow;
+        currentStep = -1;
+        stopPlaying();
+        renderSequence();
+      });
+    });
+
+    // ============ Pitfall Toggle ============
+    function togglePitfall(header) {
+      header.closest('.pitfall-card').classList.toggle('open');
+    }
+
+    // ============ Navigation ============
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = document.querySelectorAll('section');
+
+    function updateNav() {
+      let current = '';
+      sections.forEach(s => {
+        const top = s.offsetTop - 100;
+        if (window.scrollY >= top) current = s.id;
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+
+    window.addEventListener('scroll', updateNav);
+    navLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById(link.dataset.section).scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target === document.body) {
+        e.preventDefault();
+        if (isPlaying) stopPlaying();
+        else startPlaying();
+      }
+      if (e.code === 'ArrowRight') nextStep();
+      if (e.code === 'ArrowLeft') prevStep();
+    });
+
+    // ============ Init ============
+    renderArchDiagram();
+    renderSequence();
+  </script>
+</body>
+</html>

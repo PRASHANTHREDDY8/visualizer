@@ -1,0 +1,2362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Patterns in Python — Visualizer</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f4f6f9;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --accent: #6366f1;
+      --accent-light: #eef2ff;
+      --creational: #10b981;
+      --creational-light: #ecfdf5;
+      --structural: #f59e0b;
+      --structural-light: #fffbeb;
+      --behavioral: #8b5cf6;
+      --behavioral-light: #f5f3ff;
+      --code-bg: #1e293b;
+      --code-text: #e2e8f0;
+      --shadow: 0 2px 8px rgba(0,0,0,0.06);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
+      --radius: 12px;
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* Navigation */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      overflow-x: auto;
+    }
+
+    .nav-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--accent);
+      white-space: nowrap;
+      margin-right: 1rem;
+    }
+
+    .nav a {
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .nav a:hover, .nav a.active {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 4rem 2rem 3rem;
+      background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 50%, #ecfdf5 100%);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero h1 {
+      font-size: 2.75rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--behavioral));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .badge-row {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 0.35rem 0.85rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .badge-creational { background: var(--creational-light); color: var(--creational); border: 1px solid var(--creational); }
+    .badge-structural { background: var(--structural-light); color: var(--structural); border: 1px solid var(--structural); }
+    .badge-behavioral { background: var(--behavioral-light); color: var(--behavioral); border: 1px solid var(--behavioral); }
+
+    /* Sections */
+    section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+
+    section h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    section h2 .icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    /* Pattern Cards */
+    .patterns-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .pattern-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pattern-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .pattern-card.creational::before { background: var(--creational); }
+    .pattern-card.structural::before { background: var(--structural); }
+    .pattern-card.behavioral::before { background: var(--behavioral); }
+
+    .pattern-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-lg);
+      border-color: transparent;
+    }
+
+    .pattern-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .pattern-card .desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .pattern-card .use-case {
+      font-size: 0.78rem;
+      background: var(--surface-alt);
+      padding: 0.4rem 0.65rem;
+      border-radius: 6px;
+      color: var(--text-muted);
+    }
+
+    .pattern-card.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+
+    /* Detail Panel */
+    .detail-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-top: 2rem;
+      overflow: hidden;
+      display: none;
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .detail-panel.visible { display: block; }
+
+    .detail-header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .detail-header h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    .detail-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .detail-close:hover { background: var(--surface-alt); }
+
+    .detail-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    @media (max-width: 900px) {
+      .detail-body { grid-template-columns: 1fr; }
+    }
+
+    .detail-diagram {
+      padding: 2rem;
+      border-right: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-alt);
+      min-height: 320px;
+    }
+
+    .detail-code {
+      padding: 0;
+      overflow: auto;
+      max-height: 500px;
+    }
+
+    .detail-code pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 1.5rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      line-height: 1.7;
+      margin: 0;
+      min-height: 100%;
+    }
+
+    .detail-footer {
+      padding: 1.25rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface-alt);
+    }
+
+    .detail-footer h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .detail-footer ul {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .detail-footer li {
+      font-size: 0.8rem;
+      padding: 0.3rem 0.7rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    /* Relationship Diagram */
+    .relationship-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-top: 2rem;
+    }
+
+    .relationship-svg {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    /* Comparison Table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+    }
+
+    .comparison-table th {
+      background: var(--surface-alt);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .comparison-table tr:hover td {
+      background: var(--accent-light);
+    }
+
+    /* Playground */
+    .playground {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-top: 2rem;
+    }
+
+    .playground-header {
+      padding: 1rem 1.5rem;
+      background: var(--surface-alt);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .playground-header label {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .playground-header select {
+      padding: 0.4rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      background: var(--surface);
+    }
+
+    .playground-btn {
+      padding: 0.5rem 1.25rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .playground-btn:hover {
+      background: #4f46e5;
+      transform: translateY(-1px);
+    }
+
+    .playground-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 400px;
+    }
+
+    @media (max-width: 900px) {
+      .playground-body { grid-template-columns: 1fr; }
+    }
+
+    .playground-code {
+      border-right: 1px solid var(--border);
+      overflow: auto;
+    }
+
+    .playground-code pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 1.5rem;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.7;
+      margin: 0;
+      min-height: 100%;
+    }
+
+    .playground-output {
+      padding: 1.5rem;
+      overflow: auto;
+      background: var(--surface-alt);
+    }
+
+    .playground-output h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .output-line {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      padding: 0.3rem 0;
+      opacity: 0;
+      animation: fadeIn 0.3s ease forwards;
+    }
+
+    .output-line.highlight {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    /* Pitfalls */
+    .pitfall-card {
+      background: var(--surface);
+      border: 1px solid #fbbf24;
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .pitfall-header {
+      padding: 1rem 1.25rem;
+      background: #fffbeb;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .pitfall-header:hover { background: #fef3c7; }
+
+    .pitfall-body {
+      padding: 1.25rem;
+      display: none;
+      font-size: 0.85rem;
+      line-height: 1.7;
+    }
+
+    .pitfall-body.visible { display: block; }
+
+    .pitfall-body strong { color: #b45309; }
+
+    /* Best Practices */
+    .practice-card {
+      background: var(--surface);
+      border: 1px solid #86efac;
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .practice-card h4 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #059669;
+      margin-bottom: 0.5rem;
+    }
+
+    .practice-card ul {
+      padding-left: 1.25rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .practice-card li { margin-bottom: 0.35rem; }
+
+    /* SVG Diagram */
+    .uml-box {
+      fill: var(--surface);
+      stroke: var(--border);
+      stroke-width: 1.5;
+      rx: 8;
+    }
+
+    .uml-box.interface {
+      stroke: var(--accent);
+      stroke-dasharray: 5,3;
+    }
+
+    .uml-text {
+      font-family: var(--font);
+      font-size: 11px;
+      fill: var(--text);
+    }
+
+    .uml-text.title {
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .uml-text.italic {
+      font-style: italic;
+      fill: var(--text-muted);
+    }
+
+    .uml-line {
+      stroke: var(--text-muted);
+      stroke-width: 1.2;
+      fill: none;
+    }
+
+    .uml-arrow {
+      fill: var(--text-muted);
+    }
+
+    /* Code Highlighting */
+    .kw { color: #c084fc; }
+    .fn { color: #60a5fa; }
+    .str { color: #34d399; }
+    .cmt { color: #64748b; font-style: italic; }
+    .cls { color: #fbbf24; }
+    .dec { color: #f472b6; }
+    .num { color: #fb923c; }
+    .op { color: #94a3b8; }
+
+    /* Animation Controls */
+    .anim-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 1.5rem;
+      background: var(--surface-alt);
+      border-top: 1px solid var(--border);
+    }
+
+    .anim-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .anim-btn:hover {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .step-indicator {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    /* Category Tabs */
+    .category-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .cat-tab {
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .cat-tab:hover { border-color: var(--accent); }
+    .cat-tab.active-all { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .cat-tab.active-creational { background: var(--creational-light); border-color: var(--creational); color: var(--creational); }
+    .cat-tab.active-structural { background: var(--structural-light); border-color: var(--structural); color: var(--structural); }
+    .cat-tab.active-behavioral { background: var(--behavioral-light); border-color: var(--behavioral); color: var(--behavioral); }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <span class="nav-title">Design Patterns</span>
+  <a href="#overview">Overview</a>
+  <a href="#patterns">Patterns</a>
+  <a href="#relationships">Relationships</a>
+  <a href="#comparison">Comparison</a>
+  <a href="#playground">Playground</a>
+  <a href="#pitfalls">Pitfalls</a>
+  <a href="#best-practices">Best Practices</a>
+</nav>
+
+<header class="hero">
+  <h1>Design Patterns in Python</h1>
+  <p>Interactive exploration of the Gang of Four design patterns with Pythonic implementations, UML diagrams, and a live code playground.</p>
+  <div class="badge-row">
+    <span class="badge badge-creational">5 Creational</span>
+    <span class="badge badge-structural">4 Structural</span>
+    <span class="badge badge-behavioral">5 Behavioral</span>
+  </div>
+</header>
+
+<!-- Overview Section -->
+<section id="overview">
+  <h2><span class="icon" style="background:var(--accent-light);color:var(--accent);">&#9733;</span> Overview</h2>
+  <p style="font-size:0.95rem;color:var(--text-muted);max-width:800px;margin-bottom:1.5rem;">
+    Design patterns are reusable solutions to common software design problems. They were formalized by the "Gang of Four" (GoF) in 1994 and have since been adapted to modern languages. Python's dynamic typing, first-class functions, and metaclasses make many patterns more concise — and some even unnecessary.
+  </p>
+  <div class="relationship-section">
+    <svg class="relationship-svg" viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" class="uml-arrow"/>
+        </marker>
+      </defs>
+      <!-- Creational -->
+      <rect x="30" y="50" width="240" height="120" rx="12" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
+      <text x="150" y="80" text-anchor="middle" class="uml-text title" fill="#10b981">Creational Patterns</text>
+      <text x="150" y="105" text-anchor="middle" class="uml-text" fill="#64748b">Object creation mechanisms</text>
+      <text x="150" y="125" text-anchor="middle" class="uml-text" fill="#64748b">Flexible instantiation</text>
+      <text x="150" y="145" text-anchor="middle" class="uml-text italic" fill="#64748b">"How objects are created"</text>
+
+      <!-- Structural -->
+      <rect x="330" y="50" width="240" height="120" rx="12" fill="#fffbeb" stroke="#f59e0b" stroke-width="2"/>
+      <text x="450" y="80" text-anchor="middle" class="uml-text title" fill="#f59e0b">Structural Patterns</text>
+      <text x="450" y="105" text-anchor="middle" class="uml-text" fill="#64748b">Compose objects &amp; classes</text>
+      <text x="450" y="125" text-anchor="middle" class="uml-text" fill="#64748b">Simplify relationships</text>
+      <text x="450" y="145" text-anchor="middle" class="uml-text italic" fill="#64748b">"How objects are structured"</text>
+
+      <!-- Behavioral -->
+      <rect x="630" y="50" width="240" height="120" rx="12" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="2"/>
+      <text x="750" y="80" text-anchor="middle" class="uml-text title" fill="#8b5cf6">Behavioral Patterns</text>
+      <text x="750" y="105" text-anchor="middle" class="uml-text" fill="#64748b">Object communication</text>
+      <text x="750" y="125" text-anchor="middle" class="uml-text" fill="#64748b">Responsibility assignment</text>
+      <text x="750" y="145" text-anchor="middle" class="uml-text italic" fill="#64748b">"How objects interact"</text>
+
+      <!-- Arrows -->
+      <line x1="270" y1="110" x2="330" y2="110" class="uml-line" marker-end="url(#arrowhead)"/>
+      <line x1="570" y1="110" x2="630" y2="110" class="uml-line" marker-end="url(#arrowhead)"/>
+    </svg>
+  </div>
+</section>
+
+<!-- Patterns Section -->
+<section id="patterns">
+  <h2><span class="icon" style="background:var(--accent-light);color:var(--accent);">&#9632;</span> Pattern Catalog</h2>
+
+  <div class="category-tabs">
+    <button class="cat-tab active-all" onclick="filterPatterns('all')">All (14)</button>
+    <button class="cat-tab" onclick="filterPatterns('creational')">Creational (5)</button>
+    <button class="cat-tab" onclick="filterPatterns('structural')">Structural (4)</button>
+    <button class="cat-tab" onclick="filterPatterns('behavioral')">Behavioral (5)</button>
+  </div>
+
+  <div class="patterns-grid" id="patternsGrid"></div>
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-header">
+      <h3 id="detailTitle"></h3>
+      <button class="detail-close" onclick="closeDetail()">&times;</button>
+    </div>
+    <div class="detail-body">
+      <div class="detail-diagram" id="detailDiagram"></div>
+      <div class="detail-code"><pre id="detailCode"></pre></div>
+    </div>
+    <div class="detail-footer">
+      <h4>Real-World Python Usage</h4>
+      <ul id="detailUsage"></ul>
+    </div>
+  </div>
+</section>
+
+<!-- Relationships Section -->
+<section id="relationships">
+  <h2><span class="icon" style="background:var(--structural-light);color:var(--structural);">&#8644;</span> Pattern Relationships</h2>
+  <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:1.5rem;">Patterns often work together. Click a pattern to highlight its connections.</p>
+  <div class="relationship-section">
+    <svg id="relationshipSvg" class="relationship-svg" viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+</section>
+
+<!-- Comparison Section -->
+<section id="comparison">
+  <h2><span class="icon" style="background:var(--creational-light);color:var(--creational);">&#9776;</span> Pattern Comparison</h2>
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Pattern</th>
+        <th>Category</th>
+        <th>Intent</th>
+        <th>Python Complexity</th>
+        <th>When to Use</th>
+      </tr>
+    </thead>
+    <tbody id="comparisonBody"></tbody>
+  </table>
+</section>
+
+<!-- Playground Section -->
+<section id="playground">
+  <h2><span class="icon" style="background:var(--behavioral-light);color:var(--behavioral);">&#9654;</span> Interactive Playground</h2>
+  <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:1rem;">Select a pattern, run the code, and see step-by-step execution with object interactions visualized.</p>
+
+  <div class="playground">
+    <div class="playground-header">
+      <label>Pattern:</label>
+      <select id="playgroundSelect"></select>
+      <button class="playground-btn" onclick="runPlayground()">&#9654; Run</button>
+      <button class="playground-btn" onclick="stepPlayground()" style="background:#64748b;">Step</button>
+      <button class="playground-btn" onclick="resetPlayground()" style="background:#ef4444;">Reset</button>
+    </div>
+    <div class="playground-body">
+      <div class="playground-code"><pre id="playgroundCode"></pre></div>
+      <div class="playground-output">
+        <h4>Execution Output</h4>
+        <div id="playgroundOutput"></div>
+      </div>
+    </div>
+    <div class="anim-controls">
+      <button class="anim-btn" onclick="stepPlayground()">&#9654;</button>
+      <input type="range" min="100" max="2000" value="600" id="speedSlider" style="width:120px;">
+      <span style="font-size:0.75rem;color:var(--text-muted);">Speed</span>
+      <span class="step-indicator" id="stepIndicator">Step 0 / 0</span>
+    </div>
+  </div>
+</section>
+
+<!-- Pitfalls Section -->
+<section id="pitfalls">
+  <h2><span class="icon" style="background:#fffbeb;color:#f59e0b;">&#9888;</span> Common Pitfalls</h2>
+  <div id="pitfallsList"></div>
+</section>
+
+<!-- Best Practices Section -->
+<section id="best-practices">
+  <h2><span class="icon" style="background:#ecfdf5;color:#10b981;">&#10003;</span> Best Practices</h2>
+  <div id="bestPracticesList"></div>
+</section>
+
+<script>
+// ====== DATA ======
+const patterns = [
+  // Creational
+  {
+    id: 'singleton',
+    name: 'Singleton',
+    category: 'creational',
+    desc: 'Ensure a class has only one instance and provide a global access point.',
+    useCase: 'Database connections, configuration managers, logging',
+    code: `<span class="kw">class</span> <span class="cls">SingletonMeta</span>(<span class="cls">type</span>):
+    <span class="cmt"># Thread-safe Singleton using metaclass</span>
+    _instances = {}
+
+    <span class="kw">def</span> <span class="fn">__call__</span>(cls, *args, **kwargs):
+        <span class="kw">if</span> cls <span class="kw">not in</span> cls._instances:
+            instance = <span class="fn">super</span>().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        <span class="kw">return</span> cls._instances[cls]
+
+
+<span class="kw">class</span> <span class="cls">Database</span>(metaclass=<span class="cls">SingletonMeta</span>):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.connection = <span class="str">"PostgreSQL@localhost:5432"</span>
+
+    <span class="kw">def</span> <span class="fn">query</span>(self, sql):
+        <span class="kw">return</span> <span class="str">f"Executing: </span>{sql}<span class="str">"</span>
+
+
+<span class="cmt"># Usage</span>
+db1 = <span class="cls">Database</span>()
+db2 = <span class="cls">Database</span>()
+<span class="kw">assert</span> db1 <span class="kw">is</span> db2  <span class="cmt"># Same instance!</span>`,
+    diagram: 'singleton',
+    usage: ['Django settings module', 'logging.getLogger()', 'Python module-level variables'],
+    complexity: 'Low',
+    intent: 'One instance globally accessible'
+  },
+  {
+    id: 'factory-method',
+    name: 'Factory Method',
+    category: 'creational',
+    desc: 'Define an interface for creating objects, letting subclasses decide which class to instantiate.',
+    useCase: 'Framework plugins, serializers, notification systems',
+    code: `<span class="kw">from</span> abc <span class="kw">import</span> ABC, abstractmethod
+
+
+<span class="kw">class</span> <span class="cls">Notification</span>(ABC):
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">send</span>(self, message: <span class="cls">str</span>) -> <span class="cls">str</span>:
+        ...
+
+
+<span class="kw">class</span> <span class="cls">EmailNotification</span>(<span class="cls">Notification</span>):
+    <span class="kw">def</span> <span class="fn">send</span>(self, message):
+        <span class="kw">return</span> <span class="str">f"Email: </span>{message}<span class="str">"</span>
+
+
+<span class="kw">class</span> <span class="cls">SMSNotification</span>(<span class="cls">Notification</span>):
+    <span class="kw">def</span> <span class="fn">send</span>(self, message):
+        <span class="kw">return</span> <span class="str">f"SMS: </span>{message}<span class="str">"</span>
+
+
+<span class="kw">class</span> <span class="cls">NotificationFactory</span>:
+    _creators = {
+        <span class="str">"email"</span>: <span class="cls">EmailNotification</span>,
+        <span class="str">"sms"</span>: <span class="cls">SMSNotification</span>,
+    }
+
+    @classmethod
+    <span class="kw">def</span> <span class="fn">create</span>(cls, channel: <span class="cls">str</span>) -> <span class="cls">Notification</span>:
+        creator = cls._creators.get(channel)
+        <span class="kw">if not</span> creator:
+            <span class="kw">raise</span> <span class="cls">ValueError</span>(<span class="str">f"Unknown: </span>{channel}<span class="str">"</span>)
+        <span class="kw">return</span> creator()
+
+
+<span class="cmt"># Usage</span>
+notif = <span class="cls">NotificationFactory</span>.create(<span class="str">"email"</span>)
+print(notif.send(<span class="str">"Hello!"</span>))`,
+    diagram: 'factory',
+    usage: ['Django form fields', 'SQLAlchemy engine creation', 'pytest fixture factories'],
+    complexity: 'Low',
+    intent: 'Delegate instantiation to subclasses'
+  },
+  {
+    id: 'abstract-factory',
+    name: 'Abstract Factory',
+    category: 'creational',
+    desc: 'Provide an interface for creating families of related objects without specifying concrete classes.',
+    useCase: 'Cross-platform UI toolkits, themed component libraries',
+    code: `<span class="kw">from</span> abc <span class="kw">import</span> ABC, abstractmethod
+
+
+<span class="kw">class</span> <span class="cls">Button</span>(ABC):
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">render</span>(self) -> <span class="cls">str</span>: ...
+
+<span class="kw">class</span> <span class="cls">TextField</span>(ABC):
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">render</span>(self) -> <span class="cls">str</span>: ...
+
+
+<span class="kw">class</span> <span class="cls">DarkButton</span>(<span class="cls">Button</span>):
+    <span class="kw">def</span> <span class="fn">render</span>(self): <span class="kw">return</span> <span class="str">"[Dark Button]"</span>
+
+<span class="kw">class</span> <span class="cls">DarkTextField</span>(<span class="cls">TextField</span>):
+    <span class="kw">def</span> <span class="fn">render</span>(self): <span class="kw">return</span> <span class="str">"[Dark Input___]"</span>
+
+<span class="kw">class</span> <span class="cls">LightButton</span>(<span class="cls">Button</span>):
+    <span class="kw">def</span> <span class="fn">render</span>(self): <span class="kw">return</span> <span class="str">"(Light Button)"</span>
+
+<span class="kw">class</span> <span class="cls">LightTextField</span>(<span class="cls">TextField</span>):
+    <span class="kw">def</span> <span class="fn">render</span>(self): <span class="kw">return</span> <span class="str">"(Light Input___)"</span>
+
+
+<span class="kw">class</span> <span class="cls">UIFactory</span>(ABC):
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">create_button</span>(self) -> <span class="cls">Button</span>: ...
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">create_text_field</span>(self) -> <span class="cls">TextField</span>: ...
+
+<span class="kw">class</span> <span class="cls">DarkThemeFactory</span>(<span class="cls">UIFactory</span>):
+    <span class="kw">def</span> <span class="fn">create_button</span>(self): <span class="kw">return</span> <span class="cls">DarkButton</span>()
+    <span class="kw">def</span> <span class="fn">create_text_field</span>(self): <span class="kw">return</span> <span class="cls">DarkTextField</span>()
+
+<span class="kw">class</span> <span class="cls">LightThemeFactory</span>(<span class="cls">UIFactory</span>):
+    <span class="kw">def</span> <span class="fn">create_button</span>(self): <span class="kw">return</span> <span class="cls">LightButton</span>()
+    <span class="kw">def</span> <span class="fn">create_text_field</span>(self): <span class="kw">return</span> <span class="cls">LightTextField</span>()
+
+
+<span class="cmt"># Usage</span>
+factory = <span class="cls">DarkThemeFactory</span>()
+btn = factory.create_button()
+txt = factory.create_text_field()
+print(btn.render(), txt.render())`,
+    diagram: 'abstract-factory',
+    usage: ['GUI toolkits (tkinter themes)', 'Database driver families', 'Cloud provider SDKs'],
+    complexity: 'Medium',
+    intent: 'Create families of related objects'
+  },
+  {
+    id: 'builder',
+    name: 'Builder',
+    category: 'creational',
+    desc: 'Separate the construction of a complex object from its representation.',
+    useCase: 'Query builders, configuration objects, document generation',
+    code: `<span class="kw">class</span> <span class="cls">QueryBuilder</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self._select = []
+        self._from = <span class="str">""</span>
+        self._where = []
+        self._order_by = <span class="str">""</span>
+        self._limit = <span class="kw">None</span>
+
+    <span class="kw">def</span> <span class="fn">select</span>(self, *columns):
+        self._select.extend(columns)
+        <span class="kw">return</span> self
+
+    <span class="kw">def</span> <span class="fn">from_table</span>(self, table: <span class="cls">str</span>):
+        self._from = table
+        <span class="kw">return</span> self
+
+    <span class="kw">def</span> <span class="fn">where</span>(self, condition: <span class="cls">str</span>):
+        self._where.append(condition)
+        <span class="kw">return</span> self
+
+    <span class="kw">def</span> <span class="fn">order_by</span>(self, column: <span class="cls">str</span>):
+        self._order_by = column
+        <span class="kw">return</span> self
+
+    <span class="kw">def</span> <span class="fn">limit</span>(self, n: <span class="cls">int</span>):
+        self._limit = n
+        <span class="kw">return</span> self
+
+    <span class="kw">def</span> <span class="fn">build</span>(self) -> <span class="cls">str</span>:
+        q = <span class="str">f"SELECT </span>{<span class="str">', '</span>.join(self._select)}<span class="str">"</span>
+        q += <span class="str">f" FROM </span>{self._from}<span class="str">"</span>
+        <span class="kw">if</span> self._where:
+            q += <span class="str">f" WHERE </span>{<span class="str">' AND '</span>.join(self._where)}<span class="str">"</span>
+        <span class="kw">if</span> self._order_by:
+            q += <span class="str">f" ORDER BY </span>{self._order_by}<span class="str">"</span>
+        <span class="kw">if</span> self._limit:
+            q += <span class="str">f" LIMIT </span>{self._limit}<span class="str">"</span>
+        <span class="kw">return</span> q
+
+
+<span class="cmt"># Fluent interface usage</span>
+query = (<span class="cls">QueryBuilder</span>()
+    .select(<span class="str">"name"</span>, <span class="str">"email"</span>)
+    .from_table(<span class="str">"users"</span>)
+    .where(<span class="str">"active = true"</span>)
+    .where(<span class="str">"age > 18"</span>)
+    .order_by(<span class="str">"name"</span>)
+    .limit(<span class="num">10</span>)
+    .build()
+)
+print(query)`,
+    diagram: 'builder',
+    usage: ['SQLAlchemy Query API', 'requests.Request()', 'dataclasses with __post_init__'],
+    complexity: 'Low',
+    intent: 'Step-by-step object construction'
+  },
+  {
+    id: 'prototype',
+    name: 'Prototype',
+    category: 'creational',
+    desc: 'Create new objects by copying an existing object (prototype).',
+    useCase: 'Cloning game entities, document templates, config presets',
+    code: `<span class="kw">import</span> copy
+
+
+<span class="kw">class</span> <span class="cls">Prototype</span>:
+    <span class="kw">def</span> <span class="fn">clone</span>(self):
+        <span class="kw">return</span> copy.deepcopy(self)
+
+
+<span class="kw">class</span> <span class="cls">GameUnit</span>(<span class="cls">Prototype</span>):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, name, hp, attack, abilities):
+        self.name = name
+        self.hp = hp
+        self.attack = attack
+        self.abilities = abilities  <span class="cmt"># mutable list</span>
+
+    <span class="kw">def</span> <span class="fn">__repr__</span>(self):
+        <span class="kw">return</span> (<span class="str">f"GameUnit(</span>{self.name}<span class="str">, "</span>
+                <span class="str">f"hp=</span>{self.hp}<span class="str">, atk=</span>{self.attack}<span class="str">)"</span>)
+
+
+<span class="cmt"># Create a prototype</span>
+warrior_proto = <span class="cls">GameUnit</span>(
+    <span class="str">"Warrior"</span>, hp=<span class="num">100</span>, attack=<span class="num">15</span>,
+    abilities=[<span class="str">"slash"</span>, <span class="str">"block"</span>]
+)
+
+<span class="cmt"># Clone and customize</span>
+elite_warrior = warrior_proto.clone()
+elite_warrior.name = <span class="str">"Elite Warrior"</span>
+elite_warrior.hp = <span class="num">150</span>
+elite_warrior.abilities.append(<span class="str">"whirlwind"</span>)
+
+print(warrior_proto)
+print(elite_warrior)
+print(warrior_proto.abilities)  <span class="cmt"># unchanged!</span>`,
+    diagram: 'prototype',
+    usage: ['copy.deepcopy() in Python stdlib', 'Django model .save(force_insert)', 'Spreadsheet cell copying'],
+    complexity: 'Low',
+    intent: 'Clone objects without coupling to class'
+  },
+  // Structural
+  {
+    id: 'adapter',
+    name: 'Adapter',
+    category: 'structural',
+    desc: 'Convert the interface of a class into another interface clients expect.',
+    useCase: 'Legacy system integration, third-party library wrappers',
+    code: `<span class="kw">class</span> <span class="cls">LegacyPaymentGateway</span>:
+    <span class="cmt">"""Old API we can't modify"""</span>
+    <span class="kw">def</span> <span class="fn">make_payment</span>(self, amount_cents, card_number):
+        <span class="kw">return</span> {
+            <span class="str">"status"</span>: <span class="str">"OK"</span>,
+            <span class="str">"charged"</span>: amount_cents,
+            <span class="str">"card"</span>: card_number[-<span class="num">4</span>:]
+        }
+
+
+<span class="kw">class</span> <span class="cls">PaymentProcessor</span>:
+    <span class="cmt">"""Interface our app expects"""</span>
+    <span class="kw">def</span> <span class="fn">charge</span>(self, amount: <span class="cls">float</span>, token: <span class="cls">str</span>) -> <span class="cls">bool</span>:
+        <span class="kw">raise</span> <span class="cls">NotImplementedError</span>
+
+
+<span class="kw">class</span> <span class="cls">PaymentAdapter</span>(<span class="cls">PaymentProcessor</span>):
+    <span class="cmt">"""Adapts legacy gateway to new interface"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, gateway: <span class="cls">LegacyPaymentGateway</span>):
+        self._gateway = gateway
+
+    <span class="kw">def</span> <span class="fn">charge</span>(self, amount: <span class="cls">float</span>, token: <span class="cls">str</span>) -> <span class="cls">bool</span>:
+        cents = <span class="fn">int</span>(amount * <span class="num">100</span>)
+        result = self._gateway.make_payment(cents, token)
+        <span class="kw">return</span> result[<span class="str">"status"</span>] == <span class="str">"OK"</span>
+
+
+<span class="cmt"># Usage</span>
+legacy = <span class="cls">LegacyPaymentGateway</span>()
+processor = <span class="cls">PaymentAdapter</span>(legacy)
+success = processor.charge(<span class="num">29.99</span>, <span class="str">"4111111111111111"</span>)
+print(<span class="str">f"Payment successful: </span>{success}<span class="str">"</span>)`,
+    diagram: 'adapter',
+    usage: ['Django database backends', 'requests vs urllib adapters', 'AWS SDK compatibility layers'],
+    complexity: 'Low',
+    intent: 'Make incompatible interfaces work together'
+  },
+  {
+    id: 'decorator-pattern',
+    name: 'Decorator',
+    category: 'structural',
+    desc: 'Dynamically add responsibilities to objects without modifying their code.',
+    useCase: 'Logging, caching, authentication middleware, compression',
+    code: `<span class="kw">from</span> functools <span class="kw">import</span> wraps
+<span class="kw">import</span> time
+
+
+<span class="cmt"># Python decorator (function-based)</span>
+<span class="kw">def</span> <span class="fn">retry</span>(max_attempts=<span class="num">3</span>, delay=<span class="num">1.0</span>):
+    <span class="kw">def</span> <span class="fn">decorator</span>(func):
+        @wraps(func)
+        <span class="kw">def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+            <span class="kw">for</span> attempt <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, max_attempts + <span class="num">1</span>):
+                <span class="kw">try</span>:
+                    <span class="kw">return</span> func(*args, **kwargs)
+                <span class="kw">except</span> <span class="cls">Exception</span> <span class="kw">as</span> e:
+                    <span class="kw">if</span> attempt == max_attempts:
+                        <span class="kw">raise</span>
+                    print(<span class="str">f"Retry </span>{attempt}<span class="str">/</span>{max_attempts}<span class="str">: </span>{e}<span class="str">"</span>)
+                    time.sleep(delay)
+        <span class="kw">return</span> wrapper
+    <span class="kw">return</span> decorator
+
+
+<span class="kw">def</span> <span class="fn">log_calls</span>(func):
+    @wraps(func)
+    <span class="kw">def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+        print(<span class="str">f"Calling </span>{func.__name__}<span class="str">(</span>{args}<span class="str">)"</span>)
+        result = func(*args, **kwargs)
+        print(<span class="str">f"  -> returned </span>{result}<span class="str">"</span>)
+        <span class="kw">return</span> result
+    <span class="kw">return</span> wrapper
+
+
+<span class="cmt"># Stack decorators</span>
+<span class="dec">@retry</span>(max_attempts=<span class="num">3</span>)
+<span class="dec">@log_calls</span>
+<span class="kw">def</span> <span class="fn">fetch_data</span>(url):
+    <span class="kw">return</span> <span class="str">f"Data from </span>{url}<span class="str">"</span>
+
+print(fetch_data(<span class="str">"https://api.example.com"</span>))`,
+    diagram: 'decorator',
+    usage: ['@functools.lru_cache', '@app.route() in Flask', '@property, @staticmethod'],
+    complexity: 'Low',
+    intent: 'Add behavior without subclassing'
+  },
+  {
+    id: 'facade',
+    name: 'Facade',
+    category: 'structural',
+    desc: 'Provide a simplified interface to a complex subsystem.',
+    useCase: 'API clients, complex library wrappers, system initialization',
+    code: `<span class="kw">class</span> <span class="cls">VideoCodec</span>:
+    <span class="kw">def</span> <span class="fn">decode</span>(self, filename):
+        <span class="kw">return</span> <span class="str">f"Decoding video: </span>{filename}<span class="str">"</span>
+
+<span class="kw">class</span> <span class="cls">AudioExtractor</span>:
+    <span class="kw">def</span> <span class="fn">extract</span>(self, video_data):
+        <span class="kw">return</span> <span class="str">"Extracting audio track"</span>
+
+<span class="kw">class</span> <span class="cls">SubtitleParser</span>:
+    <span class="kw">def</span> <span class="fn">parse</span>(self, filename):
+        <span class="kw">return</span> <span class="str">"Parsing subtitles"</span>
+
+<span class="kw">class</span> <span class="cls">VideoRenderer</span>:
+    <span class="kw">def</span> <span class="fn">render</span>(self, video, audio, subs):
+        <span class="kw">return</span> <span class="str">"Rendering final output"</span>
+
+
+<span class="kw">class</span> <span class="cls">VideoPlayerFacade</span>:
+    <span class="cmt">"""Simple interface hiding complex subsystems"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self._codec = <span class="cls">VideoCodec</span>()
+        self._audio = <span class="cls">AudioExtractor</span>()
+        self._subs = <span class="cls">SubtitleParser</span>()
+        self._renderer = <span class="cls">VideoRenderer</span>()
+
+    <span class="kw">def</span> <span class="fn">play</span>(self, filename: <span class="cls">str</span>) -> <span class="cls">list</span>:
+        steps = []
+        steps.append(self._codec.decode(filename))
+        video_data = <span class="str">"decoded_frames"</span>
+        steps.append(self._audio.extract(video_data))
+        steps.append(self._subs.parse(filename))
+        steps.append(self._renderer.render(
+            video_data, <span class="str">"audio"</span>, <span class="str">"subs"</span>))
+        <span class="kw">return</span> steps
+
+
+<span class="cmt"># Client uses simple interface</span>
+player = <span class="cls">VideoPlayerFacade</span>()
+<span class="kw">for</span> step <span class="kw">in</span> player.play(<span class="str">"movie.mp4"</span>):
+    print(step)`,
+    diagram: 'facade',
+    usage: ['requests library (hides urllib)', 'Django ORM (hides SQL)', 'Boto3 high-level API'],
+    complexity: 'Low',
+    intent: 'Simplify complex subsystem access'
+  },
+  {
+    id: 'composite',
+    name: 'Composite',
+    category: 'structural',
+    desc: 'Compose objects into tree structures and treat individual objects and compositions uniformly.',
+    useCase: 'File systems, UI component trees, org charts, menus',
+    code: `<span class="kw">from</span> abc <span class="kw">import</span> ABC, abstractmethod
+
+
+<span class="kw">class</span> <span class="cls">FileSystemNode</span>(ABC):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, name: <span class="cls">str</span>):
+        self.name = name
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">size</span>(self) -> <span class="cls">int</span>: ...
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">display</span>(self, indent=<span class="num">0</span>) -> <span class="cls">str</span>: ...
+
+
+<span class="kw">class</span> <span class="cls">File</span>(<span class="cls">FileSystemNode</span>):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, name, size_bytes):
+        <span class="fn">super</span>().__init__(name)
+        self._size = size_bytes
+
+    <span class="kw">def</span> <span class="fn">size</span>(self): <span class="kw">return</span> self._size
+    <span class="kw">def</span> <span class="fn">display</span>(self, indent=<span class="num">0</span>):
+        <span class="kw">return</span> <span class="str">"  "</span> * indent + <span class="str">f"📄 </span>{self.name}<span class="str"> (</span>{self._size}<span class="str">B)"</span>
+
+
+<span class="kw">class</span> <span class="cls">Directory</span>(<span class="cls">FileSystemNode</span>):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, name):
+        <span class="fn">super</span>().__init__(name)
+        self.children = []
+
+    <span class="kw">def</span> <span class="fn">add</span>(self, node: <span class="cls">FileSystemNode</span>):
+        self.children.append(node)
+        <span class="kw">return</span> self
+
+    <span class="kw">def</span> <span class="fn">size</span>(self):
+        <span class="kw">return</span> <span class="fn">sum</span>(child.size() <span class="kw">for</span> child <span class="kw">in</span> self.children)
+
+    <span class="kw">def</span> <span class="fn">display</span>(self, indent=<span class="num">0</span>):
+        lines = [<span class="str">"  "</span> * indent + <span class="str">f"📁 </span>{self.name}<span class="str">/"</span>]
+        <span class="kw">for</span> child <span class="kw">in</span> self.children:
+            lines.append(child.display(indent + <span class="num">1</span>))
+        <span class="kw">return</span> <span class="str">"\\n"</span>.join(lines)
+
+
+<span class="cmt"># Build a tree</span>
+root = <span class="cls">Directory</span>(<span class="str">"project"</span>)
+src = <span class="cls">Directory</span>(<span class="str">"src"</span>)
+src.add(<span class="cls">File</span>(<span class="str">"main.py"</span>, <span class="num">1200</span>))
+src.add(<span class="cls">File</span>(<span class="str">"utils.py"</span>, <span class="num">800</span>))
+root.add(src)
+root.add(<span class="cls">File</span>(<span class="str">"README.md"</span>, <span class="num">500</span>))
+print(root.display())
+print(<span class="str">f"Total: </span>{root.size()}<span class="str">B"</span>)`,
+    diagram: 'composite',
+    usage: ['Django template nodes', 'ast module (Python AST)', 'GUI widget hierarchies'],
+    complexity: 'Medium',
+    intent: 'Treat individual and composite objects uniformly'
+  },
+  // Behavioral
+  {
+    id: 'observer',
+    name: 'Observer',
+    category: 'behavioral',
+    desc: 'Define a one-to-many dependency so when one object changes, all dependents are notified.',
+    useCase: 'Event systems, pub/sub, reactive UIs, monitoring',
+    code: `<span class="kw">from</span> typing <span class="kw">import</span> Callable
+
+
+<span class="kw">class</span> <span class="cls">EventBus</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self._subscribers: <span class="cls">dict</span>[<span class="cls">str</span>, <span class="cls">list</span>[<span class="cls">Callable</span>]] = {}
+
+    <span class="kw">def</span> <span class="fn">subscribe</span>(self, event: <span class="cls">str</span>, handler: <span class="cls">Callable</span>):
+        self._subscribers.setdefault(event, []).append(handler)
+
+    <span class="kw">def</span> <span class="fn">unsubscribe</span>(self, event: <span class="cls">str</span>, handler: <span class="cls">Callable</span>):
+        self._subscribers.get(event, []).remove(handler)
+
+    <span class="kw">def</span> <span class="fn">emit</span>(self, event: <span class="cls">str</span>, **data):
+        <span class="kw">for</span> handler <span class="kw">in</span> self._subscribers.get(event, []):
+            handler(**data)
+
+
+<span class="cmt"># Usage</span>
+bus = <span class="cls">EventBus</span>()
+
+<span class="kw">def</span> <span class="fn">log_order</span>(**data):
+    print(<span class="str">f"LOG: Order </span>{data[<span class="str">'order_id'</span>]}<span class="str"> placed"</span>)
+
+<span class="kw">def</span> <span class="fn">send_email</span>(**data):
+    print(<span class="str">f"EMAIL: Confirmation for </span>{data[<span class="str">'email'</span>]}<span class="str">"</span>)
+
+<span class="kw">def</span> <span class="fn">update_inventory</span>(**data):
+    print(<span class="str">f"INVENTORY: -</span>{data[<span class="str">'qty'</span>]}<span class="str"> items"</span>)
+
+bus.subscribe(<span class="str">"order.placed"</span>, log_order)
+bus.subscribe(<span class="str">"order.placed"</span>, send_email)
+bus.subscribe(<span class="str">"order.placed"</span>, update_inventory)
+
+bus.emit(<span class="str">"order.placed"</span>,
+    order_id=<span class="str">"ORD-42"</span>, email=<span class="str">"user@test.com"</span>, qty=<span class="num">2</span>)`,
+    diagram: 'observer',
+    usage: ['Django signals', 'asyncio event loops', 'RxPy reactive extensions'],
+    complexity: 'Low',
+    intent: 'Notify dependents of state changes'
+  },
+  {
+    id: 'strategy',
+    name: 'Strategy',
+    category: 'behavioral',
+    desc: 'Define a family of algorithms, encapsulate each one, and make them interchangeable.',
+    useCase: 'Sorting algorithms, payment processing, compression, auth strategies',
+    code: `<span class="kw">from</span> typing <span class="kw">import</span> Callable, Protocol
+
+
+<span class="kw">class</span> <span class="cls">SortStrategy</span>(Protocol):
+    <span class="kw">def</span> <span class="fn">__call__</span>(self, data: <span class="cls">list</span>) -> <span class="cls">list</span>: ...
+
+
+<span class="kw">def</span> <span class="fn">bubble_sort</span>(data: <span class="cls">list</span>) -> <span class="cls">list</span>:
+    arr = data[:]
+    n = <span class="fn">len</span>(arr)
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n):
+        <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(<span class="num">0</span>, n - i - <span class="num">1</span>):
+            <span class="kw">if</span> arr[j] > arr[j + <span class="num">1</span>]:
+                arr[j], arr[j + <span class="num">1</span>] = arr[j + <span class="num">1</span>], arr[j]
+    <span class="kw">return</span> arr
+
+
+<span class="kw">def</span> <span class="fn">quick_sort</span>(data: <span class="cls">list</span>) -> <span class="cls">list</span>:
+    <span class="kw">if</span> <span class="fn">len</span>(data) <= <span class="num">1</span>:
+        <span class="kw">return</span> data
+    pivot = data[<span class="fn">len</span>(data) // <span class="num">2</span>]
+    left = [x <span class="kw">for</span> x <span class="kw">in</span> data <span class="kw">if</span> x < pivot]
+    mid = [x <span class="kw">for</span> x <span class="kw">in</span> data <span class="kw">if</span> x == pivot]
+    right = [x <span class="kw">for</span> x <span class="kw">in</span> data <span class="kw">if</span> x > pivot]
+    <span class="kw">return</span> quick_sort(left) + mid + quick_sort(right)
+
+
+<span class="kw">class</span> <span class="cls">Sorter</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, strategy: <span class="cls">SortStrategy</span> = quick_sort):
+        self.strategy = strategy
+
+    <span class="kw">def</span> <span class="fn">sort</span>(self, data: <span class="cls">list</span>) -> <span class="cls">list</span>:
+        print(<span class="str">f"Using </span>{self.strategy.__name__}<span class="str">"</span>)
+        <span class="kw">return</span> self.strategy(data)
+
+
+<span class="cmt"># Swap strategies at runtime</span>
+sorter = <span class="cls">Sorter</span>(bubble_sort)
+print(sorter.sort([<span class="num">5</span>, <span class="num">2</span>, <span class="num">8</span>, <span class="num">1</span>, <span class="num">9</span>]))
+
+sorter.strategy = quick_sort
+print(sorter.sort([<span class="num">5</span>, <span class="num">2</span>, <span class="num">8</span>, <span class="num">1</span>, <span class="num">9</span>]))`,
+    diagram: 'strategy',
+    usage: ['sorted() key parameter', 'Django authentication backends', 'Serializer format selection'],
+    complexity: 'Low',
+    intent: 'Swap algorithms at runtime'
+  },
+  {
+    id: 'command',
+    name: 'Command',
+    category: 'behavioral',
+    desc: 'Encapsulate a request as an object, allowing parameterization and undo/redo.',
+    useCase: 'Undo/redo systems, task queues, macro recording, transactions',
+    code: `<span class="kw">from</span> abc <span class="kw">import</span> ABC, abstractmethod
+
+
+<span class="kw">class</span> <span class="cls">Command</span>(ABC):
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">execute</span>(self): ...
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">undo</span>(self): ...
+
+
+<span class="kw">class</span> <span class="cls">TextEditor</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.content = <span class="str">""</span>
+
+    <span class="kw">def</span> <span class="fn">__repr__</span>(self):
+        <span class="kw">return</span> <span class="str">f'TextEditor("{self.content}")'</span>
+
+
+<span class="kw">class</span> <span class="cls">InsertText</span>(<span class="cls">Command</span>):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, editor: <span class="cls">TextEditor</span>, text: <span class="cls">str</span>):
+        self.editor = editor
+        self.text = text
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self):
+        self.editor.content += self.text
+
+    <span class="kw">def</span> <span class="fn">undo</span>(self):
+        self.editor.content = self.editor.content[
+            :-<span class="fn">len</span>(self.text)]
+
+
+<span class="kw">class</span> <span class="cls">CommandHistory</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self._history: <span class="cls">list</span>[<span class="cls">Command</span>] = []
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self, cmd: <span class="cls">Command</span>):
+        cmd.execute()
+        self._history.append(cmd)
+
+    <span class="kw">def</span> <span class="fn">undo</span>(self):
+        <span class="kw">if</span> self._history:
+            cmd = self._history.pop()
+            cmd.undo()
+
+
+<span class="cmt"># Usage</span>
+editor = <span class="cls">TextEditor</span>()
+history = <span class="cls">CommandHistory</span>()
+
+history.execute(<span class="cls">InsertText</span>(editor, <span class="str">"Hello"</span>))
+history.execute(<span class="cls">InsertText</span>(editor, <span class="str">" World"</span>))
+print(editor)  <span class="cmt"># "Hello World"</span>
+
+history.undo()
+print(editor)  <span class="cmt"># "Hello"</span>`,
+    diagram: 'command',
+    usage: ['Celery task queue', 'Django management commands', 'GUI action/undo frameworks'],
+    complexity: 'Medium',
+    intent: 'Encapsulate operations as objects'
+  },
+  {
+    id: 'state',
+    name: 'State',
+    category: 'behavioral',
+    desc: 'Allow an object to alter its behavior when its internal state changes.',
+    useCase: 'Workflow engines, game character states, TCP connections, vending machines',
+    code: `<span class="kw">from</span> abc <span class="kw">import</span> ABC, abstractmethod
+
+
+<span class="kw">class</span> <span class="cls">OrderState</span>(ABC):
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">proceed</span>(self, order): ...
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">cancel</span>(self, order): ...
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">status</span>(self) -> <span class="cls">str</span>: ...
+
+
+<span class="kw">class</span> <span class="cls">PendingState</span>(<span class="cls">OrderState</span>):
+    <span class="kw">def</span> <span class="fn">proceed</span>(self, order):
+        order.state = <span class="cls">PaidState</span>()
+    <span class="kw">def</span> <span class="fn">cancel</span>(self, order):
+        order.state = <span class="cls">CancelledState</span>()
+    <span class="kw">def</span> <span class="fn">status</span>(self): <span class="kw">return</span> <span class="str">"Pending"</span>
+
+
+<span class="kw">class</span> <span class="cls">PaidState</span>(<span class="cls">OrderState</span>):
+    <span class="kw">def</span> <span class="fn">proceed</span>(self, order):
+        order.state = <span class="cls">ShippedState</span>()
+    <span class="kw">def</span> <span class="fn">cancel</span>(self, order):
+        print(<span class="str">"Cannot cancel - already paid!"</span>)
+    <span class="kw">def</span> <span class="fn">status</span>(self): <span class="kw">return</span> <span class="str">"Paid"</span>
+
+
+<span class="kw">class</span> <span class="cls">ShippedState</span>(<span class="cls">OrderState</span>):
+    <span class="kw">def</span> <span class="fn">proceed</span>(self, order):
+        order.state = <span class="cls">DeliveredState</span>()
+    <span class="kw">def</span> <span class="fn">cancel</span>(self, order):
+        print(<span class="str">"Cannot cancel - already shipped!"</span>)
+    <span class="kw">def</span> <span class="fn">status</span>(self): <span class="kw">return</span> <span class="str">"Shipped"</span>
+
+
+<span class="kw">class</span> <span class="cls">DeliveredState</span>(<span class="cls">OrderState</span>):
+    <span class="kw">def</span> <span class="fn">proceed</span>(self, order):
+        print(<span class="str">"Already delivered!"</span>)
+    <span class="kw">def</span> <span class="fn">cancel</span>(self, order):
+        print(<span class="str">"Cannot cancel - delivered!"</span>)
+    <span class="kw">def</span> <span class="fn">status</span>(self): <span class="kw">return</span> <span class="str">"Delivered"</span>
+
+
+<span class="kw">class</span> <span class="cls">CancelledState</span>(<span class="cls">OrderState</span>):
+    <span class="kw">def</span> <span class="fn">proceed</span>(self, order):
+        print(<span class="str">"Order is cancelled!"</span>)
+    <span class="kw">def</span> <span class="fn">cancel</span>(self, order):
+        print(<span class="str">"Already cancelled!"</span>)
+    <span class="kw">def</span> <span class="fn">status</span>(self): <span class="kw">return</span> <span class="str">"Cancelled"</span>
+
+
+<span class="kw">class</span> <span class="cls">Order</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.state: <span class="cls">OrderState</span> = <span class="cls">PendingState</span>()
+
+    <span class="kw">def</span> <span class="fn">proceed</span>(self):
+        self.state.proceed(self)
+
+    <span class="kw">def</span> <span class="fn">cancel</span>(self):
+        self.state.cancel(self)
+
+
+<span class="cmt"># Usage</span>
+order = <span class="cls">Order</span>()
+print(order.state.status())  <span class="cmt"># Pending</span>
+order.proceed()
+print(order.state.status())  <span class="cmt"># Paid</span>
+order.proceed()
+print(order.state.status())  <span class="cmt"># Shipped</span>`,
+    diagram: 'state',
+    usage: ['Django FSM library', 'asyncio task states', 'HTTP connection lifecycle'],
+    complexity: 'Medium',
+    intent: 'Change behavior based on internal state'
+  },
+  {
+    id: 'template-method',
+    name: 'Template Method',
+    category: 'behavioral',
+    desc: 'Define the skeleton of an algorithm, deferring some steps to subclasses.',
+    useCase: 'Data pipelines, test frameworks, document parsers, game loops',
+    code: `<span class="kw">from</span> abc <span class="kw">import</span> ABC, abstractmethod
+
+
+<span class="kw">class</span> <span class="cls">DataPipeline</span>(ABC):
+    <span class="cmt">"""Template: extract -> transform -> load"""</span>
+
+    <span class="kw">def</span> <span class="fn">run</span>(self) -> <span class="cls">list</span>[<span class="cls">str</span>]:
+        <span class="cmt"># Template method - fixed algorithm skeleton</span>
+        log = []
+        log.append(self.extract())
+        log.append(self.transform())
+        log.append(self.validate())  <span class="cmt"># hook</span>
+        log.append(self.load())
+        <span class="kw">return</span> log
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">extract</span>(self) -> <span class="cls">str</span>: ...
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">transform</span>(self) -> <span class="cls">str</span>: ...
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">load</span>(self) -> <span class="cls">str</span>: ...
+
+    <span class="kw">def</span> <span class="fn">validate</span>(self) -> <span class="cls">str</span>:
+        <span class="cmt"># Optional hook - subclasses can override</span>
+        <span class="kw">return</span> <span class="str">"Validation: skipped (default)"</span>
+
+
+<span class="kw">class</span> <span class="cls">CSVPipeline</span>(<span class="cls">DataPipeline</span>):
+    <span class="kw">def</span> <span class="fn">extract</span>(self):
+        <span class="kw">return</span> <span class="str">"Extract: Reading CSV file"</span>
+    <span class="kw">def</span> <span class="fn">transform</span>(self):
+        <span class="kw">return</span> <span class="str">"Transform: Parsing rows, converting types"</span>
+    <span class="kw">def</span> <span class="fn">load</span>(self):
+        <span class="kw">return</span> <span class="str">"Load: Inserting into PostgreSQL"</span>
+
+
+<span class="kw">class</span> <span class="cls">APIPipeline</span>(<span class="cls">DataPipeline</span>):
+    <span class="kw">def</span> <span class="fn">extract</span>(self):
+        <span class="kw">return</span> <span class="str">"Extract: Fetching from REST API"</span>
+    <span class="kw">def</span> <span class="fn">transform</span>(self):
+        <span class="kw">return</span> <span class="str">"Transform: Normalizing JSON schema"</span>
+    <span class="kw">def</span> <span class="fn">validate</span>(self):
+        <span class="kw">return</span> <span class="str">"Validation: Checking required fields"</span>
+    <span class="kw">def</span> <span class="fn">load</span>(self):
+        <span class="kw">return</span> <span class="str">"Load: Upserting to data warehouse"</span>
+
+
+<span class="cmt"># Usage</span>
+<span class="kw">for</span> pipeline <span class="kw">in</span> [<span class="cls">CSVPipeline</span>(), <span class="cls">APIPipeline</span>()]:
+    print(<span class="str">f"\\n--- </span>{pipeline.__class__.__name__}<span class="str"> ---"</span>)
+    <span class="kw">for</span> step <span class="kw">in</span> pipeline.run():
+        print(<span class="str">f"  </span>{step}<span class="str">"</span>)`,
+    diagram: 'template-method',
+    usage: ['unittest.TestCase (setUp/test/tearDown)', 'Django class-based views', 'Scrapy spider pipeline'],
+    complexity: 'Low',
+    intent: 'Fixed algorithm, customizable steps'
+  }
+];
+
+// ====== PLAYGROUND EXECUTIONS ======
+const playgroundExecutions = {
+  'singleton': [
+    { line: 'Creating Database() instance...', highlight: false },
+    { line: 'SingletonMeta.__call__ invoked', highlight: true },
+    { line: 'No existing instance found — creating new one', highlight: false },
+    { line: 'db1 = Database() -> id: 0x7f001', highlight: false },
+    { line: '', highlight: false },
+    { line: 'Creating second Database() instance...', highlight: false },
+    { line: 'SingletonMeta.__call__ invoked', highlight: true },
+    { line: 'Instance already exists — returning cached', highlight: true },
+    { line: 'db2 = Database() -> id: 0x7f001', highlight: false },
+    { line: '', highlight: false },
+    { line: 'db1 is db2 -> True  (same object!)', highlight: true },
+    { line: 'db1.query("SELECT 1") -> "Executing: SELECT 1"', highlight: false },
+  ],
+  'factory-method': [
+    { line: 'NotificationFactory.create("email") called', highlight: true },
+    { line: 'Looking up "email" in _creators registry...', highlight: false },
+    { line: 'Found: EmailNotification class', highlight: false },
+    { line: 'Instantiating EmailNotification()', highlight: false },
+    { line: 'notif.send("Hello!") -> "Email: Hello!"', highlight: true },
+    { line: '', highlight: false },
+    { line: 'NotificationFactory.create("sms") called', highlight: true },
+    { line: 'Looking up "sms" in _creators registry...', highlight: false },
+    { line: 'Found: SMSNotification class', highlight: false },
+    { line: 'Instantiating SMSNotification()', highlight: false },
+    { line: 'notif.send("Hi!") -> "SMS: Hi!"', highlight: true },
+    { line: '', highlight: false },
+    { line: 'NotificationFactory.create("push") called', highlight: false },
+    { line: 'ValueError: Unknown channel: push', highlight: true },
+  ],
+  'abstract-factory': [
+    { line: 'factory = DarkThemeFactory()', highlight: true },
+    { line: '', highlight: false },
+    { line: 'factory.create_button() called', highlight: false },
+    { line: '  -> DarkButton instance created', highlight: false },
+    { line: 'factory.create_text_field() called', highlight: false },
+    { line: '  -> DarkTextField instance created', highlight: false },
+    { line: '', highlight: false },
+    { line: 'btn.render() -> "[Dark Button]"', highlight: true },
+    { line: 'txt.render() -> "[Dark Input___]"', highlight: true },
+    { line: '', highlight: false },
+    { line: 'Switching to LightThemeFactory...', highlight: true },
+    { line: 'btn.render() -> "(Light Button)"', highlight: false },
+    { line: 'txt.render() -> "(Light Input___)"', highlight: false },
+  ],
+  'builder': [
+    { line: 'QueryBuilder() initialized with empty state', highlight: false },
+    { line: '', highlight: false },
+    { line: '.select("name", "email")', highlight: true },
+    { line: '  _select = ["name", "email"]', highlight: false },
+    { line: '.from_table("users")', highlight: true },
+    { line: '  _from = "users"', highlight: false },
+    { line: '.where("active = true")', highlight: true },
+    { line: '  _where = ["active = true"]', highlight: false },
+    { line: '.where("age > 18")', highlight: true },
+    { line: '  _where = ["active = true", "age > 18"]', highlight: false },
+    { line: '.order_by("name")', highlight: false },
+    { line: '.limit(10)', highlight: false },
+    { line: '', highlight: false },
+    { line: '.build() ->', highlight: true },
+    { line: 'SELECT name, email FROM users WHERE active = true AND age > 18 ORDER BY name LIMIT 10', highlight: true },
+  ],
+  'prototype': [
+    { line: 'Creating warrior prototype...', highlight: false },
+    { line: 'warrior_proto = GameUnit("Warrior", hp=100, atk=15)', highlight: false },
+    { line: 'warrior_proto.abilities = ["slash", "block"]', highlight: false },
+    { line: '', highlight: false },
+    { line: 'elite_warrior = warrior_proto.clone()', highlight: true },
+    { line: '  copy.deepcopy() called — deep clone created', highlight: true },
+    { line: '  New object at different memory address', highlight: false },
+    { line: '', highlight: false },
+    { line: 'Customizing clone...', highlight: false },
+    { line: 'elite_warrior.name = "Elite Warrior"', highlight: false },
+    { line: 'elite_warrior.hp = 150', highlight: false },
+    { line: 'elite_warrior.abilities.append("whirlwind")', highlight: false },
+    { line: '', highlight: false },
+    { line: 'warrior_proto.abilities -> ["slash", "block"]', highlight: true },
+    { line: 'elite_warrior.abilities -> ["slash", "block", "whirlwind"]', highlight: true },
+    { line: '  (Deep copy means lists are independent!)', highlight: false },
+  ],
+  'adapter': [
+    { line: 'legacy = LegacyPaymentGateway()', highlight: false },
+    { line: '  API: make_payment(amount_cents, card_number)', highlight: false },
+    { line: '', highlight: false },
+    { line: 'processor = PaymentAdapter(legacy)', highlight: true },
+    { line: '  Wraps legacy gateway with new interface', highlight: false },
+    { line: '', highlight: false },
+    { line: 'processor.charge(29.99, "4111...1111")', highlight: true },
+    { line: '  Adapter converts: 29.99 -> 2999 cents', highlight: false },
+    { line: '  Calls: legacy.make_payment(2999, "4111...1111")', highlight: false },
+    { line: '  Legacy returns: {"status": "OK", "charged": 2999}', highlight: false },
+    { line: '  Adapter converts: "OK" -> True', highlight: false },
+    { line: '', highlight: false },
+    { line: 'Result: Payment successful: True', highlight: true },
+  ],
+  'decorator-pattern': [
+    { line: '@retry(max_attempts=3)', highlight: true },
+    { line: '@log_calls', highlight: true },
+    { line: 'def fetch_data(url): ...', highlight: false },
+    { line: '', highlight: false },
+    { line: 'fetch_data("https://api.example.com") called', highlight: false },
+    { line: '', highlight: false },
+    { line: '[retry wrapper] Attempt 1/3', highlight: false },
+    { line: '  [log_calls wrapper] Calling fetch_data(("https://api.example.com",))', highlight: true },
+    { line: '  [log_calls wrapper]   -> returned "Data from https://api.example.com"', highlight: true },
+    { line: '[retry wrapper] Success on attempt 1', highlight: false },
+    { line: '', highlight: false },
+    { line: 'Final result: "Data from https://api.example.com"', highlight: true },
+    { line: '', highlight: false },
+    { line: 'Note: Decorators wrap bottom-up:', highlight: false },
+    { line: '  fetch_data = retry(log_calls(fetch_data))', highlight: true },
+  ],
+  'facade': [
+    { line: 'player = VideoPlayerFacade()', highlight: false },
+    { line: '  Initializes: VideoCodec, AudioExtractor,', highlight: false },
+    { line: '               SubtitleParser, VideoRenderer', highlight: false },
+    { line: '', highlight: false },
+    { line: 'player.play("movie.mp4") called', highlight: true },
+    { line: '', highlight: false },
+    { line: '  Step 1: codec.decode("movie.mp4")', highlight: false },
+    { line: '    -> "Decoding video: movie.mp4"', highlight: true },
+    { line: '  Step 2: audio.extract(video_data)', highlight: false },
+    { line: '    -> "Extracting audio track"', highlight: true },
+    { line: '  Step 3: subs.parse("movie.mp4")', highlight: false },
+    { line: '    -> "Parsing subtitles"', highlight: true },
+    { line: '  Step 4: renderer.render(video, audio, subs)', highlight: false },
+    { line: '    -> "Rendering final output"', highlight: true },
+    { line: '', highlight: false },
+    { line: 'Client only called one method!', highlight: false },
+  ],
+  'composite': [
+    { line: 'Building file system tree...', highlight: false },
+    { line: '', highlight: false },
+    { line: 'root = Directory("project")', highlight: false },
+    { line: 'src = Directory("src")', highlight: false },
+    { line: 'src.add(File("main.py", 1200))', highlight: false },
+    { line: 'src.add(File("utils.py", 800))', highlight: false },
+    { line: 'root.add(src)', highlight: false },
+    { line: 'root.add(File("README.md", 500))', highlight: false },
+    { line: '', highlight: false },
+    { line: 'root.display():', highlight: true },
+    { line: '  📁 project/', highlight: false },
+    { line: '    📁 src/', highlight: false },
+    { line: '      📄 main.py (1200B)', highlight: false },
+    { line: '      📄 utils.py (800B)', highlight: false },
+    { line: '    📄 README.md (500B)', highlight: false },
+    { line: '', highlight: false },
+    { line: 'root.size() -> 2500B  (recursive sum!)', highlight: true },
+  ],
+  'observer': [
+    { line: 'bus = EventBus()', highlight: false },
+    { line: '', highlight: false },
+    { line: 'Subscribing handlers to "order.placed":', highlight: true },
+    { line: '  + log_order', highlight: false },
+    { line: '  + send_email', highlight: false },
+    { line: '  + update_inventory', highlight: false },
+    { line: '', highlight: false },
+    { line: 'bus.emit("order.placed", order_id="ORD-42", ...)', highlight: true },
+    { line: '', highlight: false },
+    { line: '  Notifying subscriber 1: log_order()', highlight: false },
+    { line: '    LOG: Order ORD-42 placed', highlight: true },
+    { line: '  Notifying subscriber 2: send_email()', highlight: false },
+    { line: '    EMAIL: Confirmation for user@test.com', highlight: true },
+    { line: '  Notifying subscriber 3: update_inventory()', highlight: false },
+    { line: '    INVENTORY: -2 items', highlight: true },
+  ],
+  'strategy': [
+    { line: 'sorter = Sorter(bubble_sort)', highlight: false },
+    { line: 'data = [5, 2, 8, 1, 9]', highlight: false },
+    { line: '', highlight: false },
+    { line: 'sorter.sort(data) using bubble_sort:', highlight: true },
+    { line: '  Pass 1: [2, 5, 1, 8, 9]', highlight: false },
+    { line: '  Pass 2: [2, 1, 5, 8, 9]', highlight: false },
+    { line: '  Pass 3: [1, 2, 5, 8, 9]', highlight: false },
+    { line: '  Result: [1, 2, 5, 8, 9]', highlight: true },
+    { line: '', highlight: false },
+    { line: 'sorter.strategy = quick_sort', highlight: true },
+    { line: '', highlight: false },
+    { line: 'sorter.sort(data) using quick_sort:', highlight: true },
+    { line: '  pivot=8: left=[5,2,1] mid=[8] right=[9]', highlight: false },
+    { line: '  pivot=2: left=[1] mid=[2] right=[5]', highlight: false },
+    { line: '  Result: [1, 2, 5, 8, 9]', highlight: true },
+  ],
+  'command': [
+    { line: 'editor = TextEditor("")', highlight: false },
+    { line: 'history = CommandHistory()', highlight: false },
+    { line: '', highlight: false },
+    { line: 'history.execute(InsertText(editor, "Hello"))', highlight: true },
+    { line: '  cmd.execute() -> editor.content = "Hello"', highlight: false },
+    { line: '  history: [InsertText("Hello")]', highlight: false },
+    { line: '', highlight: false },
+    { line: 'history.execute(InsertText(editor, " World"))', highlight: true },
+    { line: '  cmd.execute() -> editor.content = "Hello World"', highlight: false },
+    { line: '  history: [InsertText("Hello"), InsertText(" World")]', highlight: false },
+    { line: '', highlight: false },
+    { line: 'history.undo()', highlight: true },
+    { line: '  Popping last command: InsertText(" World")', highlight: false },
+    { line: '  cmd.undo() -> editor.content = "Hello"', highlight: true },
+    { line: '  history: [InsertText("Hello")]', highlight: false },
+  ],
+  'state': [
+    { line: 'order = Order()', highlight: false },
+    { line: 'order.state = PendingState', highlight: true },
+    { line: '', highlight: false },
+    { line: 'order.proceed()', highlight: false },
+    { line: '  PendingState.proceed() -> transition to PaidState', highlight: true },
+    { line: 'order.state.status() -> "Paid"', highlight: false },
+    { line: '', highlight: false },
+    { line: 'order.cancel()', highlight: false },
+    { line: '  PaidState.cancel() -> "Cannot cancel - already paid!"', highlight: true },
+    { line: '  (State restricts invalid transitions)', highlight: false },
+    { line: '', highlight: false },
+    { line: 'order.proceed()', highlight: false },
+    { line: '  PaidState.proceed() -> transition to ShippedState', highlight: true },
+    { line: 'order.state.status() -> "Shipped"', highlight: false },
+    { line: '', highlight: false },
+    { line: 'order.proceed()', highlight: false },
+    { line: '  ShippedState.proceed() -> transition to DeliveredState', highlight: true },
+    { line: 'order.state.status() -> "Delivered"', highlight: false },
+  ],
+  'template-method': [
+    { line: '--- CSVPipeline ---', highlight: true },
+    { line: 'pipeline.run() called (template method)', highlight: false },
+    { line: '', highlight: false },
+    { line: '  Step 1: extract()', highlight: false },
+    { line: '    -> "Extract: Reading CSV file"', highlight: true },
+    { line: '  Step 2: transform()', highlight: false },
+    { line: '    -> "Transform: Parsing rows, converting types"', highlight: true },
+    { line: '  Step 3: validate() [hook - using default]', highlight: false },
+    { line: '    -> "Validation: skipped (default)"', highlight: false },
+    { line: '  Step 4: load()', highlight: false },
+    { line: '    -> "Load: Inserting into PostgreSQL"', highlight: true },
+    { line: '', highlight: false },
+    { line: '--- APIPipeline ---', highlight: true },
+    { line: '  Step 3: validate() [hook - overridden!]', highlight: false },
+    { line: '    -> "Validation: Checking required fields"', highlight: true },
+  ],
+};
+
+// ====== PITFALLS ======
+const pitfalls = [
+  {
+    title: 'Overusing Singleton — the Global State Trap',
+    mistake: 'Making everything a Singleton because "there should only be one."',
+    why: 'Singletons feel like clean architecture but introduce hidden global state and tight coupling.',
+    consequence: 'Unit tests become impossible to isolate. Changing one Singleton\'s behavior cascades unpredictably. Concurrency bugs emerge.',
+    fix: 'Use dependency injection. Pass instances explicitly. In Python, module-level variables already act as singletons — you rarely need the pattern.'
+  },
+  {
+    title: 'Pattern Mania — Applying Patterns Everywhere',
+    mistake: 'Using a Factory when a simple constructor works, or wrapping everything in a Strategy when a function parameter suffices.',
+    why: 'Developers new to patterns see them as universally good. Java-centric examples encourage over-engineering.',
+    consequence: 'Code becomes harder to read, with unnecessary indirection layers. New team members spend time understanding the pattern instead of the business logic.',
+    fix: 'In Python, many patterns reduce to first-class functions, decorators, or simple dict lookups. Use the simplest construct that solves the problem.'
+  },
+  {
+    title: 'God Object disguised as Facade',
+    mistake: 'Creating a Facade that does too much — orchestrating, validating, transforming, logging — becoming a 2000-line class.',
+    why: 'Once a Facade exists, developers add "just one more thing" to it rather than creating proper subsystem boundaries.',
+    consequence: 'The Facade becomes the bottleneck for changes, violating Single Responsibility. It\'s a God Object with a nice name.',
+    fix: 'A Facade should only delegate. If it contains business logic, it\'s not a Facade — refactor into proper service classes.'
+  },
+  {
+    title: 'Observer Memory Leaks',
+    mistake: 'Subscribing handlers without ever unsubscribing, especially with closures that capture large objects.',
+    why: 'Event subscription is easy; cleanup discipline is not.',
+    consequence: 'Subscribers keep references alive, preventing garbage collection. In long-running apps, memory grows unbounded.',
+    fix: 'Use weak references (weakref.WeakMethod), context managers for subscription lifetime, or explicit unsubscribe in __del__ / close().'
+  },
+  {
+    title: 'Mutable State in Prototype Clones',
+    mistake: 'Using copy.copy() (shallow copy) instead of copy.deepcopy() for objects with nested mutable attributes.',
+    why: 'Shallow copy is faster and feels sufficient for simple objects.',
+    consequence: 'Cloned objects share internal lists/dicts. Modifying one clone corrupts others — a subtle, hard-to-debug issue.',
+    fix: 'Always use deepcopy for prototypes with mutable attributes. Or implement __copy__/__deepcopy__ explicitly to control clone semantics.'
+  }
+];
+
+// ====== BEST PRACTICES ======
+const bestPractices = [
+  {
+    title: 'Prefer Composition Over Inheritance',
+    items: [
+      'Use Strategy/Decorator patterns instead of deep class hierarchies',
+      'Python\'s duck typing and protocols make composition natural',
+      'Mixins are acceptable for small, orthogonal concerns — but prefer explicit delegation',
+      'If a class tree exceeds 3 levels, consider flattening with composition'
+    ]
+  },
+  {
+    title: 'Leverage Python\'s Built-in Pattern Support',
+    items: [
+      'Module-level variables = Singleton (no metaclass needed for simple cases)',
+      'First-class functions = Strategy (just pass a callable)',
+      'Decorators (@) = Decorator pattern with cleaner syntax',
+      '__init_subclass__ and __set_name__ = framework-level patterns without metaclasses',
+      'dataclasses + __post_init__ = Builder alternative for simple objects'
+    ]
+  },
+  {
+    title: 'Design for Testability',
+    items: [
+      'Inject dependencies through __init__ — never hard-code concrete classes inside methods',
+      'Use Protocol (structural typing) instead of ABC when possible — easier to mock',
+      'Keep pattern implementations small and focused — a Factory with 200 lines is a code smell',
+      'Event/Observer systems should support synchronous testing mode'
+    ]
+  },
+  {
+    title: 'Apply SOLID Principles as Guardrails',
+    items: [
+      'Single Responsibility: Each pattern class should have exactly one reason to change',
+      'Open/Closed: Use Strategy/Template Method to extend behavior without modifying existing code',
+      'Liskov Substitution: All implementations of an interface must be truly interchangeable',
+      'Interface Segregation: Keep Protocol/ABC interfaces small and focused',
+      'Dependency Inversion: High-level modules depend on abstractions, not concrete implementations'
+    ]
+  },
+  {
+    title: 'Document Pattern Intent, Not Mechanics',
+    items: [
+      'Name classes after what they do in the domain, not after the pattern (PaymentProcessor, not PaymentStrategy)',
+      'Add a one-line docstring explaining WHY this pattern was chosen here',
+      'If a pattern\'s benefit isn\'t obvious, you might not need it yet — YAGNI applies',
+      'Group related pattern files by domain feature, not by pattern category'
+    ]
+  }
+];
+
+// ====== RENDERING ======
+function renderPatterns() {
+  const grid = document.getElementById('patternsGrid');
+  grid.innerHTML = patterns.map(p => `
+    <div class="pattern-card ${p.category}" data-id="${p.id}" data-category="${p.category}" onclick="showDetail('${p.id}')">
+      <h3>${p.name}</h3>
+      <div class="desc">${p.desc}</div>
+      <div class="use-case">${p.useCase}</div>
+    </div>
+  `).join('');
+}
+
+function filterPatterns(category) {
+  document.querySelectorAll('.cat-tab').forEach(t => t.className = 'cat-tab');
+  event.target.className = `cat-tab active-${category}`;
+
+  document.querySelectorAll('.pattern-card').forEach(card => {
+    if (category === 'all' || card.dataset.category === category) {
+      card.style.display = 'block';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+function showDetail(patternId) {
+  const p = patterns.find(x => x.id === patternId);
+  if (!p) return;
+
+  document.querySelectorAll('.pattern-card').forEach(c => c.classList.remove('active'));
+  document.querySelector(`[data-id="${patternId}"]`).classList.add('active');
+
+  document.getElementById('detailTitle').textContent = p.name + ' Pattern';
+  document.getElementById('detailCode').innerHTML = p.code;
+  document.getElementById('detailDiagram').innerHTML = getDiagramSVG(p.diagram);
+  document.getElementById('detailUsage').innerHTML = p.usage.map(u => `<li>${u}</li>`).join('');
+
+  const panel = document.getElementById('detailPanel');
+  panel.classList.add('visible');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('visible');
+  document.querySelectorAll('.pattern-card').forEach(c => c.classList.remove('active'));
+}
+
+function getDiagramSVG(type) {
+  const diagrams = {
+    'singleton': `<svg viewBox="0 0 300 180" width="280" xmlns="http://www.w3.org/2000/svg">
+      <rect x="60" y="10" width="180" height="160" class="uml-box"/>
+      <text x="150" y="35" text-anchor="middle" class="uml-text title">SingletonMeta</text>
+      <line x1="60" y1="45" x2="240" y2="45" class="uml-line"/>
+      <text x="70" y="65" class="uml-text">- _instances: dict</text>
+      <line x1="60" y1="75" x2="240" y2="75" class="uml-line"/>
+      <text x="70" y="95" class="uml-text">+ __call__(cls)</text>
+      <text x="70" y="115" class="uml-text italic">  if cls not in instances:</text>
+      <text x="70" y="135" class="uml-text italic">    create &amp; cache</text>
+      <text x="70" y="155" class="uml-text italic">  return cached</text>
+    </svg>`,
+    'factory': `<svg viewBox="0 0 340 200" width="320" xmlns="http://www.w3.org/2000/svg">
+      <rect x="90" y="5" width="160" height="50" class="uml-box interface"/>
+      <text x="170" y="25" text-anchor="middle" class="uml-text italic">&laquo;interface&raquo;</text>
+      <text x="170" y="43" text-anchor="middle" class="uml-text title">Notification</text>
+      <rect x="10" y="140" width="120" height="45" class="uml-box"/>
+      <text x="70" y="167" text-anchor="middle" class="uml-text">EmailNotification</text>
+      <rect x="210" y="140" width="120" height="45" class="uml-box"/>
+      <text x="270" y="167" text-anchor="middle" class="uml-text">SMSNotification</text>
+      <line x1="70" y1="140" x2="170" y2="55" class="uml-line" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+      <line x1="270" y1="140" x2="170" y2="55" class="uml-line" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+      <rect x="100" y="85" width="140" height="35" class="uml-box" style="fill:#eef2ff"/>
+      <text x="170" y="107" text-anchor="middle" class="uml-text title">Factory</text>
+    </svg>`,
+    'abstract-factory': `<svg viewBox="0 0 340 180" width="320" xmlns="http://www.w3.org/2000/svg">
+      <rect x="90" y="5" width="160" height="45" class="uml-box interface"/>
+      <text x="170" y="22" text-anchor="middle" class="uml-text italic">&laquo;abstract&raquo;</text>
+      <text x="170" y="40" text-anchor="middle" class="uml-text title">UIFactory</text>
+      <rect x="10" y="125" width="130" height="45" class="uml-box"/>
+      <text x="75" y="152" text-anchor="middle" class="uml-text">DarkThemeFactory</text>
+      <rect x="200" y="125" width="130" height="45" class="uml-box"/>
+      <text x="265" y="152" text-anchor="middle" class="uml-text">LightThemeFactory</text>
+      <line x1="75" y1="125" x2="150" y2="50" class="uml-line" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+      <line x1="265" y1="125" x2="190" y2="50" class="uml-line" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+      <text x="170" y="90" text-anchor="middle" class="uml-text italic">create_button() / create_text_field()</text>
+    </svg>`,
+    'builder': `<svg viewBox="0 0 320 160" width="300" xmlns="http://www.w3.org/2000/svg">
+      <rect x="70" y="10" width="180" height="140" class="uml-box"/>
+      <text x="160" y="35" text-anchor="middle" class="uml-text title">QueryBuilder</text>
+      <line x1="70" y1="45" x2="250" y2="45" class="uml-line"/>
+      <text x="80" y="65" class="uml-text">+ select(*cols) -> self</text>
+      <text x="80" y="82" class="uml-text">+ from_table(t) -> self</text>
+      <text x="80" y="99" class="uml-text">+ where(cond) -> self</text>
+      <text x="80" y="116" class="uml-text">+ order_by(col) -> self</text>
+      <text x="80" y="133" class="uml-text">+ build() -> str</text>
+      <text x="160" y="155" text-anchor="middle" class="uml-text italic" style="fill:var(--accent);font-size:10px;">Fluent Interface</text>
+    </svg>`,
+    'prototype': `<svg viewBox="0 0 300 140" width="280" xmlns="http://www.w3.org/2000/svg">
+      <rect x="80" y="10" width="140" height="50" class="uml-box interface"/>
+      <text x="150" y="30" text-anchor="middle" class="uml-text italic">&laquo;prototype&raquo;</text>
+      <text x="150" y="48" text-anchor="middle" class="uml-text title">+ clone() -> Self</text>
+      <rect x="70" y="90" width="160" height="40" class="uml-box"/>
+      <text x="150" y="115" text-anchor="middle" class="uml-text">GameUnit(name, hp, atk)</text>
+      <line x1="150" y1="90" x2="150" y2="60" class="uml-line" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+      <path d="M 240 110 C 280 110 280 30 240 30" class="uml-line" marker-end="url(#arrowhead)"/>
+      <text x="285" y="70" class="uml-text italic" style="font-size:9px;">deepcopy</text>
+    </svg>`,
+    'adapter': `<svg viewBox="0 0 360 140" width="340" xmlns="http://www.w3.org/2000/svg">
+      <rect x="5" y="45" width="100" height="50" class="uml-box" style="fill:#fee2e2"/>
+      <text x="55" y="65" text-anchor="middle" class="uml-text" style="font-size:9px;">LegacyGateway</text>
+      <text x="55" y="82" text-anchor="middle" class="uml-text italic" style="font-size:8px;">make_payment()</text>
+      <rect x="130" y="45" width="100" height="50" class="uml-box" style="fill:#eef2ff"/>
+      <text x="180" y="65" text-anchor="middle" class="uml-text title" style="font-size:10px;">PaymentAdapter</text>
+      <text x="180" y="82" text-anchor="middle" class="uml-text italic" style="font-size:8px;">charge()</text>
+      <rect x="255" y="45" width="100" height="50" class="uml-box interface"/>
+      <text x="305" y="65" text-anchor="middle" class="uml-text italic" style="font-size:9px;">PaymentProcessor</text>
+      <text x="305" y="82" text-anchor="middle" class="uml-text italic" style="font-size:8px;">charge()</text>
+      <line x1="105" y1="70" x2="130" y2="70" class="uml-line" marker-end="url(#arrowhead)"/>
+      <line x1="230" y1="70" x2="255" y2="70" class="uml-line" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+      <text x="180" y="30" text-anchor="middle" class="uml-text italic" style="font-size:9px;fill:var(--accent);">translates interface</text>
+    </svg>`,
+    'decorator': `<svg viewBox="0 0 320 160" width="300" xmlns="http://www.w3.org/2000/svg">
+      <rect x="100" y="100" width="120" height="45" class="uml-box"/>
+      <text x="160" y="127" text-anchor="middle" class="uml-text title">fetch_data()</text>
+      <rect x="70" y="55" width="180" height="35" class="uml-box" style="fill:#f5f3ff"/>
+      <text x="160" y="77" text-anchor="middle" class="uml-text">@log_calls</text>
+      <rect x="40" y="10" width="240" height="35" class="uml-box" style="fill:#eef2ff"/>
+      <text x="160" y="32" text-anchor="middle" class="uml-text">@retry(max_attempts=3)</text>
+      <path d="M 290 27 L 310 27 L 310 122 L 230 122" class="uml-line" marker-end="url(#arrowhead)"/>
+      <text x="315" y="75" class="uml-text italic" style="font-size:9px;writing-mode:vertical-rl;">wraps</text>
+    </svg>`,
+    'facade': `<svg viewBox="0 0 340 180" width="320" xmlns="http://www.w3.org/2000/svg">
+      <rect x="110" y="5" width="120" height="40" class="uml-box" style="fill:#eef2ff"/>
+      <text x="170" y="30" text-anchor="middle" class="uml-text title">VideoPlayerFacade</text>
+      <rect x="5" y="120" width="72" height="35" class="uml-box"/>
+      <text x="41" y="142" text-anchor="middle" class="uml-text" style="font-size:8px;">VideoCodec</text>
+      <rect x="87" y="120" width="72" height="35" class="uml-box"/>
+      <text x="123" y="142" text-anchor="middle" class="uml-text" style="font-size:8px;">AudioExtract</text>
+      <rect x="170" y="120" width="72" height="35" class="uml-box"/>
+      <text x="206" y="142" text-anchor="middle" class="uml-text" style="font-size:8px;">SubtitleParser</text>
+      <rect x="253" y="120" width="72" height="35" class="uml-box"/>
+      <text x="289" y="142" text-anchor="middle" class="uml-text" style="font-size:8px;">Renderer</text>
+      <line x1="140" y1="45" x2="41" y2="120" class="uml-line"/>
+      <line x1="155" y1="45" x2="123" y2="120" class="uml-line"/>
+      <line x1="185" y1="45" x2="206" y2="120" class="uml-line"/>
+      <line x1="200" y1="45" x2="289" y2="120" class="uml-line"/>
+      <text x="170" y="80" text-anchor="middle" class="uml-text italic" style="font-size:9px;fill:var(--accent);">play() delegates to all</text>
+    </svg>`,
+    'composite': `<svg viewBox="0 0 300 170" width="280" xmlns="http://www.w3.org/2000/svg">
+      <rect x="85" y="5" width="130" height="35" class="uml-box interface"/>
+      <text x="150" y="27" text-anchor="middle" class="uml-text title">FileSystemNode</text>
+      <rect x="10" y="110" width="100" height="45" class="uml-box"/>
+      <text x="60" y="130" text-anchor="middle" class="uml-text">File</text>
+      <text x="60" y="147" text-anchor="middle" class="uml-text italic" style="font-size:9px;">size() -> int</text>
+      <rect x="190" y="110" width="100" height="45" class="uml-box"/>
+      <text x="240" y="130" text-anchor="middle" class="uml-text">Directory</text>
+      <text x="240" y="147" text-anchor="middle" class="uml-text italic" style="font-size:9px;">children: list</text>
+      <line x1="60" y1="110" x2="130" y2="40" class="uml-line" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+      <line x1="240" y1="110" x2="170" y2="40" class="uml-line" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+      <path d="M 240 110 C 240 70 200 60 170 40" class="uml-line" style="stroke:var(--accent);" marker-end="url(#arrowhead)"/>
+      <text x="260" y="75" class="uml-text italic" style="font-size:8px;fill:var(--accent);">contains</text>
+    </svg>`,
+    'observer': `<svg viewBox="0 0 340 150" width="320" xmlns="http://www.w3.org/2000/svg">
+      <rect x="110" y="5" width="120" height="45" class="uml-box" style="fill:#eef2ff"/>
+      <text x="170" y="25" text-anchor="middle" class="uml-text title">EventBus</text>
+      <text x="170" y="42" text-anchor="middle" class="uml-text italic" style="font-size:9px;">emit(event, **data)</text>
+      <rect x="5" y="105" width="90" height="35" class="uml-box"/>
+      <text x="50" y="127" text-anchor="middle" class="uml-text" style="font-size:9px;">log_order()</text>
+      <rect x="125" y="105" width="90" height="35" class="uml-box"/>
+      <text x="170" y="127" text-anchor="middle" class="uml-text" style="font-size:9px;">send_email()</text>
+      <rect x="245" y="105" width="90" height="35" class="uml-box"/>
+      <text x="290" y="127" text-anchor="middle" class="uml-text" style="font-size:9px;">inventory()</text>
+      <line x1="140" y1="50" x2="50" y2="105" class="uml-line" marker-end="url(#arrowhead)"/>
+      <line x1="170" y1="50" x2="170" y2="105" class="uml-line" marker-end="url(#arrowhead)"/>
+      <line x1="200" y1="50" x2="290" y2="105" class="uml-line" marker-end="url(#arrowhead)"/>
+      <text x="170" y="78" text-anchor="middle" class="uml-text italic" style="font-size:9px;fill:var(--accent);">notifies all subscribers</text>
+    </svg>`,
+    'strategy': `<svg viewBox="0 0 340 160" width="320" xmlns="http://www.w3.org/2000/svg">
+      <rect x="110" y="5" width="120" height="45" class="uml-box"/>
+      <text x="170" y="25" text-anchor="middle" class="uml-text title">Sorter</text>
+      <text x="170" y="42" text-anchor="middle" class="uml-text italic" style="font-size:9px;">strategy: Callable</text>
+      <rect x="10" y="110" width="100" height="35" class="uml-box"/>
+      <text x="60" y="132" text-anchor="middle" class="uml-text" style="font-size:9px;">bubble_sort()</text>
+      <rect x="230" y="110" width="100" height="35" class="uml-box"/>
+      <text x="280" y="132" text-anchor="middle" class="uml-text" style="font-size:9px;">quick_sort()</text>
+      <rect x="110" y="110" width="120" height="35" class="uml-box interface"/>
+      <text x="170" y="125" text-anchor="middle" class="uml-text italic" style="font-size:9px;">SortStrategy</text>
+      <text x="170" y="140" text-anchor="middle" class="uml-text italic" style="font-size:8px;">(Protocol)</text>
+      <line x1="170" y1="50" x2="170" y2="110" class="uml-line" marker-end="url(#arrowhead)"/>
+      <line x1="60" y1="110" x2="120" y2="132" class="uml-line" stroke-dasharray="5,3"/>
+      <line x1="280" y1="110" x2="220" y2="132" class="uml-line" stroke-dasharray="5,3"/>
+    </svg>`,
+    'command': `<svg viewBox="0 0 340 160" width="320" xmlns="http://www.w3.org/2000/svg">
+      <rect x="5" y="55" width="90" height="50" class="uml-box"/>
+      <text x="50" y="75" text-anchor="middle" class="uml-text title" style="font-size:10px;">History</text>
+      <text x="50" y="93" text-anchor="middle" class="uml-text italic" style="font-size:8px;">execute(cmd)</text>
+      <rect x="125" y="5" width="90" height="40" class="uml-box interface"/>
+      <text x="170" y="22" text-anchor="middle" class="uml-text italic" style="font-size:9px;">Command</text>
+      <text x="170" y="37" text-anchor="middle" class="uml-text" style="font-size:8px;">execute() / undo()</text>
+      <rect x="110" y="110" width="120" height="40" class="uml-box"/>
+      <text x="170" y="135" text-anchor="middle" class="uml-text" style="font-size:9px;">InsertText</text>
+      <rect x="245" y="55" width="90" height="50" class="uml-box"/>
+      <text x="290" y="75" text-anchor="middle" class="uml-text title" style="font-size:10px;">TextEditor</text>
+      <text x="290" y="93" text-anchor="middle" class="uml-text italic" style="font-size:8px;">content: str</text>
+      <line x1="95" y1="75" x2="125" y2="25" class="uml-line" marker-end="url(#arrowhead)"/>
+      <line x1="170" y1="110" x2="170" y2="45" class="uml-line" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+      <line x1="230" y1="130" x2="245" y2="100" class="uml-line" marker-end="url(#arrowhead)"/>
+    </svg>`,
+    'state': `<svg viewBox="0 0 360 170" width="340" xmlns="http://www.w3.org/2000/svg">
+      <rect x="130" y="5" width="100" height="40" class="uml-box" style="fill:#eef2ff"/>
+      <text x="180" y="30" text-anchor="middle" class="uml-text title" style="font-size:10px;">Order</text>
+      <circle cx="40" cy="130" r="25" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
+      <text x="40" y="134" text-anchor="middle" class="uml-text" style="font-size:8px;">Pending</text>
+      <circle cx="130" cy="130" r="25" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+      <text x="130" y="134" text-anchor="middle" class="uml-text" style="font-size:8px;">Paid</text>
+      <circle cx="220" cy="130" r="25" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
+      <text x="220" y="134" text-anchor="middle" class="uml-text" style="font-size:8px;">Shipped</text>
+      <circle cx="310" cy="130" r="25" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+      <text x="310" y="134" text-anchor="middle" class="uml-text" style="font-size:8px;">Delivered</text>
+      <line x1="65" y1="130" x2="105" y2="130" class="uml-line" marker-end="url(#arrowhead)"/>
+      <line x1="155" y1="130" x2="195" y2="130" class="uml-line" marker-end="url(#arrowhead)"/>
+      <line x1="245" y1="130" x2="285" y2="130" class="uml-line" marker-end="url(#arrowhead)"/>
+      <line x1="180" y1="45" x2="180" y2="85" class="uml-line" stroke-dasharray="3,3"/>
+      <text x="180" y="78" text-anchor="middle" class="uml-text italic" style="font-size:8px;fill:var(--accent);">state.proceed()</text>
+    </svg>`,
+    'template-method': `<svg viewBox="0 0 320 170" width="300" xmlns="http://www.w3.org/2000/svg">
+      <rect x="85" y="5" width="150" height="65" class="uml-box" style="fill:#eef2ff"/>
+      <text x="160" y="25" text-anchor="middle" class="uml-text title" style="font-size:10px;">DataPipeline</text>
+      <text x="160" y="42" text-anchor="middle" class="uml-text" style="font-size:9px;">run() [template]</text>
+      <text x="160" y="57" text-anchor="middle" class="uml-text italic" style="font-size:8px;">extract() | transform() | load()</text>
+      <rect x="15" y="120" width="120" height="35" class="uml-box"/>
+      <text x="75" y="142" text-anchor="middle" class="uml-text" style="font-size:9px;">CSVPipeline</text>
+      <rect x="185" y="120" width="120" height="35" class="uml-box"/>
+      <text x="245" y="142" text-anchor="middle" class="uml-text" style="font-size:9px;">APIPipeline</text>
+      <line x1="75" y1="120" x2="130" y2="70" class="uml-line" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+      <line x1="245" y1="120" x2="190" y2="70" class="uml-line" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+      <text x="160" y="100" text-anchor="middle" class="uml-text italic" style="font-size:8px;fill:var(--accent);">override abstract steps</text>
+    </svg>`
+  };
+  return diagrams[type] || '<div style="color:var(--text-muted);">Diagram</div>';
+}
+
+// Relationship diagram
+function renderRelationships() {
+  const svg = document.getElementById('relationshipSvg');
+  const nodes = [
+    { id: 'singleton', x: 80, y: 50, cat: 'creational' },
+    { id: 'factory-method', x: 220, y: 50, cat: 'creational' },
+    { id: 'abstract-factory', x: 380, y: 50, cat: 'creational' },
+    { id: 'builder', x: 540, y: 50, cat: 'creational' },
+    { id: 'prototype', x: 700, y: 50, cat: 'creational' },
+    { id: 'adapter', x: 100, y: 180, cat: 'structural' },
+    { id: 'decorator-pattern', x: 280, y: 180, cat: 'structural' },
+    { id: 'facade', x: 460, y: 180, cat: 'structural' },
+    { id: 'composite', x: 660, y: 180, cat: 'structural' },
+    { id: 'observer', x: 80, y: 320, cat: 'behavioral' },
+    { id: 'strategy', x: 240, y: 320, cat: 'behavioral' },
+    { id: 'command', x: 420, y: 320, cat: 'behavioral' },
+    { id: 'state', x: 590, y: 320, cat: 'behavioral' },
+    { id: 'template-method', x: 760, y: 320, cat: 'behavioral' },
+  ];
+
+  const edges = [
+    ['factory-method', 'abstract-factory', 'extends'],
+    ['abstract-factory', 'singleton', 'often uses'],
+    ['builder', 'composite', 'can build'],
+    ['decorator-pattern', 'composite', 'similar structure'],
+    ['strategy', 'template-method', 'alternative'],
+    ['command', 'observer', 'can notify'],
+    ['state', 'strategy', 'similar but'],
+    ['facade', 'singleton', 'often is'],
+    ['observer', 'command', 'can queue'],
+  ];
+
+  const catColors = { creational: '#10b981', structural: '#f59e0b', behavioral: '#8b5cf6' };
+
+  let html = `<defs><marker id="rel-arrow" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0, 6 2.5, 0 5" fill="#94a3b8"/></marker></defs>`;
+
+  edges.forEach(([from, to]) => {
+    const n1 = nodes.find(n => n.id === from);
+    const n2 = nodes.find(n => n.id === to);
+    html += `<line x1="${n1.x}" y1="${n1.y}" x2="${n2.x}" y2="${n2.y}" stroke="#e2e8f0" stroke-width="1" marker-end="url(#rel-arrow)" data-from="${from}" data-to="${to}"/>`;
+  });
+
+  nodes.forEach(n => {
+    const name = patterns.find(p => p.id === n.id)?.name || n.id;
+    html += `<circle cx="${n.x}" cy="${n.y}" r="22" fill="white" stroke="${catColors[n.cat]}" stroke-width="2" data-node="${n.id}" style="cursor:pointer;transition:all 0.2s"/>`;
+    html += `<text x="${n.x}" y="${n.y + 4}" text-anchor="middle" font-size="8" font-family="var(--font)" font-weight="600" fill="${catColors[n.cat]}" style="pointer-events:none;">${name.split(' ')[0]}</text>`;
+  });
+
+  svg.innerHTML = html;
+
+  svg.querySelectorAll('circle').forEach(circle => {
+    circle.addEventListener('mouseenter', () => {
+      const id = circle.dataset.node;
+      svg.querySelectorAll('line').forEach(line => {
+        if (line.dataset.from === id || line.dataset.to === id) {
+          line.setAttribute('stroke', '#6366f1');
+          line.setAttribute('stroke-width', '2.5');
+        } else {
+          line.setAttribute('stroke', '#f1f5f9');
+        }
+      });
+      svg.querySelectorAll('circle').forEach(c => {
+        if (c.dataset.node !== id) c.setAttribute('opacity', '0.4');
+      });
+      circle.setAttribute('r', '26');
+    });
+    circle.addEventListener('mouseleave', () => {
+      svg.querySelectorAll('line').forEach(line => {
+        line.setAttribute('stroke', '#e2e8f0');
+        line.setAttribute('stroke-width', '1');
+      });
+      svg.querySelectorAll('circle').forEach(c => {
+        c.setAttribute('opacity', '1');
+        c.setAttribute('r', '22');
+      });
+    });
+  });
+}
+
+// Comparison table
+function renderComparison() {
+  const body = document.getElementById('comparisonBody');
+  body.innerHTML = patterns.map(p => `
+    <tr>
+      <td><strong>${p.name}</strong></td>
+      <td><span class="badge badge-${p.category}" style="font-size:0.75rem;">${p.category}</span></td>
+      <td>${p.intent}</td>
+      <td>${p.complexity}</td>
+      <td style="font-size:0.8rem;color:var(--text-muted);">${p.useCase.split(',')[0]}</td>
+    </tr>
+  `).join('');
+}
+
+// Playground
+let playgroundStep = 0;
+let playgroundTimer = null;
+let currentPlaygroundPattern = 'singleton';
+
+function initPlayground() {
+  const select = document.getElementById('playgroundSelect');
+  select.innerHTML = patterns.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  select.addEventListener('change', () => {
+    currentPlaygroundPattern = select.value;
+    resetPlayground();
+    loadPlaygroundCode();
+  });
+  loadPlaygroundCode();
+}
+
+function loadPlaygroundCode() {
+  const p = patterns.find(x => x.id === currentPlaygroundPattern);
+  document.getElementById('playgroundCode').innerHTML = p.code;
+}
+
+function runPlayground() {
+  resetPlayground();
+  const steps = playgroundExecutions[currentPlaygroundPattern] || [];
+  const speed = parseInt(document.getElementById('speedSlider').value);
+  let i = 0;
+
+  playgroundTimer = setInterval(() => {
+    if (i >= steps.length) {
+      clearInterval(playgroundTimer);
+      return;
+    }
+    stepPlaygroundTo(i);
+    i++;
+  }, speed);
+}
+
+function stepPlayground() {
+  const steps = playgroundExecutions[currentPlaygroundPattern] || [];
+  if (playgroundStep < steps.length) {
+    stepPlaygroundTo(playgroundStep);
+    playgroundStep++;
+  }
+}
+
+function stepPlaygroundTo(index) {
+  const steps = playgroundExecutions[currentPlaygroundPattern] || [];
+  const output = document.getElementById('playgroundOutput');
+  const step = steps[index];
+
+  const line = document.createElement('div');
+  line.className = `output-line${step.highlight ? ' highlight' : ''}`;
+  line.style.animationDelay = '0s';
+  line.textContent = step.line || ' ';
+  output.appendChild(line);
+
+  playgroundStep = index + 1;
+  document.getElementById('stepIndicator').textContent = `Step ${playgroundStep} / ${steps.length}`;
+  output.scrollTop = output.scrollHeight;
+}
+
+function resetPlayground() {
+  if (playgroundTimer) clearInterval(playgroundTimer);
+  playgroundStep = 0;
+  document.getElementById('playgroundOutput').innerHTML = '';
+  document.getElementById('stepIndicator').textContent = `Step 0 / ${(playgroundExecutions[currentPlaygroundPattern] || []).length}`;
+}
+
+// Pitfalls
+function renderPitfalls() {
+  const container = document.getElementById('pitfallsList');
+  container.innerHTML = pitfalls.map((p, i) => `
+    <div class="pitfall-card">
+      <div class="pitfall-header" onclick="togglePitfall(${i})">
+        <span>&#9888;</span> ${p.title}
+      </div>
+      <div class="pitfall-body" id="pitfall-${i}">
+        <p><strong>The mistake:</strong> ${p.mistake}</p>
+        <p><strong>Why it happens:</strong> ${p.why}</p>
+        <p><strong>The consequence:</strong> ${p.consequence}</p>
+        <p><strong>The fix:</strong> ${p.fix}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+function togglePitfall(i) {
+  const body = document.getElementById(`pitfall-${i}`);
+  body.classList.toggle('visible');
+}
+
+// Best Practices
+function renderBestPractices() {
+  const container = document.getElementById('bestPracticesList');
+  container.innerHTML = bestPractices.map(bp => `
+    <div class="practice-card">
+      <h4>${bp.title}</h4>
+      <ul>${bp.items.map(item => `<li>${item}</li>`).join('')}</ul>
+    </div>
+  `).join('');
+}
+
+// Navigation highlighting
+function initNavHighlight() {
+  const sections = document.querySelectorAll('section');
+  const navLinks = document.querySelectorAll('.nav a');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const link = document.querySelector(`.nav a[href="#${entry.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3 });
+
+  sections.forEach(s => observer.observe(s));
+}
+
+// Init
+renderPatterns();
+renderRelationships();
+renderComparison();
+initPlayground();
+renderPitfalls();
+renderBestPractices();
+initNavHighlight();
+</script>
+</body>
+</html>
