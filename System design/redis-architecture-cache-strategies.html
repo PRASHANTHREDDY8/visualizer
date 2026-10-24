@@ -93,6 +93,102 @@
       color: var(--redis-red);
     }
 
+    /* Requirements Section */
+    .req-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 768px) {
+      .req-grid { grid-template-columns: 1fr; }
+    }
+    .req-column {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+    }
+    .req-column h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .req-column h3 .req-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+    .req-item {
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      border-left: 4px solid transparent;
+      transition: all 0.2s;
+    }
+    .req-item:hover {
+      transform: translateX(4px);
+    }
+    .req-item .req-id {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .req-item .req-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+    .req-item .req-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .req-item.functional {
+      background: var(--accent-blue-light);
+      border-left-color: var(--accent-blue);
+    }
+    .req-item.functional .req-id { color: var(--accent-blue); }
+    .req-item.nonfunctional {
+      background: var(--accent-purple-light);
+      border-left-color: var(--accent-purple);
+    }
+    .req-item.nonfunctional .req-id { color: var(--accent-purple); }
+    .req-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .req-summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+    .req-summary-card .metric {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .req-summary-card .label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
     /* Sections */
     .section {
       padding: 3rem 2rem;
@@ -751,6 +847,7 @@
     <a class="nav-link" onclick="scrollToSection('pitfalls')">Pitfalls</a>
     <a class="nav-link" onclick="scrollToSection('bestpractices')">Best Practices</a>
     <a class="nav-link" onclick="scrollToSection('scaling')">Scaling</a>
+    <a class="nav-link" onclick="scrollToSection('requirements')">Requirements</a>
     <a class="nav-link" onclick="scrollToSection('playground')">Playground</a>
   </div>
 </nav>
@@ -1350,6 +1447,137 @@
   </div>
 </div>
 
+<!-- Section: Functional & Non-Functional Requirements -->
+<div class="section" id="requirements">
+  <h2 class="section-title">Functional & Non-Functional Requirements</h2>
+  <p class="section-subtitle">What Redis must deliver and the quality attributes it must maintain — driving every architectural decision from data structures to replication.</p>
+
+  <div class="req-summary">
+    <div class="req-summary-card">
+      <div class="metric" style="color:var(--accent-blue);">8</div>
+      <div class="label">Functional Requirements</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color:var(--accent-purple);">8</div>
+      <div class="label">Non-Functional Requirements</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color:var(--accent-green);">&lt;1ms</div>
+      <div class="label">Read Latency (p99)</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color:var(--redis-red);">100K+</div>
+      <div class="label">Operations/sec</div>
+    </div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--accent-blue-light);color:var(--accent-blue);">&#9889;</span> Functional Requirements</h3>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Key-Value Storage</div>
+        <div class="req-desc">Store and retrieve data using string keys mapped to values. Support GET, SET, DEL, and EXISTS operations with optional TTL expiration on any key.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Rich Data Structures</div>
+        <div class="req-desc">Support Strings, Lists, Sets, Sorted Sets, Hashes, Bitmaps, HyperLogLog, and Streams as native value types — each with specialized commands optimized for its access pattern.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Pub/Sub Messaging</div>
+        <div class="req-desc">Enable publish/subscribe messaging where publishers send to channels and subscribers receive in real-time. Support pattern-based subscriptions for flexible topic matching.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Atomic Transactions</div>
+        <div class="req-desc">Execute multiple commands atomically using MULTI/EXEC blocks. Support optimistic locking with WATCH for check-and-set patterns. Lua scripting for complex atomic operations.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Cache Eviction Policies</div>
+        <div class="req-desc">When memory is full, evict keys based on configurable policies: LRU, LFU, random, volatile-lru, volatile-ttl, allkeys-lru, noeviction. Each suits different workload patterns.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Persistence Options</div>
+        <div class="req-desc">Support RDB snapshots (point-in-time) and AOF (append-only file) for durability. Allow hybrid persistence (RDB + AOF) combining fast restarts with minimal data loss.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">TTL & Expiration</div>
+        <div class="req-desc">Set time-to-live on any key with millisecond precision. Support lazy and active expiration strategies. EXPIREAT for absolute timestamps, PERSIST to remove TTL.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">Cluster & Replication</div>
+        <div class="req-desc">Replicate data across master-replica pairs for read scaling and failover. Redis Cluster for automatic sharding across nodes with hash slot assignment (16,384 slots).</div>
+      </div>
+    </div>
+
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--accent-purple-light);color:var(--accent-purple);">&#128737;</span> Non-Functional Requirements</h3>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Sub-Millisecond Latency</div>
+        <div class="req-desc">Read and write operations must complete in &lt;1ms (p99) for simple commands. Achieved through in-memory storage, single-threaded event loop, and efficient data structures.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">High Throughput</div>
+        <div class="req-desc">Handle 100K+ operations/sec per node. Support pipelining (batch multiple commands in one roundtrip) to push throughput beyond 500K ops/sec for bulk workloads.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">High Availability</div>
+        <div class="req-desc">Automatic failover via Redis Sentinel or Redis Cluster when a master fails. Promote replica to master within seconds. Target 99.99% availability for cache layer.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Memory Efficiency</div>
+        <div class="req-desc">Optimize memory usage with compact encoding for small collections (ziplists, intsets). Support memory-efficient data structures. Report fragmentation ratio and memory usage per key class.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Horizontal Scalability</div>
+        <div class="req-desc">Scale linearly by adding nodes to a Redis Cluster. Automatic resharding redistributes hash slots. Support read replicas per shard for read-heavy workloads.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Durability Trade-offs</div>
+        <div class="req-desc">Configurable durability from no persistence (pure cache) to fsync-every-write (strong durability). AOF rewrite and RDB snapshots run in background without blocking reads.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">Security</div>
+        <div class="req-desc">Support ACL-based authentication and authorization (Redis 6+). TLS encryption for data in transit. Protected mode to prevent accidental exposure. Command renaming/disabling.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-08</div>
+        <div class="req-title">Observability</div>
+        <div class="req-desc">Built-in INFO command exposing memory, CPU, replication, and keyspace metrics. SLOWLOG for identifying slow commands. MONITOR for real-time command stream. Latency histogram tracking.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Section 9: Interactive Playground -->
 <div class="section" id="playground">
   <h2 class="section-title">Interactive Playground</h2>
@@ -1493,7 +1721,7 @@ function scrollToSection(id) {
 }
 
 // Highlight nav on scroll
-const sections = ['architecture','components','sequence','comparisons','usecases','pitfalls','bestpractices','scaling','playground'];
+const sections = ['architecture','components','sequence','comparisons','usecases','pitfalls','bestpractices','scaling','requirements','playground'];
 window.addEventListener('scroll', () => {
   const scrollPos = window.scrollY + 100;
   sections.forEach(id => {

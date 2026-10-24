@@ -508,6 +508,26 @@
       .container { padding: 1rem; }
       .nav-inner { gap: 0.75rem; }
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: #eff6ff; border-left-color: var(--accent-blue); }
+    .req-item.functional .req-id { color: var(--accent-blue); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: var(--accent-glue); }
+    .req-item.nonfunctional .req-id { color: var(--accent-glue); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -521,6 +541,7 @@
       <a href="#usecases">Use Cases</a>
       <a href="#pitfalls">Pitfalls</a>
       <a href="#practices">Best Practices</a>
+      <a href="#requirements">Requirements</a>
       <a href="#scaling">Scaling</a>
     </div>
   </nav>
@@ -968,7 +989,111 @@
       </div>
     </section>
 
-    <!-- Section 7: Scaling -->
+    <!-- Section 7: Functional & Non-Functional Requirements -->
+    <section id="requirements">
+      <h2 class="section-title">Functional &amp; Non-Functional Requirements</h2>
+      <p style="color:var(--text-muted);margin-bottom:1.5rem;">Core capabilities and quality attributes comparing serverless ETL approaches on AWS</p>
+
+      <div class="req-summary">
+        <div class="req-summary-card">
+          <div class="metric" style="color:var(--accent-glue);">2</div>
+          <div class="label">Architecture Approaches</div>
+        </div>
+        <div class="req-summary-card">
+          <div class="metric" style="color:var(--accent-step);">Serverless</div>
+          <div class="label">Compute Model</div>
+        </div>
+        <div class="req-summary-card">
+          <div class="metric" style="color:var(--accent-blue);">PB-Scale</div>
+          <div class="label">Data Processing</div>
+        </div>
+        <div class="req-summary-card">
+          <div class="metric" style="color:var(--accent-green);">Pay-per-Use</div>
+          <div class="label">Billing Model</div>
+        </div>
+      </div>
+
+      <div class="req-grid">
+        <div class="req-column">
+          <h3><span class="req-icon" style="background:#eff6ff;color:var(--accent-blue);">F</span> Functional Requirements</h3>
+          <div class="req-item functional">
+            <div class="req-id">FR-01</div>
+            <div class="req-title">ETL Job Authoring (Glue)</div>
+            <div class="req-desc">Author ETL jobs in Python or Scala using Apache Spark, with auto-generated scripts from visual editor and support for custom transformations.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-02</div>
+            <div class="req-title">Serverless Spark Execution (Glue)</div>
+            <div class="req-desc">Run distributed Spark jobs without managing clusters; Glue provisions, scales, and terminates workers automatically based on data volume.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-03</div>
+            <div class="req-title">Event-Driven Orchestration (Step Functions)</div>
+            <div class="req-desc">Coordinate Lambda functions, API calls, and AWS services into complex workflows triggered by events, schedules, or API calls.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-04</div>
+            <div class="req-title">Schema Discovery (Glue Crawlers)</div>
+            <div class="req-desc">Automatically discover and catalog data schemas from S3, JDBC, and DynamoDB sources, maintaining a centralized metadata repository.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-05</div>
+            <div class="req-title">Job Bookmarks (Glue)</div>
+            <div class="req-desc">Track previously processed data to enable incremental ETL processing, avoiding reprocessing of already-handled records across job runs.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-06</div>
+            <div class="req-title">Comparison Criteria</div>
+            <div class="req-desc">Enable informed selection between Glue (batch ETL, large datasets, Spark ecosystem) and Lambda+Step Functions (event-driven, real-time, microservice orchestration).</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-07</div>
+            <div class="req-title">Data Format Support</div>
+            <div class="req-desc">Handle diverse formats including Parquet, ORC, Avro, JSON, CSV, and XML with automatic schema inference and format conversion capabilities.</div>
+          </div>
+        </div>
+        <div class="req-column">
+          <h3><span class="req-icon" style="background:#f5f3ff;color:var(--accent-glue);">NF</span> Non-Functional Requirements</h3>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-01</div>
+            <div class="req-title">Cost Efficiency</div>
+            <div class="req-desc">Glue charges per DPU-hour ($0.44/DPU-hour); Lambda charges per request and duration ($0.20/1M requests + compute time), optimizing for different workload sizes.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-02</div>
+            <div class="req-title">Execution Time Limits</div>
+            <div class="req-desc">Glue jobs can run up to 48 hours for large ETL batches; Lambda functions limited to 15 minutes per invocation, requiring chunking for long tasks.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-03</div>
+            <div class="req-title">Cold Start Performance</div>
+            <div class="req-desc">Lambda cold starts range 100ms-10s depending on runtime and VPC config; Glue job startup takes 1-3 minutes for cluster provisioning.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-04</div>
+            <div class="req-title">Scalability Patterns</div>
+            <div class="req-desc">Glue scales via DPU allocation (2-100 DPUs standard, up to 300 with Flex); Lambda scales to thousands of concurrent invocations automatically.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-05</div>
+            <div class="req-title">DPU Billing Model</div>
+            <div class="req-desc">Glue bills in Data Processing Unit increments (4 vCPU, 16 GB RAM each), with minimum 2 DPUs and 1-minute billing granularity for Glue 3.0+.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-06</div>
+            <div class="req-title">Monitoring &amp; Observability</div>
+            <div class="req-desc">Glue provides Spark UI and CloudWatch metrics; Step Functions offers visual execution history, X-Ray tracing, and per-state-level metrics.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-07</div>
+            <div class="req-title">Data Security</div>
+            <div class="req-desc">Both support VPC endpoints, IAM roles, KMS encryption, and AWS Lake Formation integration for fine-grained column-level access control.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 8: Scaling -->
     <section id="scaling">
       <h2 class="section-title">Scaling & Trade-offs</h2>
       <div class="scaling-grid">

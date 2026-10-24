@@ -669,6 +669,26 @@
             .comp-table { font-size: 0.78rem; }
             .section { padding: 2rem 1rem; }
         }
+
+        /* Requirements Section */
+        .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+        @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+        .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+        .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+        .req-item:hover { transform: translateX(4px); }
+        .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+        .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+        .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+        .req-item.functional .req-id { color: var(--accent); }
+        .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+        .req-item.nonfunctional .req-id { color: var(--purple); }
+        .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+        .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+        .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+        .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
     </style>
 </head>
 <body>
@@ -682,6 +702,7 @@
     <a class="nav-link" href="#use-cases">Use Cases & Pitfalls</a>
     <a class="nav-link" href="#best-practices">Best Practices</a>
     <a class="nav-link" href="#scaling">Scaling</a>
+    <a class="nav-link" href="#requirements">Requirements</a>
     <a class="nav-link" href="#playground">Playground</a>
 </nav>
 
@@ -963,7 +984,125 @@
 <hr class="section-divider">
 
 <!-- ============================================================ -->
-<!-- SECTION 8: Interactive Playground                              -->
+<!-- SECTION 8: Functional & Non-Functional Requirements           -->
+<!-- ============================================================ -->
+<section class="section" id="requirements">
+    <div class="section-header">
+        <h2>Functional &amp; Non-Functional Requirements</h2>
+        <p class="subtitle">Core capabilities and quality attributes for a scalable inventory tracking and management system</p>
+    </div>
+
+    <div class="req-summary">
+        <div class="req-summary-card">
+            <div class="metric" style="color:var(--accent);">9</div>
+            <div class="label">Functional Reqs</div>
+        </div>
+        <div class="req-summary-card">
+            <div class="metric" style="color:var(--purple);">6</div>
+            <div class="label">Non-Functional Reqs</div>
+        </div>
+        <div class="req-summary-card">
+            <div class="metric" style="color:var(--green);">99.9%</div>
+            <div class="label">Stock Accuracy</div>
+        </div>
+        <div class="req-summary-card">
+            <div class="metric" style="color:var(--orange);">100K+</div>
+            <div class="label">SKUs</div>
+        </div>
+    </div>
+
+    <div class="req-grid">
+        <div class="req-column">
+            <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9881;</span> Functional Requirements</h3>
+
+            <div class="req-item functional">
+                <div class="req-id">FR-01</div>
+                <div class="req-title">Stock Tracking (SKU-level)</div>
+                <div class="req-desc">Track inventory quantities at the individual SKU level across all locations with real-time visibility into available, reserved, and in-transit stock.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-02</div>
+                <div class="req-title">Reservation System</div>
+                <div class="req-desc">Support soft holds (time-limited, auto-releasing) and hard holds (committed, order-backed) to prevent overselling during the checkout process.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-03</div>
+                <div class="req-title">Stock Replenishment Triggers</div>
+                <div class="req-desc">Automatically generate purchase orders or transfer requests when inventory falls below configurable reorder points with safety stock calculations.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-04</div>
+                <div class="req-title">Multi-warehouse Support</div>
+                <div class="req-desc">Manage inventory across multiple warehouses, fulfillment centers, and retail locations with location-specific stock levels and transfer capabilities.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-05</div>
+                <div class="req-title">Inventory Transfers</div>
+                <div class="req-desc">Enable stock transfers between locations with shipment tracking, in-transit visibility, and automatic stock adjustment upon receipt confirmation.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-06</div>
+                <div class="req-title">Batch &amp; Lot Tracking</div>
+                <div class="req-desc">Track inventory by batch/lot numbers for traceability, expiration date management, FIFO/FEFO picking, and recall support.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-07</div>
+                <div class="req-title">Cycle Counting</div>
+                <div class="req-desc">Support continuous partial inventory counts as an alternative to full physical counts, with variance reporting and automatic adjustments.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-08</div>
+                <div class="req-title">Demand Forecasting</div>
+                <div class="req-desc">Predict future demand using historical sales data, seasonality, trends, and external factors to optimize stock levels and reduce carrying costs.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-09</div>
+                <div class="req-title">Backorder Management</div>
+                <div class="req-desc">Manage out-of-stock scenarios with customer backorder queues, expected availability dates, and automatic fulfillment when stock arrives.</div>
+            </div>
+        </div>
+
+        <div class="req-column">
+            <h3><span class="req-icon" style="background:var(--purple-light);color:var(--purple);">&#9889;</span> Non-Functional Requirements</h3>
+
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-01</div>
+                <div class="req-title">Real-time Stock Accuracy</div>
+                <div class="req-desc">Maintain 99.9% inventory accuracy across all channels with continuous reconciliation and discrepancy alerting.</div>
+            </div>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-02</div>
+                <div class="req-title">Stock Check Latency</div>
+                <div class="req-desc">Return real-time stock availability within 50ms to support high-traffic e-commerce checkout flows without bottlenecks.</div>
+            </div>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-03</div>
+                <div class="req-title">SKU Scalability</div>
+                <div class="req-desc">Support 100K+ active SKUs with millions of inventory transactions per day without performance degradation.</div>
+            </div>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-04</div>
+                <div class="req-title">Concurrent Update Safety</div>
+                <div class="req-desc">Prevent overselling through optimistic locking, compare-and-swap operations, or serialized queue processing for stock decrements.</div>
+            </div>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-05</div>
+                <div class="req-title">Audit Trail</div>
+                <div class="req-desc">Maintain a complete, immutable log of all inventory changes with timestamps, user attribution, and reason codes for compliance and debugging.</div>
+            </div>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-06</div>
+                <div class="req-title">Integration Support</div>
+                <div class="req-desc">Provide real-time APIs and webhooks for integration with POS systems, ERP platforms, e-commerce storefronts, and third-party logistics providers.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<!-- SECTION 9: Interactive Playground                              -->
 <!-- ============================================================ -->
 <section class="section" id="playground">
     <div class="section-header">

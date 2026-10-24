@@ -572,6 +572,26 @@
       .arch-svg { height: 350px; }
       .card-grid { grid-template-columns: 1fr; }
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -589,6 +609,7 @@
   <a class="nav-link" onclick="scrollToSection('usecases')">Use Cases</a>
   <a class="nav-link" onclick="scrollToSection('practices')">Best Practices</a>
   <a class="nav-link" onclick="scrollToSection('scaling')">Scaling</a>
+  <a class="nav-link" onclick="scrollToSection('requirements')">Requirements</a>
   <a class="nav-link" onclick="scrollToSection('playground')">Playground</a>
 </nav>
 
@@ -875,6 +896,113 @@
         <p style="margin-bottom:10px"><strong>S3 throttling (503s):</strong> Too many requests to same prefix. Mitigation: randomize prefixes, use S3 request metrics.</p>
         <p style="margin-bottom:10px"><strong>OOM on driver:</strong> Too much data collected to driver. Mitigation: avoid <code>collect()</code>, increase driver memory class.</p>
         <p><strong>Schema drift breaks jobs:</strong> Source adds/removes columns. Mitigation: DynamicFrames + schema evolution in Catalog.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section: Functional & Non-Functional Requirements -->
+<section class="section" id="requirements">
+  <div class="section-header">
+    <div class="section-number">Requirements</div>
+    <h2 class="section-title">Functional &amp; Non-Functional Requirements</h2>
+    <p class="section-subtitle">Key capabilities and quality attributes for a production AWS Glue ETL platform covering data ingestion, transformation, and catalog management.</p>
+  </div>
+
+  <div class="req-summary">
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--primary);">Serverless</div>
+      <div class="label">Compute Model</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--accent);">&lt;1 min</div>
+      <div class="label">Target Job Startup</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--purple);">$0.44/DPU-hr</div>
+      <div class="label">Cost Per DPU-Hour</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--success);">7 + 7</div>
+      <div class="label">FR + NFR Requirements</div>
+    </div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9889;</span> Functional Requirements</h3>
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Serverless ETL Job Execution</div>
+        <div class="req-desc">Execute Extract-Transform-Load jobs without provisioning or managing infrastructure. Support Spark-based (Glue ETL) and Python shell job types with configurable worker counts and timeout limits.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Glue Crawlers for Schema Discovery</div>
+        <div class="req-desc">Automatically crawl data sources (S3, JDBC, DynamoDB) to infer schema, detect format (Parquet, JSON, CSV, Avro), and register/update table definitions in the Data Catalog without manual DDL.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Data Catalog (Hive-Compatible Metastore)</div>
+        <div class="req-desc">Maintain a centralized, Hive-compatible metadata repository of databases, tables, partitions, and schemas. Serve as the metastore for Athena, EMR, Redshift Spectrum, and Glue jobs.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Job Bookmarks for Incremental Processing</div>
+        <div class="req-desc">Track previously processed data using job bookmarks so subsequent runs only process new or changed records. Support bookmark pausing, resetting, and rewind for reprocessing scenarios.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Glue Studio (Visual ETL Authoring)</div>
+        <div class="req-desc">Provide a drag-and-drop visual interface for building ETL pipelines. Generate PySpark code automatically from the visual DAG. Support custom transforms, data preview, and job monitoring.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Glue DataBrew (Data Preparation)</div>
+        <div class="req-desc">Enable no-code data cleaning and normalization with 250+ built-in transformations. Support data quality profiling, column statistics, and recipe-based repeatable transformations.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Custom Classifiers</div>
+        <div class="req-desc">Define custom classifiers (Grok, JSON, XML, CSV patterns) to help crawlers correctly identify and parse non-standard or proprietary data formats beyond built-in classifiers.</div>
+      </div>
+    </div>
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:#f5f3ff;color:#7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Auto-Scaling DPUs</div>
+        <div class="req-desc">Automatically scale Data Processing Units up or down based on workload demands. Support Glue 3.0+ auto-scaling that adjusts worker count during job execution to optimize cost and performance.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Cost Efficiency per DPU-Hour</div>
+        <div class="req-desc">Bill at $0.44 per DPU-hour with 1-second granularity (minimum 1 min for ETL, 10 min for streaming). Support Flex execution for non-urgent jobs at lower cost with pre-emptible resources.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Job Startup Time Under 1 Minute</div>
+        <div class="req-desc">Cold-start Glue 3.0+ jobs in under 1 minute. Support warm pools and reusable Spark contexts to reduce startup overhead for frequently triggered pipelines to near-zero.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Integration with AWS Data Ecosystem</div>
+        <div class="req-desc">Natively integrate with S3, Redshift, RDS, DynamoDB, Athena, Lake Formation, and Kinesis. Support JDBC/ODBC connections for external databases and cross-account access via IAM roles.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">PySpark and Python Shell Support</div>
+        <div class="req-desc">Support Apache Spark (PySpark/Scala) for distributed ETL and Python shell for lightweight scripting. Provide DynamicFrames API alongside native Spark DataFrames for schema flexibility.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Encryption at Rest and in Transit</div>
+        <div class="req-desc">Encrypt Data Catalog metadata, ETL job logs, and bookmarks at rest using AWS KMS. Enforce TLS 1.2+ for all API calls and data transfers between Glue and connected services.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">Monitoring and Observability</div>
+        <div class="req-desc">Emit CloudWatch metrics for job duration, DPU usage, and error rates. Support Spark UI for debugging, CloudTrail for audit logging, and SNS notifications for job state transitions.</div>
       </div>
     </div>
   </div>
@@ -1362,7 +1490,7 @@ function scrollToSection(id) {
 }
 
 // Highlight active nav on scroll
-const sections = ['architecture', 'components', 'flow', 'comparison', 'usecases', 'practices', 'scaling', 'playground'];
+const sections = ['architecture', 'components', 'flow', 'comparison', 'usecases', 'practices', 'scaling', 'requirements', 'playground'];
 window.addEventListener('scroll', () => {
   const scrollPos = window.scrollY + 100;
   let activeIdx = 0;

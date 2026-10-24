@@ -678,6 +678,26 @@
             border-radius: 4px;
             transition: width 0.5s;
         }
+
+        /* Requirements Section */
+        .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+        @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+        .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+        .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+        .req-item:hover { transform: translateX(4px); }
+        .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+        .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+        .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+        .req-item.functional .req-id { color: var(--accent); }
+        .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+        .req-item.nonfunctional .req-id { color: #7c3aed; }
+        .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+        .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+        .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+        .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
     </style>
 </head>
 <body>
@@ -694,6 +714,7 @@
     <a href="#usecases">Use Cases</a>
     <a href="#pitfalls">Pitfalls</a>
     <a href="#practices">Best Practices</a>
+    <a href="#requirements">Requirements</a>
     <a href="#scaling">Scaling</a>
     <a href="#playground">Playground</a>
 </nav>
@@ -1069,6 +1090,122 @@
         <h2>Best Practices</h2>
     </div>
     <div id="practicesList"></div>
+</section>
+
+<!-- Section: Functional & Non-Functional Requirements -->
+<section class="section" id="requirements">
+    <div class="section-header">
+        <h2>Functional &amp; Non-Functional Requirements</h2>
+        <p>Core capabilities and quality attributes that define YouTube's video platform at planetary scale.</p>
+    </div>
+
+    <div class="req-summary">
+        <div class="req-summary-card">
+            <div class="metric" style="color:var(--accent);">500+</div>
+            <div class="label">Hours Uploaded / Min</div>
+        </div>
+        <div class="req-summary-card">
+            <div class="metric" style="color:var(--blue);">1B+</div>
+            <div class="label">Hours Watched Daily</div>
+        </div>
+        <div class="req-summary-card">
+            <div class="metric" style="color:var(--green);">&lt;2s</div>
+            <div class="label">Video Start Time</div>
+        </div>
+        <div class="req-summary-card">
+            <div class="metric" style="color:var(--purple);">99.99%</div>
+            <div class="label">Availability Target</div>
+        </div>
+    </div>
+
+    <div class="req-grid">
+        <div class="req-column">
+            <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9889;</span> Functional Requirements</h3>
+            <div class="req-item functional">
+                <div class="req-id">FR-01</div>
+                <div class="req-title">Video Upload &amp; Transcoding</div>
+                <div class="req-desc">Accept video uploads in 40+ container formats and transcode to multiple resolutions (144p to 8K) and codecs (H.264, VP9, AV1). Generate adaptive bitrate ladder with per-title encoding optimization.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-02</div>
+                <div class="req-title">Adaptive Bitrate Streaming (DASH/HLS)</div>
+                <div class="req-desc">Deliver video via DASH and HLS protocols with automatic quality switching based on network conditions. Segment videos into 2-10 second chunks for seamless quality transitions without rebuffering.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-03</div>
+                <div class="req-title">Recommendation Engine</div>
+                <div class="req-desc">Serve personalized video recommendations using deep neural networks (e.g., two-tower model) trained on watch history, engagement signals, and collaborative filtering across billions of user-video interactions.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-04</div>
+                <div class="req-title">Search with Relevance Ranking</div>
+                <div class="req-desc">Full-text search across video titles, descriptions, captions, and auto-generated transcripts. Rank results using a blend of textual relevance, video quality signals, freshness, and user engagement metrics.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-05</div>
+                <div class="req-title">Comments &amp; Engagement</div>
+                <div class="req-desc">Support threaded comments, likes/dislikes, shares, and subscriptions. Handle high fan-out for viral videos with eventual consistency and pre-aggregated counters updated via background jobs.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-06</div>
+                <div class="req-title">Live Streaming</div>
+                <div class="req-desc">Ingest live video via RTMP/SRT, transcode in real-time to multiple qualities, and distribute with sub-5-second glass-to-glass latency. Support live chat, DVR (rewind), and automatic VOD conversion after stream ends.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-07</div>
+                <div class="req-title">Monetization (Ads &amp; Subscriptions)</div>
+                <div class="req-desc">Server-side ad insertion (SSAI) with real-time bidding for pre-roll, mid-roll, and overlay ads. Support Premium ad-free experience, channel memberships, Super Chat, and creator revenue sharing.</div>
+            </div>
+            <div class="req-item functional">
+                <div class="req-id">FR-08</div>
+                <div class="req-title">Content Moderation</div>
+                <div class="req-desc">Automated ML-based moderation pipeline scanning uploads for policy violations (violence, copyright, spam). Content ID system for copyright matching against a 100M+ reference file database with sub-second matching.</div>
+            </div>
+        </div>
+        <div class="req-column">
+            <h3><span class="req-icon" style="background:#f5f3ff;color:#7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-01</div>
+                <div class="req-title">Fast Video Start Time (&lt;2s)</div>
+                <div class="req-desc">Achieve under 2 seconds from click to first frame (p95). Use pre-fetched initial segments, edge caching of popular content, and optimistic segment loading before playback begins.</div>
+            </div>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-02</div>
+                <div class="req-title">Massive Upload Scale (500+ hrs/min)</div>
+                <div class="req-desc">Ingest 500+ hours of video per minute with a distributed transcoding pipeline. Chunk uploads for resumability, parallelize encoding across GPU clusters, and prioritize popular creators.</div>
+            </div>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-03</div>
+                <div class="req-title">Extreme Watch Volume (1B+ hrs/day)</div>
+                <div class="req-desc">Serve over 1 billion hours of video daily across 2B+ monthly active users. Requires petabytes of egress bandwidth, tiered storage (hot/warm/cold), and intelligent cache hierarchies at the edge.</div>
+            </div>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-04</div>
+                <div class="req-title">CDN-Backed Global Delivery</div>
+                <div class="req-desc">Distribute content via a global CDN (Google's private backbone + edge PoPs in 100+ countries). Cache popular videos at the edge; long-tail content served from regional origins with tiered pull-through caching.</div>
+            </div>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-05</div>
+                <div class="req-title">High Availability (99.99%)</div>
+                <div class="req-desc">Achieve 99.99% uptime (~52 min downtime/year) via multi-region active-active deployment, automatic failover, graceful degradation (serve cached recommendations if ML service is down), and chaos testing.</div>
+            </div>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-06</div>
+                <div class="req-title">Adaptive Quality Based on Bandwidth</div>
+                <div class="req-desc">Dynamically adjust video quality in real-time using client-side bandwidth estimation (EWMA). Switch between bitrate ladder rungs within 1-2 segments to minimize rebuffering while maximizing visual quality.</div>
+            </div>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-07</div>
+                <div class="req-title">Storage Efficiency at Exabyte Scale</div>
+                <div class="req-desc">Manage exabytes of video data with per-title encoding (skip unnecessary quality rungs), deduplication of re-uploaded content, and tiered storage moving cold content to cheaper archival layers.</div>
+            </div>
+            <div class="req-item nonfunctional">
+                <div class="req-id">NFR-08</div>
+                <div class="req-title">Low Latency Recommendations</div>
+                <div class="req-desc">Generate personalized recommendations in under 200ms (p99). Use a two-stage retrieval (candidate generation + ranking) with pre-computed embeddings and a real-time feature store for fresh signals.</div>
+            </div>
+        </div>
+    </div>
 </section>
 
 <!-- Section 8: Scaling -->

@@ -619,6 +619,25 @@
       display: block;
       margin-bottom: 4px;
     }
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -635,6 +654,7 @@
   <button class="nav-tab" data-tab="flow">Query Flow</button>
   <button class="nav-tab" data-tab="usecases">Use Cases</button>
   <button class="nav-tab" data-tab="pitfalls">Pitfalls</button>
+  <button class="nav-tab" data-tab="requirements">Requirements</button>
   <button class="nav-tab" data-tab="practices">Best Practices</button>
 </div>
 
@@ -1180,6 +1200,98 @@
       <p>While S3 now provides strong read-after-write consistency, Iceberg's commit protocol still needs atomic metadata pointer updates. If your catalog (Glue) has eventual consistency in rare cases, you might read stale metadata.</p>
       <div class="pitfall-solution">
         <strong>Fix:</strong> Use AWS Glue as catalog (strongest AWS integration). Ensure your Iceberg library version handles S3 consistency correctly. Avoid custom catalog implementations unless you understand the commit protocol deeply.
+      </div>
+    </div>
+  </div>
+
+  <!-- REQUIREMENTS SECTION -->
+  <div class="section" id="requirements">
+    <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 8px;">Functional & Non-Functional Requirements</h2>
+    <p style="color: var(--text-muted, var(--text-secondary)); font-size: 1.05rem; margin-bottom: 28px;">Key requirements for Apache Iceberg as a high-performance table format for massive analytic datasets on data lakes.</p>
+
+    <div class="req-summary">
+      <div class="req-summary-card"><div class="metric" style="color: var(--accent, #4f6ef7);">ACID</div><div class="label">Transaction Guarantees</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--green, #22c55e);">PB-Scale</div><div class="label">Table Size Support</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--purple, #8b5cf6);">&lt;1s</div><div class="label">Query Planning</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--orange, #f59e0b);">7+7</div><div class="label">FR + NFR Count</div></div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--accent-light, #e8ecff); color: var(--accent, #4f6ef7);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">ACID Transactions on Data Lakes</div>
+          <div class="req-desc">Provide serializable isolation for concurrent reads and writes on data lake tables, with optimistic concurrency control and automatic conflict resolution.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Schema Evolution</div>
+          <div class="req-desc">Support safe schema changes — add, rename, drop, and reorder columns — without rewriting existing data files, using column IDs for backward compatibility.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Hidden Partitioning</div>
+          <div class="req-desc">Derive partition values automatically from column transforms (year, month, day, hour, bucket, truncate) without requiring users to specify partition columns in queries.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Time-Travel Queries</div>
+          <div class="req-desc">Query historical table snapshots by timestamp or snapshot ID, enabling reproducible analytics, auditing, and rollback to previous table states.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Snapshot Management</div>
+          <div class="req-desc">Manage table snapshots with configurable retention policies, snapshot expiration, orphan file cleanup, and rollback to any previous snapshot.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Data Compaction</div>
+          <div class="req-desc">Compact small files into optimally-sized files (128-512MB) to improve read performance, with configurable compaction strategies (bin-pack, sort, z-order).</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Partition Evolution</div>
+          <div class="req-desc">Change partition schemes on existing tables without rewriting data — new data uses the updated partition spec while old data retains its original layout.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: #f5f3ff; color: #7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Petabyte-Scale Tables</div>
+          <div class="req-desc">Handle tables with petabytes of data and millions of data files efficiently through hierarchical metadata (manifest lists, manifests, data files).</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">Fast Query Planning</div>
+          <div class="req-desc">Plan queries in under 1 second even for tables with millions of files, using manifest-level statistics and partition pruning to avoid full metadata scans.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Minimal Metadata Overhead</div>
+          <div class="req-desc">Store metadata efficiently with column-level min/max statistics in manifests, avoiding the need for a separate metastore for file-level statistics.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Multi-Engine Compatibility</div>
+          <div class="req-desc">Support simultaneous access from Spark, Flink, Trino, Presto, Hive, and Athena through a well-defined table specification and engine-agnostic catalog API.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Concurrent Write Safety</div>
+          <div class="req-desc">Handle concurrent writers safely using optimistic concurrency control with atomic metadata commits, detecting and resolving conflicts at commit time.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">File Format Flexibility</div>
+          <div class="req-desc">Support Parquet, ORC, and Avro data file formats with configurable compression (Snappy, ZSTD, Gzip) and encoding optimizations per column.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Object Storage Optimized</div>
+          <div class="req-desc">Designed for cloud object stores (S3, GCS, ADLS) with features like manifest caching, predicate pushdown, and metadata-only operations to minimize I/O.</div>
+        </div>
       </div>
     </div>
   </div>

@@ -591,6 +591,26 @@
       .section { padding: 2rem 1rem; }
       .card-grid { grid-template-columns: 1fr; }
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -604,6 +624,7 @@
         <a href="#comparisons" class="nav-link">Comparisons</a>
         <a href="#usecases" class="nav-link">Use Cases</a>
         <a href="#bestpractices" class="nav-link">Best Practices</a>
+        <a href="#requirements" class="nav-link">Requirements</a>
         <a href="#scaling" class="nav-link">Scaling</a>
       </div>
     </div>
@@ -1211,7 +1232,113 @@
     </div>
   </section>
 
-  <!-- Section 7: Scaling & Trade-offs -->
+  <!-- Section 7: Functional & Non-Functional Requirements -->
+  <section class="section" id="requirements">
+    <div class="section-header">
+      <h2>Functional &amp; Non-Functional Requirements</h2>
+      <p>Core capabilities and quality attributes for orchestrating distributed workflows with AWS Step Functions</p>
+    </div>
+
+    <div class="req-summary">
+      <div class="req-summary-card">
+        <div class="metric" style="color:var(--accent);">25,000/sec</div>
+        <div class="label">Express Transitions</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color:var(--green);">99.9%</div>
+        <div class="label">Availability SLA</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color:var(--blue);">1 Year</div>
+        <div class="label">Execution History</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color:var(--purple);">8</div>
+        <div class="label">State Types</div>
+      </div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">F</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Visual Workflow Orchestration</div>
+          <div class="req-desc">Design and visualize complex workflows as state machines using the Workflow Studio, with drag-and-drop composition of AWS service integrations.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">State Types</div>
+          <div class="req-desc">Support 8 state types: Task (execute work), Choice (branching logic), Parallel (concurrent branches), Map (dynamic iteration), Wait (delay), Pass (transform data), Succeed, and Fail.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Error Handling &amp; Retry</div>
+          <div class="req-desc">Built-in retry policies with configurable backoff (maxAttempts, intervalSeconds, backoffRate) and Catch blocks for routing failures to recovery states.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Express vs Standard Workflows</div>
+          <div class="req-desc">Standard workflows for long-running (up to 1 year), exactly-once execution; Express workflows for high-volume, short-duration (&lt;5 min), at-least-once execution.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Activity Tasks</div>
+          <div class="req-desc">Enable human approval steps or external system polling via activity workers that pull tasks, process them externally, and report results back.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Callback Patterns</div>
+          <div class="req-desc">Pause workflow execution and wait for an external callback (via SendTaskSuccess/Failure API) to resume, enabling async integration with external systems.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Dynamic Parallelism (Distributed Map)</div>
+          <div class="req-desc">Process millions of items in parallel using Distributed Map state, reading from S3 and launching up to 10,000 concurrent child executions.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:var(--purple-light);color:var(--purple);">NF</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">High Throughput (Express)</div>
+          <div class="req-desc">Express workflows support up to 25,000 state transitions per second per account, suitable for IoT data processing and streaming workloads.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">API Rate Limits</div>
+          <div class="req-desc">Support up to 5,000 StartExecution API calls per second with automatic throttling and retry mechanisms for burst traffic patterns.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Exactly-Once Execution (Standard)</div>
+          <div class="req-desc">Standard workflows guarantee exactly-once state transition execution with full audit trail and execution deduplication via client tokens.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">At-Least-Once Execution (Express)</div>
+          <div class="req-desc">Express workflows provide at-least-once execution semantics optimized for idempotent, high-throughput event processing.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Execution History Retention</div>
+          <div class="req-desc">Retain full execution history for up to 1 year (Standard), with CloudWatch integration for Express workflow logging and monitoring.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Availability SLA (99.9%)</div>
+          <div class="req-desc">AWS guarantees 99.9% monthly uptime for Step Functions, with multi-AZ deployment and automatic failover within a region.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">IAM &amp; Encryption Integration</div>
+          <div class="req-desc">Fine-grained IAM policies for execution roles, AWS KMS encryption for data at rest, and CloudTrail logging for all API activity.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 8: Scaling & Trade-offs -->
   <section class="section" id="scaling">
     <div class="section-header">
       <h2>Scaling & Trade-offs</h2>

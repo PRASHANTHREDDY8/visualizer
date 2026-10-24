@@ -470,6 +470,26 @@
             nav { padding: 0 1rem; }
             .arch-svg { height: 500px; }
         }
+
+        /* Requirements Section */
+        .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+        @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+        .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+        .req-item:hover { transform: translateX(4px); }
+        .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+        .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+        .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+        .req-item.functional .req-id { color: var(--accent); }
+        .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+        .req-item.nonfunctional .req-id { color: var(--purple); }
+        .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+        .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+        .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
     </style>
 </head>
 <body>
@@ -482,6 +502,7 @@
         <a href="#use-cases">Use Cases</a>
         <a href="#best-practices">Best Practices</a>
         <a href="#scaling">Scaling</a>
+        <a href="#requirements">Requirements</a>
         <a href="#playground">Playground</a>
     </nav>
 
@@ -1032,7 +1053,121 @@
             </div>
         </section>
 
-        <!-- Section 8: Interactive Playground -->
+        <!-- Section 8: Requirements -->
+        <section id="requirements">
+            <h2>Functional &amp; Non-Functional Requirements <span class="badge" style="background:var(--accent-light);color:var(--accent);">Spec</span></h2>
+            <p class="subtitle" style="margin-bottom:1.5rem;">Core capabilities and quality attributes that define Uber's ride-hailing platform at global scale</p>
+
+            <div class="req-summary">
+                <div class="req-summary-card">
+                    <div class="metric" style="color: var(--accent);">&lt;3s</div>
+                    <div class="label">Ride Matching Time</div>
+                </div>
+                <div class="req-summary-card">
+                    <div class="metric" style="color: var(--success);">20M+</div>
+                    <div class="label">Trips per Day</div>
+                </div>
+                <div class="req-summary-card">
+                    <div class="metric" style="color: var(--teal);">4s</div>
+                    <div class="label">Location Update Interval</div>
+                </div>
+                <div class="req-summary-card">
+                    <div class="metric" style="color: var(--purple);">99.99%</div>
+                    <div class="label">Platform Availability</div>
+                </div>
+            </div>
+
+            <div class="req-grid">
+                <div class="req-column">
+                    <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9889;</span> Functional Requirements</h3>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-01</div>
+                        <div class="req-title">Ride Matching (Rider-Driver Pairing)</div>
+                        <div class="req-desc">Match riders with optimal nearby drivers using geospatial indexing (S2/H3 cells), considering driver proximity, ETA, rating, acceptance rate, and fairness rotation.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-02</div>
+                        <div class="req-title">Dynamic Pricing (Surge)</div>
+                        <div class="req-desc">Real-time surge pricing based on supply-demand ratio per geo-cell. Compute multiplier using rider request density vs available driver count, with transparent fare breakdowns.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-03</div>
+                        <div class="req-title">Real-Time GPS Tracking</div>
+                        <div class="req-desc">Continuous location streaming from driver apps with updates every 4 seconds. Display live driver position on rider map during ride with smooth interpolation between points.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-04</div>
+                        <div class="req-title">ETA Calculation</div>
+                        <div class="req-desc">ML-based arrival time estimation accounting for road network topology, real-time traffic, historical travel times, weather, and special events with continuous recalculation en route.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-05</div>
+                        <div class="req-title">Fare Estimation</div>
+                        <div class="req-desc">Upfront fare calculation combining base fare, per-mile/minute rates, surge multiplier, tolls, and route-specific adjustments. Support fare splitting and promo code application.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-06</div>
+                        <div class="req-title">Payment Processing</div>
+                        <div class="req-desc">Multi-method payment support (cards, wallets, cash, corporate accounts) with automatic charging post-trip, tip processing, driver payout scheduling, and dispute resolution.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-07</div>
+                        <div class="req-title">Driver &amp; Rider Ratings</div>
+                        <div class="req-desc">Bidirectional rating system with post-trip feedback. Aggregate scores influence matching priority, deactivation thresholds, and rider experience tiers.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-08</div>
+                        <div class="req-title">Trip History &amp; Multi-Stop Rides</div>
+                        <div class="req-desc">Persistent trip history with receipts, route replay, and expense categorization. Support multi-stop rides with dynamic re-routing and per-segment fare computation.</div>
+                    </div>
+                </div>
+                <div class="req-column">
+                    <h3><span class="req-icon" style="background:var(--purple-light);color:var(--purple);">&#128737;</span> Non-Functional Requirements</h3>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-01</div>
+                        <div class="req-title">Sub-3s Ride Matching</div>
+                        <div class="req-desc">Complete rider-to-driver matching within 3 seconds at P99, including geospatial query, ranking, and dispatch notification, even during surge periods with 10x normal request volume.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-02</div>
+                        <div class="req-title">Real-Time Location Updates</div>
+                        <div class="req-desc">Ingest and process location updates from millions of active drivers every 4 seconds via persistent WebSocket connections, with geospatial indexing for sub-100ms proximity queries.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-03</div>
+                        <div class="req-title">Massive Trip Volume</div>
+                        <div class="req-desc">Handle 20M+ trips per day across 10,000+ cities with horizontally partitioned trip services, geo-sharded databases, and async event-driven processing for non-critical paths.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-04</div>
+                        <div class="req-title">Ultra-High Availability</div>
+                        <div class="req-desc">99.99% uptime (under 53 minutes downtime/year) with multi-region active-active deployment, automatic failover, and graceful degradation of non-critical features during outages.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-05</div>
+                        <div class="req-title">Fast Surge Computation</div>
+                        <div class="req-desc">Compute surge pricing multipliers in under 1 second per geo-cell using streaming supply-demand aggregation with sliding window counters and in-memory geo-partitioned state.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-06</div>
+                        <div class="req-title">Geospatial Indexing</div>
+                        <div class="req-desc">Efficient nearby-driver queries using S2 geometry cells or H3 hexagonal indexing, supporting radius searches across millions of active driver locations with sub-100ms response time.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-07</div>
+                        <div class="req-title">Global Data Partitioning</div>
+                        <div class="req-desc">Geo-partitioned data storage ensuring trips, driver data, and location streams stay within regional boundaries for compliance (GDPR) while enabling cross-region ride support.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-08</div>
+                        <div class="req-title">Fault Isolation</div>
+                        <div class="req-desc">City-level blast radius containment so failures in one market do not cascade. Bulkhead patterns, circuit breakers, and independent deployment per region ensure resilience.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 9: Interactive Playground -->
         <section id="playground">
             <h2>Interactive Playground <span class="badge" style="background:var(--success-light);color:var(--success);">Live Sim</span></h2>
 

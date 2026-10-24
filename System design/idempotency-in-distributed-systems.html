@@ -117,6 +117,47 @@
       margin-bottom: 40px;
     }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      background: var(--accent-light);
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 700px;
+      margin-bottom: 32px;
+    }
+
     /* Architecture Diagram */
     .arch-diagram {
       background: var(--surface);
@@ -1058,6 +1099,100 @@
         <div class="demo-panel">
           <h4>Server Log</h4>
           <div class="demo-log" id="demoLog"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="background: var(--surface-alt);">
+  <div class="container">
+    <div class="section-label">&#128203; Requirements</div>
+    <h2 class="section-title">Functional & Non-Functional Requirements</h2>
+    <p class="section-desc">Essential requirements for implementing robust idempotency in distributed systems, ensuring safe retries and exactly-once processing semantics.</p>
+
+    <div class="req-summary">
+      <div class="req-summary-card"><div class="metric" style="color: var(--accent);">24-48h</div><div class="label">Idempotency Key TTL</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--green);">Exactly-Once</div><div class="label">Processing Guarantee</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--purple);">7</div><div class="label">Functional Requirements</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--orange);">7</div><div class="label">Non-Functional Requirements</div></div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--accent-light); color: var(--accent);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Idempotency Key Generation</div>
+          <div class="req-desc">Generate unique idempotency keys (UUID v4) client-side and pass them via Idempotency-Key header. Keys must be deterministic per logical operation.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Request Deduplication</div>
+          <div class="req-desc">Detect and deduplicate retried requests by matching idempotency keys, returning the original cached response instead of re-processing the operation.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Retry-Safe Operations</div>
+          <div class="req-desc">Ensure all mutating API endpoints (POST, PUT, PATCH) produce the same result regardless of how many times a request with the same key is received.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Idempotent API Design</div>
+          <div class="req-desc">Design APIs where repeated calls with identical parameters and idempotency keys always return the same response body, status code, and side effects.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">State Machine Transitions</div>
+          <div class="req-desc">Track request lifecycle states (pending, processing, completed, failed) per idempotency key, preventing concurrent processing of the same key.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Conflict Resolution</div>
+          <div class="req-desc">Handle conflicts when a retry arrives with a different request body but the same idempotency key, returning 422 Unprocessable Entity with a clear error message.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Response Caching</div>
+          <div class="req-desc">Cache complete responses (status code, headers, body) keyed by the idempotency key, enabling instant replay of previously completed operations.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: #f5f3ff; color: #7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Strong Consistency Guarantees</div>
+          <div class="req-desc">Ensure linearizable consistency for idempotency key lookups and insertions, preventing duplicate processing even under network partitions.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">Low Storage Overhead</div>
+          <div class="req-desc">Store idempotency records efficiently (~500 bytes per key including cached response), supporting millions of active keys within a single Redis instance.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Configurable TTL Expiration</div>
+          <div class="req-desc">Auto-expire idempotency keys after a configurable TTL (default 24-48 hours), balancing retry window duration against storage costs.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Distributed Coordination</div>
+          <div class="req-desc">Use distributed locks (Redis SETNX with TTL) to coordinate idempotency checks across multiple service instances, preventing split-brain scenarios.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Exactly-Once Semantics</div>
+          <div class="req-desc">Guarantee exactly-once processing through the combination of idempotency key locking, transactional state updates, and cached response replay.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">High Availability</div>
+          <div class="req-desc">Maintain idempotency guarantees during partial failures using Redis Sentinel or Cluster mode, with fallback to database-level unique constraints.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Minimal Latency Impact</div>
+          <div class="req-desc">Add less than 2ms overhead for idempotency key lookup and lock acquisition, leveraging in-memory stores and connection pooling.</div>
         </div>
       </div>
     </div>

@@ -723,6 +723,26 @@
       background: var(--border);
       margin: 3rem 0;
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -742,6 +762,7 @@
     <a class="nav-link" onclick="scrollToSection('comparisons')">Comparisons</a>
     <a class="nav-link" onclick="scrollToSection('usecases')">Use Cases</a>
     <a class="nav-link" onclick="scrollToSection('practices')">Best Practices</a>
+    <a class="nav-link" onclick="scrollToSection('requirements')">Requirements</a>
     <a class="nav-link" onclick="scrollToSection('scaling')">Scaling</a>
   </div>
 </nav>
@@ -1331,10 +1352,131 @@
   </div>
 </section>
 
-<!-- Section 7: Scaling & Trade-offs -->
+<!-- Section 7: Functional & Non-Functional Requirements -->
+<section class="section" id="requirements">
+  <div class="section-header">
+    <h2><span class="section-number">7</span> Functional &amp; Non-Functional Requirements</h2>
+    <p>Core capabilities and quality attributes that define Amazon Aurora as a cloud-native relational database engine</p>
+  </div>
+
+  <div class="req-summary">
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--accent);">5x / 3x</div>
+      <div class="label">Throughput Boost (MySQL / PostgreSQL)</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--success);">99.99%</div>
+      <div class="label">Availability SLA</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--purple);">128 TB</div>
+      <div class="label">Max Storage</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--orange);">&lt;30s</div>
+      <div class="label">Failover Time</div>
+    </div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--accent-light); color: var(--accent);">&#9889;</span> Functional Requirements</h3>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">MySQL &amp; PostgreSQL Compatibility</div>
+        <div class="req-desc">Full wire-protocol compatibility with MySQL 5.7/8.0 and PostgreSQL 13/14/15, enabling drop-in migration of existing applications without code changes.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Multi-Master Writes</div>
+        <div class="req-desc">Support concurrent write operations across multiple DB instances in a cluster, enabling active-active configurations for write-heavy workloads.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Global Databases</div>
+        <div class="req-desc">Cross-region replication with dedicated infrastructure, enabling &lt;1 second replication lag for disaster recovery and low-latency global reads.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Database Cloning</div>
+        <div class="req-desc">Create full copy-on-write clones of production databases in minutes without impacting source performance, useful for testing and analytics.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Backtracking (Point-in-Time Rewind)</div>
+        <div class="req-desc">Rewind database state to any point within a configurable window (up to 72 hours) without restoring from backup snapshots.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Serverless v2 Auto-Scaling</div>
+        <div class="req-desc">Automatically scale compute capacity in fine-grained increments (0.5 ACU steps) based on application demand, scaling to zero when idle.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Parallel Query Processing</div>
+        <div class="req-desc">Offload analytical queries to the Aurora storage layer, distributing computation across thousands of storage nodes for faster results.</div>
+      </div>
+    </div>
+
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--purple-light); color: var(--purple);">&#9881;</span> Non-Functional Requirements</h3>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Throughput Performance</div>
+        <div class="req-desc">Deliver up to 5x the throughput of standard MySQL and 3x the throughput of standard PostgreSQL on the same hardware.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">High Availability (99.99% SLA)</div>
+        <div class="req-desc">Maintain 99.99% uptime SLA with automatic failover, self-healing storage, and continuous backup to S3.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Storage Auto-Scaling</div>
+        <div class="req-desc">Automatically grow storage from 10 GB to 128 TB in 10 GB increments with no downtime or performance impact.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Six-Way Replication</div>
+        <div class="req-desc">Replicate data 6 ways across 3 Availability Zones, tolerating loss of 2 copies for writes and 3 copies for reads without outage.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Fast Failover</div>
+        <div class="req-desc">Complete automatic failover to a read replica in under 30 seconds, with DNS propagation and connection draining handled transparently.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Continuous Backup to S3</div>
+        <div class="req-desc">Continuously back up data to Amazon S3 with point-in-time recovery, maintaining a 35-day backup retention window by default.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">Encryption &amp; Compliance</div>
+        <div class="req-desc">Support AES-256 encryption at rest, TLS in transit, and compliance with SOC, PCI-DSS, HIPAA, and FedRAMP standards.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 8: Scaling & Trade-offs -->
 <section class="section" id="scaling">
   <div class="section-header">
-    <h2><span class="section-number">7</span> Scaling & Trade-offs</h2>
+    <h2><span class="section-number">8</span> Scaling & Trade-offs</h2>
     <p>Capacity planning estimates and architectural trade-offs for Aurora deployments.</p>
   </div>
 

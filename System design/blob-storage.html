@@ -804,6 +804,26 @@
 
     .nav-dot:hover::after { opacity: 1; }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
+
     @media (max-width: 1024px) {
       .concept-grid, .tradeoffs-grid, .usecases-grid, .internals-grid {
         grid-template-columns: 1fr;
@@ -837,6 +857,7 @@
   <div class="nav-dot" data-label="Request Flow" onclick="scrollToSection('sequence')"></div>
   <div class="nav-dot" data-label="Alternatives" onclick="scrollToSection('alternatives')"></div>
   <div class="nav-dot" data-label="Tradeoffs" onclick="scrollToSection('tradeoffs')"></div>
+  <div class="nav-dot" data-label="Requirements" onclick="scrollToSection('requirements')"></div>
   <div class="nav-dot" data-label="Decision Guide" onclick="scrollToSection('decision')"></div>
 </nav>
 
@@ -1623,6 +1644,100 @@ Data transfer out:        500 TB × $90/TB      = <span class="string">$45,000</
     </div>
   </section>
 
+  <!-- SECTION: Requirements -->
+<section id="requirements" class="section">
+  <div class="container">
+    <h2 class="section-title">Functional & Non-Functional Requirements</h2>
+    <p class="section-subtitle" style="color: var(--text-muted, var(--text-secondary)); font-size: 1.05rem; margin-bottom: 28px;">Essential requirements for designing a highly durable, scalable blob storage system that handles objects from bytes to terabytes.</p>
+
+    <div class="req-summary">
+      <div class="req-summary-card"><div class="metric" style="color: var(--accent, #4f6ef7);">11 Nines</div><div class="label">Durability (99.999999999%)</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--green, #22c55e);">99.99%</div><div class="label">Availability SLA</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--purple, #8b5cf6);">5 TB</div><div class="label">Max Object Size</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--orange, #f59e0b);">7+7</div><div class="label">FR + NFR Count</div></div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--accent-light, #e8ecff); color: var(--accent, #4f6ef7);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Object Upload &amp; Download</div>
+          <div class="req-desc">Support PUT/GET operations for objects with configurable content types, metadata, and server-side checksums (MD5, SHA-256) for integrity verification.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Multipart Upload</div>
+          <div class="req-desc">Enable parallel multipart uploads for large files (up to 5TB), with resumable uploads, part-level retry, and automatic assembly upon completion.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Object Versioning</div>
+          <div class="req-desc">Maintain multiple versions of objects with version IDs, enabling rollback to previous versions and protection against accidental overwrites or deletions.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Access Control</div>
+          <div class="req-desc">Enforce fine-grained access control through bucket policies, ACLs, and IAM policies with support for pre-signed URLs for temporary access grants.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Metadata &amp; Tagging</div>
+          <div class="req-desc">Attach custom key-value metadata and tags to objects for classification, search, lifecycle management, and cost allocation tracking.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Lifecycle Policies</div>
+          <div class="req-desc">Define automated lifecycle rules to transition objects between storage tiers (Standard to IA to Glacier) or expire objects after configurable periods.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Cross-Region Replication</div>
+          <div class="req-desc">Replicate objects asynchronously across geographic regions for disaster recovery, compliance requirements, and reduced latency for global users.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: #f5f3ff; color: #7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Eleven-Nines Durability</div>
+          <div class="req-desc">Achieve 99.999999999% (11 nines) annual durability through erasure coding, multi-AZ replication, and continuous integrity checking with automatic repair.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">High Availability</div>
+          <div class="req-desc">Deliver 99.99% availability SLA with automatic failover across availability zones, request retries, and consistent hashing for data distribution.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Massive Object Support</div>
+          <div class="req-desc">Handle individual objects up to 5TB in size, with unlimited total storage capacity and linear performance scaling regardless of bucket size.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Low Latency First-Byte</div>
+          <div class="req-desc">Deliver first-byte latency under 100ms for standard storage class, with S3 Transfer Acceleration and CloudFront integration for global edge delivery.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Cost-Efficient Tiering</div>
+          <div class="req-desc">Provide multiple storage tiers (Standard, IA, One Zone-IA, Glacier, Deep Archive) with up to 95% cost reduction for infrequently accessed data.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Encryption &amp; Compliance</div>
+          <div class="req-desc">Support server-side encryption (SSE-S3, SSE-KMS, SSE-C) and client-side encryption, with Object Lock for WORM compliance and audit logging via CloudTrail.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Throughput Scalability</div>
+          <div class="req-desc">Support 5,500+ GET and 3,500+ PUT requests per second per prefix, with automatic partitioning for high-throughput workloads and no pre-provisioning.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
   <!-- SECTION: Decision Guide -->
   <section id="decision">
     <div class="section-header">
@@ -2007,7 +2122,7 @@ function scrollToSection(id) {
 }
 
 // Active nav dot on scroll
-const sections = ['overview', 'architecture', 's3-deep-dive', 'storage-classes', 'usecases', 'sequence', 'alternatives', 'tradeoffs', 'decision'];
+const sections = ['overview', 'architecture', 's3-deep-dive', 'storage-classes', 'usecases', 'sequence', 'alternatives', 'tradeoffs', 'requirements', 'decision'];
 const navDots = document.querySelectorAll('.nav-dot');
 
 window.addEventListener('scroll', () => {

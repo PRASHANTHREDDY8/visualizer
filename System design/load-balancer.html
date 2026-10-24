@@ -112,6 +112,26 @@
       font-size: 14px;
     }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
+
     /* Architecture Diagram */
     .arch-diagram {
       background: var(--surface);
@@ -922,6 +942,98 @@
           <div class="demo-requests" id="demoReqVisual"></div>
           <div class="demo-lb-node">Load Balancer</div>
           <div class="demo-servers" id="demoServerVisual"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Functional & Non-Functional Requirements -->
+  <section id="requirements">
+    <h2><span class="icon">&#128203;</span> Functional & Non-Functional Requirements</h2>
+    <p style="color: var(--text-muted); margin-bottom: 24px;">Core requirements for building a reliable, high-performance load balancing infrastructure that handles millions of concurrent connections.</p>
+
+    <div class="req-summary">
+      <div class="req-summary-card"><div class="metric" style="color: var(--accent);">&lt;1ms</div><div class="label">Added Latency</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--green);">99.999%</div><div class="label">Uptime SLA</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--purple);">7</div><div class="label">Functional Requirements</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--orange);">7</div><div class="label">Non-Functional Requirements</div></div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--accent-light); color: var(--accent);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Traffic Distribution Algorithms</div>
+          <div class="req-desc">Support multiple load balancing algorithms including round-robin, least-connections, weighted round-robin, IP-hash, and consistent hashing with configurable selection per service.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Health Check Probes</div>
+          <div class="req-desc">Perform active (HTTP/TCP/gRPC) and passive health checks on backend servers at configurable intervals, automatically removing unhealthy targets from the rotation.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">SSL/TLS Termination</div>
+          <div class="req-desc">Terminate TLS at the load balancer with certificate management, supporting SNI for multi-domain hosting and optional re-encryption to backends.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Session Persistence</div>
+          <div class="req-desc">Maintain sticky sessions via cookies, source IP, or custom headers to route subsequent requests from the same client to the same backend server.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Connection Draining</div>
+          <div class="req-desc">Gracefully drain active connections from a backend server before removal, allowing in-flight requests to complete within a configurable timeout window.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">L4/L7 Routing</div>
+          <div class="req-desc">Support both Layer 4 (TCP/UDP) and Layer 7 (HTTP/HTTPS) load balancing with content-based routing using URL paths, headers, and query parameters.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Dynamic Backend Registration</div>
+          <div class="req-desc">Allow backends to register/deregister dynamically via service discovery (Consul, etcd) or API calls, enabling auto-scaling integration without manual configuration.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: #f5f3ff; color: #7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Ultra-Low Latency</div>
+          <div class="req-desc">Add less than 1ms of forwarding latency per request, with P99 latency under 2ms even at peak throughput of millions of requests per second.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">Massive Concurrency</div>
+          <div class="req-desc">Handle millions of concurrent TCP connections and hundreds of thousands of new connections per second using event-driven I/O (epoll/kqueue).</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Five-Nines Availability</div>
+          <div class="req-desc">Achieve 99.999% uptime (5.26 min/year downtime) through active-passive or active-active HA pairs with sub-second VRRP/BGP failover.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Zero-Downtime Configuration</div>
+          <div class="req-desc">Apply configuration changes (new backends, updated weights, TLS certs) without dropping existing connections or requiring a restart (hot reload).</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">DDoS Resilience</div>
+          <div class="req-desc">Withstand volumetric DDoS attacks with SYN flood protection, connection rate limiting, and integration with upstream scrubbing services.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Observability</div>
+          <div class="req-desc">Export real-time metrics (RPS, latency percentiles, error rates, active connections) to Prometheus/Grafana with per-backend granularity and access logging.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Horizontal Scalability</div>
+          <div class="req-desc">Scale horizontally via DNS round-robin or Anycast, distributing load across multiple LB instances without a single point of failure.</div>
         </div>
       </div>
     </div>

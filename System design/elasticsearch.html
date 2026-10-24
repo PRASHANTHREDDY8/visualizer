@@ -626,6 +626,26 @@
     .delay-1 { animation-delay: 0.1s; }
     .delay-2 { animation-delay: 0.2s; }
     .delay-3 { animation-delay: 0.3s; }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -646,6 +666,7 @@
       <li><a href="#usecases">Use Cases</a></li>
       <li><a href="#pitfalls">Pitfalls</a></li>
       <li><a href="#practices">Best Practices</a></li>
+      <li><a href="#requirements">Requirements</a></li>
       <li><a href="#scaling">Scaling</a></li>
     </ul>
   </div>
@@ -1120,6 +1141,113 @@
       <p>Proven guidelines for designing, implementing, and operating Elasticsearch clusters</p>
     </div>
     <div id="practices-container"></div>
+  </section>
+
+  <!-- Section: Functional & Non-Functional Requirements -->
+  <section id="requirements">
+    <div class="section-header">
+      <h2>Functional &amp; Non-Functional Requirements</h2>
+      <p>Core capabilities and quality attributes for distributed search and analytics with Elasticsearch</p>
+    </div>
+
+    <div class="req-summary">
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--primary-dark);">&lt;100ms</div>
+        <div class="label">Search Latency</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--accent);">Petabytes</div>
+        <div class="label">Index Scale</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--info);">99.9%</div>
+        <div class="label">Availability</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--purple);">Real-Time</div>
+        <div class="label">Near-RT Indexing</div>
+      </div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--accent-light); color: var(--accent);">F</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Full-Text Search with Relevance Scoring</div>
+          <div class="req-desc">Execute full-text search queries with BM25 relevance ranking, supporting phrase matching, fuzzy search, synonyms, and custom scoring functions.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Inverted Index Architecture</div>
+          <div class="req-desc">Store data in inverted indices mapping terms to documents, enabling O(1) term lookups and sub-second search across billions of documents.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Query DSL</div>
+          <div class="req-desc">Comprehensive JSON-based query language supporting bool (must/should/must_not/filter), match, term, range, nested, and aggregation queries with composable structure.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Index Management</div>
+          <div class="req-desc">Create, update, delete, and manage indices with configurable shard count, replica settings, lifecycle policies (ILM), and index templates for consistent configuration.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Mappings &amp; Analyzers</div>
+          <div class="req-desc">Define field types (text, keyword, date, geo_point) and custom analyzers (tokenizers, filters) to control how documents are indexed and searched.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Near-Real-Time Indexing</div>
+          <div class="req-desc">Documents become searchable within 1 second of indexing (configurable refresh interval), balancing search freshness with indexing throughput.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Cluster Management</div>
+          <div class="req-desc">Distribute data across nodes with automatic shard allocation, master election, node roles (master, data, ingest, coordinating), and rolling restart capabilities.</div>
+        </div>
+      </div>
+
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--purple-light); color: var(--purple);">NF</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Search Latency (&lt;100ms)</div>
+          <div class="req-desc">Return search results in under 100ms for most queries through inverted indices, caching (query cache, request cache), and optimized data structures.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">Horizontal Scaling via Sharding</div>
+          <div class="req-desc">Scale horizontally by distributing index shards across nodes; add nodes to increase capacity, throughput, and resilience without downtime.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">High Availability (99.9%)</div>
+          <div class="req-desc">Replica shards on separate nodes ensure continued search availability during node failures, with automatic promotion of replicas to primary shards.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Automatic Shard Rebalancing</div>
+          <div class="req-desc">Automatically redistribute shards across nodes when cluster topology changes, maintaining balanced load without manual intervention.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Bulk Indexing Throughput</div>
+          <div class="req-desc">Bulk API supports indexing thousands of documents per second per node, with configurable batch sizes, refresh intervals, and replica pausing for optimal throughput.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Circuit Breakers for Memory</div>
+          <div class="req-desc">Configurable circuit breakers (fielddata, request, in-flight) prevent out-of-memory errors by rejecting requests that would exceed memory thresholds.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Snapshot &amp; Restore</div>
+          <div class="req-desc">Create point-in-time snapshots to S3, Azure Blob, GCS, or shared filesystem for backup, disaster recovery, and cross-cluster data migration.</div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Section 7: Scaling & Trade-offs -->

@@ -665,6 +665,26 @@
       .good-bad { grid-template-columns: 1fr; }
       nav .logo { display: none; }
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -679,6 +699,7 @@
     <a href="#use-cases" onclick="scrollToSection(event,'use-cases')">Use Cases & Pitfalls</a>
     <a href="#best-practices" onclick="scrollToSection(event,'best-practices')">Best Practices</a>
     <a href="#scaling" onclick="scrollToSection(event,'scaling')">Scaling</a>
+    <a href="#requirements" onclick="scrollToSection(event,'requirements')">Requirements</a>
     <a href="#playground" onclick="scrollToSection(event,'playground')">Playground</a>
   </div>
 </nav>
@@ -1674,9 +1695,115 @@ Bandwidth = 7,000 &times; 2 KB = <span class="num">14 MB/s &asymp; 112 Mbps</spa
   </div>
 </section>
 
-<!-- ===== SECTION 8: INTERACTIVE PLAYGROUND ===== -->
-<section id="playground">
+<!-- ===== SECTION 8: FUNCTIONAL & NON-FUNCTIONAL REQUIREMENTS ===== -->
+<section id="requirements">
   <div class="section-label">Section 8</div>
+  <h2 class="section-title">Functional & Non-Functional Requirements</h2>
+  <p class="section-desc">Core design principles and quality attributes for building robust, scalable REST APIs</p>
+
+  <div class="req-summary">
+    <div class="req-summary-card"><div class="metric" style="color:var(--accent);">9</div><div class="label">Functional Reqs</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--purple);">7</div><div class="label">Non-Functional Reqs</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--green);">&lt;200ms</div><div class="label">p95 Latency</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--amber);">Backward</div><div class="label">Compatible</div></div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9776;</span> Functional Requirements</h3>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Resource-oriented URLs</div>
+        <div class="req-desc">Design intuitive, hierarchical URL structures that represent resources as nouns, supporting nested relationships and collection endpoints.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Proper HTTP Methods</div>
+        <div class="req-desc">Implement correct semantic mapping of CRUD operations to HTTP methods: GET (read), POST (create), PUT (full update), PATCH (partial update), DELETE (remove).</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Meaningful Status Codes</div>
+        <div class="req-desc">Return appropriate HTTP status codes (2xx success, 3xx redirect, 4xx client error, 5xx server error) with consistent semantics across all endpoints.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Pagination Support</div>
+        <div class="req-desc">Implement cursor-based and offset-based pagination with configurable page sizes, total count headers, and navigation links (next, prev, first, last).</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Filtering & Sorting</div>
+        <div class="req-desc">Support query parameter-based filtering (equality, range, search) and multi-field sorting with clear, consistent syntax across all collection endpoints.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">HATEOAS</div>
+        <div class="req-desc">Include hypermedia links in responses to guide clients through available actions and state transitions without hardcoded URL knowledge.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">API Versioning</div>
+        <div class="req-desc">Support version management through URL path (/v1/), custom headers, or query parameters with clear deprecation policies and migration guides.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">Content Negotiation</div>
+        <div class="req-desc">Handle Accept and Content-Type headers for multiple formats (JSON, XML, CSV) with proper charset and encoding support.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-09</div>
+        <div class="req-title">Bulk Operations</div>
+        <div class="req-desc">Support batch create, update, and delete operations to minimize round trips, with partial success handling and per-item error reporting.</div>
+      </div>
+    </div>
+
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--purple-light);color:var(--purple);">&#9881;</span> Non-Functional Requirements</h3>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Response Time</div>
+        <div class="req-desc">Achieve less than 200ms response time at p95 for standard CRUD operations under normal load conditions.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Rate Limiting</div>
+        <div class="req-desc">Implement tiered rate limiting with clear headers (X-RateLimit-Limit, Remaining, Reset) and 429 responses to protect against abuse.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Idempotent Operations</div>
+        <div class="req-desc">Ensure PUT, DELETE, and optionally POST (with idempotency keys) produce identical results when called multiple times.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Backward Compatibility</div>
+        <div class="req-desc">API changes must not break existing clients; additive changes only, with minimum 12-month deprecation windows for breaking changes.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">API Documentation</div>
+        <div class="req-desc">Auto-generate comprehensive OpenAPI/Swagger documentation with examples, schemas, and interactive testing capabilities.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Consistent Error Format</div>
+        <div class="req-desc">Return structured error responses with error code, human-readable message, field-level details, and documentation links across all endpoints.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">CORS Support</div>
+        <div class="req-desc">Implement configurable Cross-Origin Resource Sharing headers to enable secure browser-based API access from approved origins.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 9: INTERACTIVE PLAYGROUND ===== -->
+<section id="playground">
+  <div class="section-label">Section 9</div>
   <h2 class="section-title">Interactive Playground</h2>
   <p class="section-desc">Hands-on tools to practice REST API design principles.</p>
 

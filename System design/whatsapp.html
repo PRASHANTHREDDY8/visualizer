@@ -505,6 +505,26 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
+        /* Requirements Section */
+        .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+        @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+        .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+        .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+        .req-item:hover { transform: translateX(4px); }
+        .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+        .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+        .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+        .req-item.functional .req-id { color: var(--accent); }
+        .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+        .req-item.nonfunctional .req-id { color: #7c3aed; }
+        .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+        .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+        .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+        .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
         /* Responsive */
         @media (max-width: 768px) {
             .container { padding: 1rem; }
@@ -526,6 +546,7 @@
             <a href="#usecases">Use Cases</a>
             <a href="#pitfalls">Pitfalls</a>
             <a href="#bestpractices">Best Practices</a>
+            <a href="#requirements">Requirements</a>
             <a href="#scaling">Scaling</a>
             <a href="#playground">Playground</a>
         </div>
@@ -992,6 +1013,122 @@
             <div class="practice">
                 <h4>Graceful degradation: shed presence before messages</h4>
                 <p>Under load, stop broadcasting presence/typing indicators first (low-value, high-volume). Message delivery is sacred — never shed it. This buys significant headroom.</p>
+            </div>
+        </div>
+
+        <!-- Section: Functional & Non-Functional Requirements -->
+        <div class="section" id="requirements">
+            <div class="section-header">
+                <h2>Functional &amp; Non-Functional Requirements</h2>
+            </div>
+            <p style="color:var(--text-muted);margin-bottom:1.5rem;">Core capabilities and quality attributes that define WhatsApp's messaging platform at global scale.</p>
+
+            <div class="req-summary">
+                <div class="req-summary-card">
+                    <div class="metric" style="color:var(--teal);">2B+</div>
+                    <div class="label">Daily Active Users</div>
+                </div>
+                <div class="req-summary-card">
+                    <div class="metric" style="color:var(--accent);">100B+</div>
+                    <div class="label">Messages Per Day</div>
+                </div>
+                <div class="req-summary-card">
+                    <div class="metric" style="color:var(--blue);">&lt;100ms</div>
+                    <div class="label">Delivery Latency</div>
+                </div>
+                <div class="req-summary-card">
+                    <div class="metric" style="color:var(--purple);">99.99%</div>
+                    <div class="label">Availability Target</div>
+                </div>
+            </div>
+
+            <div class="req-grid">
+                <div class="req-column">
+                    <h3><span class="req-icon" style="background:var(--accent-light);color:var(--teal);">&#9889;</span> Functional Requirements</h3>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-01</div>
+                        <div class="req-title">End-to-End Encrypted Messaging</div>
+                        <div class="req-desc">All messages must be encrypted using the Signal Protocol (Double Ratchet) so that only sender and receiver can read content. The server never has access to plaintext.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-02</div>
+                        <div class="req-title">Group Chats (up to 1024 Members)</div>
+                        <div class="req-desc">Support group conversations with up to 1024 participants, including admin controls, member management, and per-group encryption key distribution via Sender Keys.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-03</div>
+                        <div class="req-title">Voice &amp; Video Calls</div>
+                        <div class="req-desc">Real-time voice and video calling with end-to-end encryption, including group calls. Uses WebRTC with SRTP for media transport and TURN/STUN for NAT traversal.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-04</div>
+                        <div class="req-title">File &amp; Media Sharing</div>
+                        <div class="req-desc">Support sharing images, videos, documents, and audio files up to 2GB. Media is encrypted client-side, uploaded to blob storage, and a reference link is sent in the message.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-05</div>
+                        <div class="req-title">Message Status (Sent, Delivered, Read)</div>
+                        <div class="req-desc">Provide real-time delivery receipts: single gray check (sent to server), double gray check (delivered to device), double blue check (read by recipient).</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-06</div>
+                        <div class="req-title">Disappearing Messages</div>
+                        <div class="req-desc">Allow users to set messages to auto-delete after a configurable duration (24 hours, 7 days, or 90 days). Deletion is enforced client-side with server-side TTL metadata.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-07</div>
+                        <div class="req-title">Message Forwarding Limits</div>
+                        <div class="req-desc">Restrict forwarding of frequently-forwarded messages to one chat at a time to limit viral misinformation spread. Track forward count metadata per message.</div>
+                    </div>
+                    <div class="req-item functional">
+                        <div class="req-id">FR-08</div>
+                        <div class="req-title">Multi-Device Support</div>
+                        <div class="req-desc">Allow up to 4 companion devices (web, desktop) to operate independently without the phone being online, using per-device encryption keys and message fan-out.</div>
+                    </div>
+                </div>
+                <div class="req-column">
+                    <h3><span class="req-icon" style="background:#f5f3ff;color:#7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-01</div>
+                        <div class="req-title">Ultra-Low Message Delivery Latency</div>
+                        <div class="req-desc">Messages must be delivered in under 100ms (p99) for online recipients. Achieved via persistent WebSocket connections and geographically distributed edge servers.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-02</div>
+                        <div class="req-title">Massive Scale (2B+ DAU)</div>
+                        <div class="req-desc">Support 2 billion+ daily active users with horizontal scaling across data centers. Erlang/BEAM VM chosen for its ability to handle millions of concurrent lightweight processes per node.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-03</div>
+                        <div class="req-title">Extreme Throughput (100B+ Messages/Day)</div>
+                        <div class="req-desc">Handle 100 billion+ messages daily (~1.15M messages/second sustained). Requires efficient serialization (Protobuf), connection multiplexing, and minimal per-message overhead.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-04</div>
+                        <div class="req-title">Offline Message Queuing</div>
+                        <div class="req-desc">Queue messages for offline users with guaranteed delivery upon reconnect. Messages are stored transiently (up to 30 days) and delivered in order with deduplication.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-05</div>
+                        <div class="req-title">Minimal Bandwidth Usage</div>
+                        <div class="req-desc">Optimize for low-bandwidth and high-latency networks common in emerging markets. Use binary protocols, aggressive compression, and incremental sync to minimize data transfer.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-06</div>
+                        <div class="req-title">High Availability (99.99%)</div>
+                        <div class="req-desc">Achieve 99.99% uptime (~52 minutes downtime/year). Multi-region active-active deployment with automatic failover, no single points of failure, and graceful degradation under load.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-07</div>
+                        <div class="req-title">Data Privacy &amp; Compliance</div>
+                        <div class="req-desc">Zero-knowledge architecture where the server cannot read message content. Comply with GDPR, local data residency laws, and provide account deletion with full data erasure.</div>
+                    </div>
+                    <div class="req-item nonfunctional">
+                        <div class="req-id">NFR-08</div>
+                        <div class="req-title">Fault Tolerance &amp; Graceful Degradation</div>
+                        <div class="req-desc">Under extreme load, shed low-priority features (presence, typing indicators) before affecting core messaging. Circuit breakers and bulkheads isolate failures across subsystems.</div>
+                    </div>
+                </div>
             </div>
         </div>
 

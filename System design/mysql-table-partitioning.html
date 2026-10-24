@@ -612,6 +612,26 @@
       .cards-grid { grid-template-columns: 1fr; }
       nav .nav-inner { gap: 0.5rem; }
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -627,6 +647,7 @@
       <a href="#comparisons">Comparisons</a>
       <a href="#usecases">Use Cases & Pitfalls</a>
       <a href="#bestpractices">Best Practices</a>
+      <a href="#requirements">Requirements</a>
       <a href="#scaling">Scaling</a>
     </div>
   </nav>
@@ -1085,7 +1106,113 @@
     </div>
   </section>
 
-  <!-- Section 8: Scaling -->
+  <!-- Section 8: Functional & Non-Functional Requirements -->
+  <section id="requirements">
+    <h2>Functional &amp; Non-Functional Requirements</h2>
+    <p class="section-subtitle">Core capabilities and quality attributes for a production MySQL partitioning strategy.</p>
+
+    <div class="req-summary">
+      <div class="req-summary-card">
+        <div class="metric" style="color:var(--accent);">7</div>
+        <div class="label">Partition Types Supported</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color:var(--green);">10x</div>
+        <div class="label">Query Speedup via Pruning</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color:var(--purple);">1024</div>
+        <div class="label">Max Partitions per Table</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color:var(--amber);">O(1)</div>
+        <div class="label">Partition Drop Complexity</div>
+      </div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9889;</span> Functional Requirements</h3>
+
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Range Partitioning</div>
+          <div class="req-desc">Support partitioning rows by continuous value ranges (e.g., date ranges, numeric IDs). Enable PARTITION BY RANGE with expressions and COLUMNS syntax for multi-column ranges.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">List Partitioning</div>
+          <div class="req-desc">Support partitioning by discrete value lists (e.g., region codes, status values). Handle PARTITION BY LIST with both single values and COLUMNS for composite keys.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Hash Partitioning</div>
+          <div class="req-desc">Distribute rows evenly across partitions using a hash function on the partition key. Support PARTITION BY HASH for uniform data distribution when range/list is not applicable.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Key Partitioning</div>
+          <div class="req-desc">Support PARTITION BY KEY using MySQL's internal hashing on one or more columns. Automatically use the primary key when no column is specified for simplified configuration.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Sub-partitioning (Composite)</div>
+          <div class="req-desc">Allow two-level partitioning by combining range or list with hash or key sub-partitions. Enable fine-grained data distribution for complex access patterns.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Partition Pruning</div>
+          <div class="req-desc">Automatically eliminate irrelevant partitions during query execution. The optimizer must detect partition key conditions in WHERE clauses and scan only matching partitions.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Partition Management Operations</div>
+          <div class="req-desc">Support ADD, DROP, MERGE, SPLIT, and REORGANIZE partition DDL operations. Enable online partition management without full table locks where possible (InnoDB).</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:#f5f3ff;color:#7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Query Performance via Pruning</div>
+          <div class="req-desc">Queries that include the partition key in the WHERE clause should achieve 10x or greater performance improvement through partition pruning, scanning only relevant partitions.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">Reduced Lock Contention</div>
+          <div class="req-desc">Partitioning must reduce row-level lock contention by isolating writes to specific partitions. Concurrent DML on different partitions should not cause cross-partition locking.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Faster Bulk Operations</div>
+          <div class="req-desc">Bulk deletes via ALTER TABLE DROP PARTITION must execute in O(1) time by removing the partition file, not scanning and deleting individual rows. Enables instant data purge.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Efficient Data Archival</div>
+          <div class="req-desc">Support ALTER TABLE EXCHANGE PARTITION to swap a partition with a standalone table for near-instant archival. Enable data lifecycle management without downtime.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Minimal Non-Partitioned Query Overhead</div>
+          <div class="req-desc">Queries that do not include the partition key must not suffer more than 5-10% performance degradation compared to a non-partitioned table, even with 100+ partitions.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Transparent Application Compatibility</div>
+          <div class="req-desc">Partitioning must be transparent to the application layer. All standard SQL queries, joins, and transactions must work without modification after partitioning a table.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Operational Monitoring</div>
+          <div class="req-desc">Expose partition metadata via INFORMATION_SCHEMA.PARTITIONS. Provide per-partition row counts, data size, and index size for capacity planning and imbalance detection.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 9: Scaling -->
   <section id="scaling">
     <h2>Scaling & Trade-offs</h2>
     <p class="section-subtitle">How partitioning handles growth and the trade-offs involved</p>

@@ -435,6 +435,26 @@
       color: var(--text);
     }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
+
     /* Scaling Section */
     .scaling-grid {
       display: grid;
@@ -655,6 +675,7 @@
   <a href="#comparisons">Comparisons</a>
   <a href="#use-cases">Use Cases</a>
   <a href="#best-practices">Best Practices</a>
+  <a href="#requirements">Requirements</a>
   <a href="#scaling">Scaling</a>
   <a href="#playground">Playground</a>
 </nav>
@@ -1188,6 +1209,103 @@
     <div class="practice-card">
       <h4>Compute Savings Plans</h4>
       <p>1-year or 3-year commitments save 20-50% on Fargate. If you have steady-state baseline, commit that portion and use on-demand for bursts above.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Requirements Section -->
+<section class="section" id="requirements">
+  <h2 class="section-title">Functional &amp; Non-Functional Requirements</h2>
+  <p class="section-subtitle">Key capabilities and quality attributes for serverless container workloads on AWS Fargate.</p>
+
+  <div class="req-summary">
+    <div class="req-summary-card"><div class="metric">0</div><div class="label">Servers to Manage</div></div>
+    <div class="req-summary-card"><div class="metric">&lt;60s</div><div class="label">Cold Start Time</div></div>
+    <div class="req-summary-card"><div class="metric">99.99%</div><div class="label">SLA</div></div>
+    <div class="req-summary-card"><div class="metric">Per-Second</div><div class="label">Billing Granularity</div></div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9889;</span> Functional Requirements</h3>
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Serverless Containers</div>
+        <div class="req-desc">Run containers without provisioning or managing EC2 instances. Focus on application logic, not infrastructure.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Resource Allocation</div>
+        <div class="req-desc">Task-level CPU (0.25 to 16 vCPU) and memory (0.5 to 120 GB) allocation. Fine-grained resource sizing per container.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Platform Versions</div>
+        <div class="req-desc">Managed runtime versions with kernel, container runtime, and agent updates. Stable and latest platform version tracks.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Ephemeral Storage</div>
+        <div class="req-desc">Configurable ephemeral storage up to 200 GB per task. Shared among containers in the same task. Encrypted by default.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">VPC Networking</div>
+        <div class="req-desc">Each task gets its own ENI with a private IP in your VPC. Security groups, NACLs, and VPC Flow Logs apply per task.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">ECS &amp; EKS Support</div>
+        <div class="req-desc">Works with both ECS and EKS orchestrators. Run Kubernetes pods on Fargate without node management.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Spot Pricing</div>
+        <div class="req-desc">Fargate Spot for fault-tolerant workloads at up to 70% discount. 2-minute interruption notice before task termination.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">Graviton Support</div>
+        <div class="req-desc">Run containers on AWS Graviton (ARM64) processors for up to 40% better price-performance versus x86.</div>
+      </div>
+    </div>
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:#f5f3ff;color:#7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">No Infrastructure Management</div>
+        <div class="req-desc">Zero operational overhead for server patching, scaling, or AMI management. AWS handles all host-level maintenance.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Startup Latency</div>
+        <div class="req-desc">Cold start under 60 seconds. SOCI (Seekable OCI) index for lazy-loading large container images reduces startup to ~5 seconds.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Per-Second Billing</div>
+        <div class="req-desc">Pay only for compute resources used, billed per second with a 1-minute minimum. No charges for stopped tasks.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">SLA</div>
+        <div class="req-desc">99.99% availability SLA. Tasks automatically placed across multiple AZs for resilience.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Security Isolation</div>
+        <div class="req-desc">Each task runs in its own microVM (Firecracker). Kernel-level isolation between tasks from different customers.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Network Isolation</div>
+        <div class="req-desc">Dedicated ENI per task provides full VPC networking. No shared networking between tasks. PrivateLink supported.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">Compliance</div>
+        <div class="req-desc">FedRAMP, HIPAA, SOC, PCI, ISO compliant. Encryption at rest and in transit. Integration with AWS KMS for key management.</div>
+      </div>
     </div>
   </div>
 </section>

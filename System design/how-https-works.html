@@ -665,6 +665,26 @@
       0% { transform: translateY(-3px); }
       100% { transform: translateY(0); }
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -678,6 +698,7 @@
       <a href="#comparisons" class="nav-link" data-section="comparisons">Comparisons</a>
       <a href="#usecases" class="nav-link" data-section="usecases">Use Cases</a>
       <a href="#bestpractices" class="nav-link" data-section="bestpractices">Best Practices</a>
+      <a href="#requirements" class="nav-link" data-section="requirements">Requirements</a>
       <a href="#scaling" class="nav-link" data-section="scaling">Scaling</a>
     </div>
   </nav>
@@ -1110,7 +1131,115 @@
     </div>
   </section>
 
-  <!-- Section 7: Scaling & Trade-offs -->
+  <!-- Section 7: Functional & Non-Functional Requirements -->
+  <section id="requirements">
+    <div class="section-header">
+      <h2>Functional &amp; Non-Functional Requirements</h2>
+      <p>Core capabilities and quality attributes that a production HTTPS implementation must satisfy.</p>
+    </div>
+
+    <div class="req-summary">
+      <div class="req-summary-card">
+        <div class="metric" style="color:var(--accent);">&lt;100ms</div>
+        <div class="label">TLS Handshake Overhead</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color:var(--green);">TLS 1.3</div>
+        <div class="label">Minimum Protocol Version</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color:var(--purple);">0-RTT</div>
+        <div class="label">Session Resumption</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color:var(--amber);">ECDHE</div>
+        <div class="label">Forward Secrecy Algorithm</div>
+      </div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9889;</span> Functional Requirements</h3>
+
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">TLS Handshake Negotiation</div>
+          <div class="req-desc">Support full TLS 1.3 handshake flow including ClientHello, ServerHello, and key exchange. Fall back to TLS 1.2 for legacy clients with configurable minimum version.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Certificate Validation</div>
+          <div class="req-desc">Validate the complete CA certificate chain from leaf to root. Verify domain name matching, expiration dates, revocation status, and Certificate Transparency (CT) log inclusion.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Symmetric Encryption</div>
+          <div class="req-desc">Encrypt all application data using AES-256-GCM after key exchange. Ensure authenticated encryption with associated data (AEAD) to prevent tampering.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Certificate Type Support</div>
+          <div class="req-desc">Support Domain Validated (DV), Organization Validated (OV), and Extended Validation (EV) certificates. Handle wildcard and multi-domain (SAN) certificates correctly.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">HSTS Enforcement</div>
+          <div class="req-desc">Send Strict-Transport-Security headers with appropriate max-age (minimum 1 year). Support includeSubDomains and preload directives for HSTS preload list inclusion.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Certificate Pinning</div>
+          <div class="req-desc">Support HTTP Public Key Pinning (HPKP) or application-level pinning to bind specific certificates or public keys, preventing MITM attacks from rogue CAs.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">OCSP Stapling</div>
+          <div class="req-desc">Server must staple OCSP responses to the TLS handshake, eliminating client-side revocation checks. Support must-staple extension for strict revocation enforcement.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:#f5f3ff;color:#7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Handshake Latency</div>
+          <div class="req-desc">TLS handshake must add less than 100ms overhead to connection establishment. TLS 1.3 should complete in 1-RTT, with 0-RTT resumption for returning clients.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">0-RTT Session Resumption</div>
+          <div class="req-desc">Support TLS 1.3 0-RTT early data for previously connected clients, reducing latency to zero round trips. Implement replay protection for idempotent requests only.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Forward Secrecy</div>
+          <div class="req-desc">Mandate Ephemeral Diffie-Hellman (ECDHE) key exchange to ensure forward secrecy. Compromise of long-term private key must not expose past session data.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Certificate Transparency</div>
+          <div class="req-desc">All issued certificates must be logged to at least two independent CT logs. Clients should verify Signed Certificate Timestamps (SCTs) to detect misissued certificates.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Minimal CPU Overhead</div>
+          <div class="req-desc">Leverage hardware AES-NI instructions to keep encryption CPU overhead below 2%. TLS processing should not be a bottleneck even at 100K+ concurrent connections.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Protocol Downgrade Protection</div>
+          <div class="req-desc">Prevent protocol downgrade attacks (POODLE, DROWN) by enforcing minimum TLS 1.2 and disabling SSLv3, RC4, and export ciphers. Use downgrade sentinels in ServerHello.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Automated Certificate Lifecycle</div>
+          <div class="req-desc">Support ACME protocol (Let's Encrypt) for automated certificate issuance, renewal, and deployment. Certificates must auto-renew at least 30 days before expiry.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 8: Scaling & Trade-offs -->
   <section id="scaling">
     <div class="section-header">
       <h2>Scaling & Trade-offs</h2>

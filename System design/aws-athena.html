@@ -639,6 +639,26 @@
     }
 
     .table-wrapper { overflow-x: auto; }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -655,6 +675,7 @@
     <a href="#comparisons" class="nav-link">Comparisons</a>
     <a href="#usecases" class="nav-link">Use Cases</a>
     <a href="#best-practices" class="nav-link">Best Practices</a>
+    <a href="#requirements" class="nav-link">Requirements</a>
     <a href="#scaling" class="nav-link">Scaling</a>
   </div>
 </nav>
@@ -1212,6 +1233,97 @@
         <div class="practice-item"><span class="practice-check">&#10003;</span><span>Colocate frequently joined tables in same S3 region</span></div>
         <div class="practice-item"><span class="practice-check">&#10003;</span><span>Use views to encapsulate common query patterns and enforce partitioning</span></div>
         <div class="practice-item"><span class="practice-check">&#10003;</span><span>Avoid regex-heavy queries on large datasets — pre-extract fields in ETL</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="requirements">
+    <h2 class="section-title">Functional & Non-Functional Requirements</h2>
+    <p class="section-subtitle" style="color: var(--text-muted, var(--text-secondary)); font-size: 1.05rem; margin-bottom: 28px;">Core requirements for AWS Athena as a serverless, interactive query service for analyzing data in Amazon S3 using standard SQL.</p>
+
+    <div class="req-summary">
+      <div class="req-summary-card"><div class="metric" style="color: var(--accent, #4f6ef7);">Serverless</div><div class="label">Infrastructure Model</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--green, #22c55e);">Per TB</div><div class="label">Pay-Per-Query</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--purple, #8b5cf6);">30 min</div><div class="label">Query Timeout</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--orange, #f59e0b);">7+7</div><div class="label">FR + NFR Count</div></div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--accent-light, #e8ecff); color: var(--accent, #4f6ef7);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">SQL Queries on S3 Data</div>
+          <div class="req-desc">Execute standard SQL (Presto/Trino-based) queries directly against data stored in Amazon S3 without loading data into a separate database or data warehouse.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Multi-Format Support</div>
+          <div class="req-desc">Query data in Parquet, ORC, CSV, JSON, Avro, and text formats with automatic schema inference and support for nested/complex data types.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">CTAS (Create Table As Select)</div>
+          <div class="req-desc">Transform query results into new tables with CTAS, supporting format conversion (CSV to Parquet), data partitioning, and compression in a single SQL statement.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Federated Queries</div>
+          <div class="req-desc">Query data across multiple sources (DynamoDB, RDS, Redshift, on-premises) using Lambda-based connectors with the Athena Federated Query SDK.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Partitioned Tables</div>
+          <div class="req-desc">Define and query partitioned tables with partition pruning to minimize data scanned, supporting Hive-style partitioning and partition projection for large partition spaces.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Glue Data Catalog Integration</div>
+          <div class="req-desc">Use AWS Glue Data Catalog as a persistent metadata store for table definitions, schemas, and partition information shared across Athena, EMR, and Redshift Spectrum.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Prepared Statements &amp; Views</div>
+          <div class="req-desc">Support parameterized prepared statements for SQL injection prevention and named views for query reuse, abstraction, and access control.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: #f5f3ff; color: #7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Serverless Architecture</div>
+          <div class="req-desc">Operate with zero infrastructure provisioning — no servers to manage, no capacity planning, and automatic resource allocation based on query complexity.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">Pay-Per-Query Pricing</div>
+          <div class="req-desc">Charge $5.00 per TB of data scanned, with cost optimization through columnar formats (Parquet/ORC) reducing scanned data by up to 90%.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Query Timeout &amp; Limits</div>
+          <div class="req-desc">Support queries up to 30 minutes with configurable workgroup-level data scan limits, concurrent query limits (20-200), and per-query result size limits.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Automatic Scaling</div>
+          <div class="req-desc">Scale query compute resources automatically without manual intervention, handling bursty analytics workloads and concurrent queries from multiple users.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Encryption &amp; Security</div>
+          <div class="req-desc">Encrypt data at rest (SSE-S3, SSE-KMS) and in transit (TLS). Integrate with IAM for fine-grained access control and Lake Formation for column-level security.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Result Caching</div>
+          <div class="req-desc">Cache query results for repeated queries, with configurable result reuse policies to avoid re-scanning data for identical queries within the cache TTL.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Workgroup Isolation</div>
+          <div class="req-desc">Isolate query workloads using workgroups with separate data scan limits, IAM policies, query result locations, and cost allocation tags.</div>
+        </div>
       </div>
     </div>
   </section>

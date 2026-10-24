@@ -710,6 +710,26 @@
       .playground-viz { grid-template-columns: 1fr; }
       .components-grid { grid-template-columns: 1fr; }
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--primary-light); border-left-color: var(--primary); }
+    .req-item.functional .req-id { color: var(--primary); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -730,6 +750,7 @@
   <a href="#pitfalls">Pitfalls</a>
   <a href="#practices">Best Practices</a>
   <a href="#scaling">Scaling</a>
+  <a href="#requirements">Requirements</a>
   <a href="#playground">Playground</a>
 </nav>
 
@@ -1317,7 +1338,118 @@
   </div>
 </div>
 
-<!-- Section 8: Interactive Playground -->
+<!-- Section 8: Functional & Non-Functional Requirements -->
+<div class="section" id="requirements">
+  <div class="section-header">
+    <h2>Functional &amp; Non-Functional Requirements</h2>
+    <p>Core platform capabilities and quality attributes for a global property rental marketplace</p>
+  </div>
+
+  <div class="req-summary">
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--primary);">10+</div>
+      <div class="label">Functional Reqs</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--purple);">6+</div>
+      <div class="label">Non-Functional Reqs</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--secondary);">&lt;300ms</div>
+      <div class="label">Search Latency</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--blue);">100M+</div>
+      <div class="label">Listings</div>
+    </div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--primary-light); color: var(--primary);">&#x2699;</span> Functional Requirements</h3>
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Property Listing &amp; Search</div>
+        <div class="req-desc">Enable hosts to list properties with photos, descriptions, and amenities; guests search by location, dates, price range, and filters.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Booking Management</div>
+        <div class="req-desc">Handle the full booking lifecycle: request, confirmation, modification, cancellation with configurable refund policies.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Host &amp; Guest Profiles</div>
+        <div class="req-desc">Manage user profiles with verification badges, hosting history, travel preferences, and trust scores.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Real-time Messaging</div>
+        <div class="req-desc">Provide in-app messaging between hosts and guests with read receipts, attachments, and automated translation.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Reviews &amp; Ratings</div>
+        <div class="req-desc">Enable bidirectional reviews (host-to-guest, guest-to-host) with star ratings, written feedback, and response capabilities.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Payment Processing</div>
+        <div class="req-desc">Handle split payments (guest charges, host payouts, service fees), multi-currency support, and secure escrow management.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Dynamic Pricing Suggestions</div>
+        <div class="req-desc">Provide AI-driven pricing recommendations based on demand, seasonality, local events, and comparable listings.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">Identity Verification</div>
+        <div class="req-desc">Multi-factor identity verification including government ID, phone, email, and social media account linking.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-09</div>
+        <div class="req-title">Instant Book</div>
+        <div class="req-desc">Allow qualified guests to book instantly without host approval, with configurable eligibility criteria per listing.</div>
+      </div>
+    </div>
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--purple-light); color: var(--purple);">&#x26A1;</span> Non-Functional Requirements</h3>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Search Performance</div>
+        <div class="req-desc">Search results must return within 300ms (p95) with relevant ranking across 100M+ listings worldwide.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Scalability</div>
+        <div class="req-desc">Support 100M+ active listings and handle peak booking loads during holidays and major events without degradation.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Multi-currency &amp; Localization</div>
+        <div class="req-desc">Support 70+ currencies, 60+ languages, and region-specific tax calculations with real-time exchange rates.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Booking Availability</div>
+        <div class="req-desc">99.99% uptime for booking flow; no double-bookings allowed under any concurrent access scenario.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Real-time Calendar Sync</div>
+        <div class="req-desc">Calendar updates must propagate within 2 seconds across all platforms (web, iOS, Android) and third-party integrations (iCal).</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Fraud Prevention</div>
+        <div class="req-desc">Detect and prevent fraudulent listings, fake reviews, payment fraud, and account takeovers using ML-based risk scoring.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 9: Interactive Playground -->
 <div class="section" id="playground">
   <div class="section-header">
     <h2>Interactive Playground</h2>

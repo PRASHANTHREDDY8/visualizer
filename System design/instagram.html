@@ -451,6 +451,26 @@ section > h2 .icon {
   margin-top: 0.5rem;
 }
 
+/* Requirements Section */
+.req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+@media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+.req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+.req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+.req-item:hover { transform: translateX(4px); }
+.req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+.req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+.req-item.functional { background: #fce4ec; border-left-color: var(--accent); }
+.req-item.functional .req-id { color: var(--accent); }
+.req-item.nonfunctional { background: #f3e5f5; border-left-color: var(--accent2); }
+.req-item.nonfunctional .req-id { color: var(--accent2); }
+.req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+.req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+.req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+.req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
 /* Playground */
 .playground-container {
   background: var(--surface);
@@ -618,6 +638,7 @@ section > h2 .icon {
     <a class="nav-link" href="#usecases">Use Cases</a>
     <a class="nav-link" href="#bestpractices">Best Practices</a>
     <a class="nav-link" href="#scaling">Scaling</a>
+    <a class="nav-link" href="#requirements">Requirements</a>
     <a class="nav-link" href="#playground">Playground</a>
   </div>
 </nav>
@@ -828,7 +849,103 @@ section > h2 .icon {
   </div>
 </section>
 
-<!-- Section 8: Playground -->
+<!-- Section 8: Requirements -->
+<section id="requirements">
+  <h2><span class="icon" style="background:#fce4ec;">&#128203;</span> Functional &amp; Non-Functional Requirements</h2>
+
+  <div class="req-summary">
+    <div class="req-summary-card"><div class="metric" style="background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">2B+</div><div class="label">Monthly Active Users</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--accent);">100M+</div><div class="label">Daily Photo Uploads</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--teal);">&lt;200ms</div><div class="label">Feed Load Time</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--green);">99.99%</div><div class="label">Availability Target</div></div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:#fce4ec;color:var(--accent);">&#9889;</span> Functional Requirements</h3>
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Photo &amp; Video Upload</div>
+        <div class="req-desc">Support photo/video uploads with filters, cropping, and multi-image carousels. Max video length 60s for feed, 90s for Reels.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Stories</div>
+        <div class="req-desc">24-hour ephemeral content with text overlays, stickers, polls, and interactive elements. Auto-archive after expiry.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Reels</div>
+        <div class="req-desc">Short-form video creation and discovery with audio tracks, effects, and algorithmic recommendation feed.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">News Feed Generation</div>
+        <div class="req-desc">Fan-out-on-write for followed accounts. Rank posts by engagement signals, recency, and relationship strength.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Follow/Unfollow</div>
+        <div class="req-desc">Asymmetric social graph with follow, unfollow, block, and restrict capabilities. Private account approval flow.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Direct Messaging</div>
+        <div class="req-desc">Real-time text, photo, video, and voice messaging. Group chats, disappearing messages, message reactions.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Explore &amp; Discover</div>
+        <div class="req-desc">Personalized content discovery using collaborative filtering and content-based recommendation. Trending hashtags and topics.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">Notifications</div>
+        <div class="req-desc">Push, in-app, and email notifications for likes, comments, follows, mentions, and story views. Configurable preferences.</div>
+      </div>
+    </div>
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:#f3e5f5;color:var(--accent2);">&#9881;</span> Non-Functional Requirements</h3>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Feed Latency</div>
+        <div class="req-desc">Feed load time under 200ms at p99. Pre-computed feed cache with incremental updates for active users.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Massive Scale</div>
+        <div class="req-desc">Support 2B+ monthly active users with 500M+ daily active users. Handle 100M+ photo uploads per day.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Media Delivery</div>
+        <div class="req-desc">Global CDN with adaptive bitrate streaming. Multiple resolution variants generated on upload. Edge caching for popular content.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">High Availability</div>
+        <div class="req-desc">99.99% uptime SLA. Multi-region deployment with automatic failover. Graceful degradation under load.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Infinite Scroll</div>
+        <div class="req-desc">Smooth pagination with cursor-based feed loading. Pre-fetch next page while user scrolls. No duplicate or missing posts.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Storage Efficiency</div>
+        <div class="req-desc">Deduplication of identical media. Tiered storage (hot/warm/cold) based on content age and access frequency.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">Data Consistency</div>
+        <div class="req-desc">Eventual consistency for social graph and feed. Strong consistency for direct messages and financial transactions (ads).</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 9: Playground -->
 <section id="playground">
   <h2><span class="icon" style="background:#fef3c7;">&#9881;</span> Interactive Playground</h2>
   <div class="playground-container">

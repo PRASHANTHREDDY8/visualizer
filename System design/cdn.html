@@ -590,6 +590,26 @@
       color: white;
     }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
     @media (max-width: 768px) {
       .container { padding: 1.5rem 1rem; }
       h1 { font-size: 2rem; }
@@ -614,6 +634,7 @@
     <a href="#use-cases">Use Cases</a>
     <a href="#best-practices">Best Practices</a>
     <a href="#scaling">Scaling</a>
+    <a href="#requirements">Requirements</a>
     <a href="#playground">Playground</a>
   </nav>
 
@@ -1204,6 +1225,124 @@
           <p style="margin-top:0.4rem;"><strong>Origin goes down:</strong> CDN serves stale cached content (if stale-if-error configured). Uncacheable requests fail. Origin shield reduces blast radius.</p>
           <p style="margin-top:0.4rem;"><strong>DNS failure:</strong> Users can't resolve CDN domain at all. Complete outage. Mitigate with low DNS TTLs and multiple DNS providers.</p>
           <p style="margin-top:0.4rem;"><strong>Cache poisoning:</strong> Attacker caches malicious response at edge. Affects all users until TTL expires or purge. Validate origin responses, sign content.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: Functional & Non-Functional Requirements -->
+    <section id="requirements">
+      <h2>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Functional &amp; Non-Functional Requirements
+      </h2>
+
+      <div class="req-summary">
+        <div class="req-summary-card">
+          <div class="metric" style="color: var(--accent);">&lt;50ms</div>
+          <div class="label">Global TTFB</div>
+        </div>
+        <div class="req-summary-card">
+          <div class="metric" style="color: var(--green);">99.99%</div>
+          <div class="label">Availability</div>
+        </div>
+        <div class="req-summary-card">
+          <div class="metric" style="color: var(--purple);">Tbps</div>
+          <div class="label">Bandwidth Scale</div>
+        </div>
+        <div class="req-summary-card">
+          <div class="metric" style="color: var(--blue);">&gt;95%</div>
+          <div class="label">Cache Hit Ratio</div>
+        </div>
+      </div>
+
+      <div class="req-grid">
+        <div class="req-column">
+          <h3>
+            <span class="req-icon" style="background: var(--accent-light); color: var(--accent);">&#9889;</span>
+            Functional Requirements
+          </h3>
+          <div class="req-item functional">
+            <div class="req-id">FR-01</div>
+            <div class="req-title">Edge Caching</div>
+            <div class="req-desc">Cache static and dynamic content at globally distributed edge locations. Reduce origin load and improve end-user latency.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-02</div>
+            <div class="req-title">Cache Invalidation</div>
+            <div class="req-desc">Instant purge by URL, path pattern, or cache tag. Versioned URLs and surrogate keys for granular invalidation control.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-03</div>
+            <div class="req-title">SSL/TLS Termination</div>
+            <div class="req-desc">Terminate HTTPS at the edge with managed or custom certificates. Automatic certificate renewal. TLS 1.3 support.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-04</div>
+            <div class="req-title">Custom Origins</div>
+            <div class="req-desc">Support any HTTP origin: cloud storage, web servers, APIs, load balancers. Origin failover with health checks.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-05</div>
+            <div class="req-title">Geo-Routing</div>
+            <div class="req-desc">Route requests to nearest edge PoP using anycast or DNS-based routing. Geo-restriction to block/allow by country.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-06</div>
+            <div class="req-title">Compression</div>
+            <div class="req-desc">Automatic gzip and Brotli compression at the edge. Reduce bandwidth costs and improve page load times by 60-80%.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-07</div>
+            <div class="req-title">HTTP/2 &amp; HTTP/3</div>
+            <div class="req-desc">Full HTTP/2 multiplexing and server push. HTTP/3 (QUIC) for faster connection establishment and improved mobile performance.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-08</div>
+            <div class="req-title">WAF &amp; Security</div>
+            <div class="req-desc">Integrated Web Application Firewall. DDoS protection, bot management, rate limiting, and signed URLs for access control.</div>
+          </div>
+        </div>
+
+        <div class="req-column">
+          <h3>
+            <span class="req-icon" style="background: var(--purple-light); color: var(--purple);">&#9878;</span>
+            Non-Functional Requirements
+          </h3>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-01</div>
+            <div class="req-title">Global Latency</div>
+            <div class="req-desc">Under 50ms Time to First Byte (TTFB) from any global location. Edge locations in 40+ countries.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-02</div>
+            <div class="req-title">Availability</div>
+            <div class="req-desc">99.99% uptime SLA. Automatic failover between edge locations. Origin shield for origin protection during outages.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-03</div>
+            <div class="req-title">Bandwidth Scale</div>
+            <div class="req-desc">Handle terabits per second of traffic. Absorb flash crowds and viral content spikes without degradation.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-04</div>
+            <div class="req-title">Cache Efficiency</div>
+            <div class="req-desc">Cache hit ratio exceeding 95% for static content. Smart caching policies with TTL optimization and stale-while-revalidate.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-05</div>
+            <div class="req-title">Origin Protection</div>
+            <div class="req-desc">Origin shield layer reduces origin requests by 90%+. Automatic retry with exponential backoff on origin failures.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-06</div>
+            <div class="req-title">DDoS Mitigation</div>
+            <div class="req-desc">Absorb multi-Tbps volumetric attacks at the edge. Layer 3/4 always-on protection. Layer 7 rate limiting and challenge pages.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-07</div>
+            <div class="req-title">Real-time Analytics</div>
+            <div class="req-desc">Per-request logging with &lt;5 minute delay. Real-time dashboards for cache hit ratio, bandwidth, errors, and latency percentiles.</div>
+          </div>
         </div>
       </div>
     </section>

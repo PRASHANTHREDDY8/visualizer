@@ -495,6 +495,26 @@
     .tag-bad { background: #fecaca; color: #991b1b; }
     .tag-good { background: #a7f3d0; color: #065f46; }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: #eff6ff; border-left-color: var(--accent-i); }
+    .req-item.functional .req-id { color: var(--accent-i); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: var(--accent-d); }
+    .req-item.nonfunctional .req-id { color: var(--accent-d); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
     /* Relationship diagram */
     .relationship-section {
       padding: 4rem 0;
@@ -595,6 +615,7 @@
     <a href="#isp">ISP</a>
     <a href="#dip">DIP</a>
     <a href="#relationships">Relations</a>
+    <a href="#requirements">Requirements</a>
     <a href="#quiz">Quiz</a>
   </div>
 </nav>
@@ -1279,6 +1300,85 @@ test_service = <span class="cls">OrderService</span>(db=<span class="cls">FakeDB
           </tr>
         </tbody>
       </table>
+    </div>
+  </section>
+
+  <!-- Requirements -->
+  <section id="requirements" class="fade-in">
+    <div class="section-header">
+      <div class="badge" style="background:var(--accent-i)">&#128203;</div>
+      <h2>Functional &amp; Non-Functional Requirements <small>What SOLID principles demand from your codebase</small></h2>
+    </div>
+
+    <div class="req-summary">
+      <div class="req-summary-card"><div class="metric" style="color:var(--accent-i);">5</div><div class="label">Core Principles</div></div>
+      <div class="req-summary-card"><div class="metric" style="color:var(--accent-l);">100%</div><div class="label">Testability Goal</div></div>
+      <div class="req-summary-card"><div class="metric" style="color:var(--accent-s);">Low</div><div class="label">Coupling Target</div></div>
+      <div class="req-summary-card"><div class="metric" style="color:var(--accent-d);">High</div><div class="label">Cohesion Target</div></div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:#eff6ff;color:var(--accent-i);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Single Responsibility (SRP)</div>
+          <div class="req-desc">Every class/module should have exactly one reason to change. Separate concerns into distinct units with focused responsibilities.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Open/Closed Principle (OCP)</div>
+          <div class="req-desc">Software entities should be open for extension but closed for modification. Use abstractions and polymorphism to add behavior.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Liskov Substitution (LSP)</div>
+          <div class="req-desc">Subtypes must be substitutable for their base types without altering program correctness. Preconditions, postconditions, and invariants preserved.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Interface Segregation (ISP)</div>
+          <div class="req-desc">Clients should not depend on interfaces they do not use. Prefer many specific interfaces over one general-purpose interface.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Dependency Inversion (DIP)</div>
+          <div class="req-desc">High-level modules should not depend on low-level modules. Both should depend on abstractions. Abstractions should not depend on details.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:#f5f3ff;color:var(--accent-d);">&#9881;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Maintainability</div>
+          <div class="req-desc">Code organized by SOLID principles is easier to understand, modify, and debug. Reduced cognitive load for developers.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">Testability</div>
+          <div class="req-desc">Each unit has minimal dependencies and clear interfaces, enabling isolated unit testing with mocks and stubs.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Reduced Coupling</div>
+          <div class="req-desc">Modules interact through abstractions, minimizing ripple effects of changes. Dependency injection enables loose coupling.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Extensibility</div>
+          <div class="req-desc">New features added by creating new classes rather than modifying existing ones. Plugin architectures and strategy patterns emerge naturally.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Module Boundaries</div>
+          <div class="req-desc">Clear separation of concerns creates well-defined module boundaries. Each module has a cohesive public API.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Refactoring Safety</div>
+          <div class="req-desc">SOLID code is safer to refactor because changes are localized. Comprehensive tests catch regressions early.</div>
+        </div>
+      </div>
     </div>
   </section>
 

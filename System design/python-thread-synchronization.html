@@ -555,6 +555,26 @@ pre.code-block .hl { background: rgba(203,166,247,0.15); display: inline-block; 
   color: var(--text-secondary);
 }
 
+/* Requirements Section */
+.req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+@media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+.req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+.req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+.req-item:hover { transform: translateX(4px); }
+.req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+.req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+.req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+.req-item.functional .req-id { color: var(--accent); }
+.req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+.req-item.nonfunctional .req-id { color: var(--purple); }
+.req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+.req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+.req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+.req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
 /* Responsive */
 @media (max-width: 900px) {
   .main-container { padding: 1rem; }
@@ -576,6 +596,7 @@ pre.code-block .hl { background: rgba(203,166,247,0.15); display: inline-block; 
     <a href="#use-cases">Use Cases & Pitfalls</a>
     <a href="#best-practices">Best Practices</a>
     <a href="#scaling">Scaling & Trade-offs</a>
+    <a href="#requirements">Requirements</a>
     <a href="#playground">Playground</a>
   </div>
 </nav>
@@ -1071,10 +1092,115 @@ pre.code-block .hl { background: rgba(203,166,247,0.15); display: inline-block; 
   </div>
 </div>
 
-<!-- ===================== SECTION 8: PLAYGROUND ===================== -->
-<div class="section" id="playground">
+<!-- ===================== SECTION 8: REQUIREMENTS ===================== -->
+<div class="section" id="requirements">
   <div class="section-header">
     <div class="section-number">8</div>
+    <h2 class="section-title">Functional & Non-Functional Requirements</h2>
+  </div>
+  <p style="color:var(--text-secondary);margin-bottom:1.5rem;font-size:0.95rem;">Core synchronization primitives and quality attributes for safe concurrent Python programming</p>
+
+  <div class="req-summary">
+    <div class="req-summary-card"><div class="metric" style="color:var(--accent);">10</div><div class="label">Functional Reqs</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--purple);">6</div><div class="label">Non-Functional Reqs</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--green);">Thread Safety</div><div class="label">Primary Concern</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--amber);">GIL-aware</div><div class="label">Design Approach</div></div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">F</span> Functional Requirements</h3>
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Lock (threading.Lock)</div>
+        <div class="req-desc">Provide mutual exclusion primitive that allows only one thread to execute a critical section at a time, with acquire/release semantics.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Reentrant Lock (threading.RLock)</div>
+        <div class="req-desc">Support recursive locking where the same thread can acquire the lock multiple times without deadlocking, with matched release counting.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Semaphores</div>
+        <div class="req-desc">Implement counting semaphores that allow a configurable number of threads to access a resource concurrently, with bounded variants for producer-consumer patterns.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Events (threading.Event)</div>
+        <div class="req-desc">Provide simple signaling between threads where one thread sets a flag and others wait for it, enabling coordination without shared data.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Conditions (threading.Condition)</div>
+        <div class="req-desc">Enable threads to wait for specific conditions using wait/notify/notify_all, supporting complex synchronization patterns beyond simple locking.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Barriers (threading.Barrier)</div>
+        <div class="req-desc">Synchronize a fixed number of threads at a rendezvous point, ensuring all threads reach the barrier before any proceed.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Thread-safe Queue</div>
+        <div class="req-desc">Provide Queue, LifoQueue, and PriorityQueue implementations with built-in locking for safe producer-consumer communication between threads.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">GIL Implications</div>
+        <div class="req-desc">Understand that the Global Interpreter Lock limits true parallel execution of CPU-bound Python bytecode to one thread at a time, affecting design choices.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-09</div>
+        <div class="req-title">Threading vs Multiprocessing</div>
+        <div class="req-desc">Choose between threading (shared memory, GIL-limited) for I/O-bound tasks and multiprocessing (separate memory, true parallelism) for CPU-bound tasks.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-10</div>
+        <div class="req-title">Concurrent.futures & Asyncio</div>
+        <div class="req-desc">Use ThreadPoolExecutor/ProcessPoolExecutor for high-level parallelism and asyncio event loop for cooperative multitasking with async/await syntax.</div>
+      </div>
+    </div>
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--purple-light);color:var(--purple);">NF</span> Non-Functional Requirements</h3>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Deadlock Prevention</div>
+        <div class="req-desc">Design lock acquisition ordering, use timeouts, and apply lock hierarchies to prevent circular wait conditions in multi-threaded code.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Minimal Lock Contention</div>
+        <div class="req-desc">Minimize time spent holding locks by reducing critical section scope, using read-write locks, and preferring lock-free data structures where possible.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Thread Safety Guarantees</div>
+        <div class="req-desc">All shared data structures must be accessed through proper synchronization primitives; document thread-safety contracts for all public APIs.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">GIL-aware Performance</div>
+        <div class="req-desc">Optimize for the GIL by using threading for I/O-bound workloads and multiprocessing/C extensions for CPU-bound tasks to achieve actual parallelism.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Fair Scheduling</div>
+        <div class="req-desc">Ensure no thread is starved of resources; use fair locks and bounded queues to prevent priority inversion and livelock scenarios.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Memory Visibility Guarantees</div>
+        <div class="req-desc">Ensure changes made by one thread are visible to others through proper synchronization; understand Python's memory model and happens-before relationships.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 9: PLAYGROUND ===================== -->
+<div class="section" id="playground">
+  <div class="section-header">
+    <div class="section-number">9</div>
     <h2 class="section-title">Interactive Playground</h2>
   </div>
 

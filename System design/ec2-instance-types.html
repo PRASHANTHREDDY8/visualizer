@@ -626,6 +626,26 @@
     }
 
     .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: #eff6ff; border-left-color: var(--general); }
+    .req-item.functional .req-id { color: var(--general); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: var(--memory); }
+    .req-item.nonfunctional .req-id { color: var(--memory); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -643,6 +663,7 @@
         <a href="#architecture">Architecture</a>
         <a href="#pricing">Pricing</a>
         <a href="#pitfalls">Pitfalls</a>
+        <a href="#requirements">Requirements</a>
         <a href="#best-practices">Best Practices</a>
       </div>
     </div>
@@ -1204,7 +1225,128 @@
     </div>
   </section>
 
-  <!-- Section 8: Best Practices -->
+  <!-- Section 8: Functional & Non-Functional Requirements -->
+  <section id="requirements">
+    <div class="section-header">
+      <h2>Functional &amp; Non-Functional Requirements</h2>
+      <p>Core capabilities and quality attributes for selecting and operating Amazon EC2 instances across workload types</p>
+    </div>
+
+    <div class="req-summary">
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--general);">750+</div>
+        <div class="label">Instance Types</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--storage);">99.99%</div>
+        <div class="label">Availability SLA</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--network);">400 Gbps</div>
+        <div class="label">Max Networking</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--memory);">24 TB+</div>
+        <div class="label">Max Memory</div>
+      </div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: #eff6ff; color: var(--general);">&#9889;</span> Functional Requirements</h3>
+
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">General Purpose Instances (M/T Series)</div>
+          <div class="req-desc">Balanced compute, memory, and networking resources for diverse workloads including web servers, dev environments, and small databases.</div>
+        </div>
+
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Compute Optimized (C Series)</div>
+          <div class="req-desc">High-performance processors (up to 3.6 GHz) for compute-intensive tasks like batch processing, HPC, ML inference, and gaming servers.</div>
+        </div>
+
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Memory Optimized (R/X Series)</div>
+          <div class="req-desc">Large memory footprint (up to 24 TB on X1) for in-memory databases, real-time big data analytics, and SAP HANA workloads.</div>
+        </div>
+
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Storage Optimized (I/D Series)</div>
+          <div class="req-desc">High sequential read/write access to large datasets with NVMe SSD instance storage, ideal for data warehousing and distributed file systems.</div>
+        </div>
+
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Accelerated Computing (P/G Series)</div>
+          <div class="req-desc">Hardware accelerators (GPUs, FPGAs, Inferentia) for ML training, graphics rendering, video encoding, and genomics.</div>
+        </div>
+
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Instance Store (Ephemeral Storage)</div>
+          <div class="req-desc">Directly attached NVMe SSD storage with up to 30 TB capacity and millions of IOPS for temporary, high-performance data.</div>
+        </div>
+
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">EBS Optimization</div>
+          <div class="req-desc">Dedicated bandwidth to Amazon EBS (up to 19,000 Mbps) ensuring consistent, high-throughput access to persistent block storage volumes.</div>
+        </div>
+      </div>
+
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: #f5f3ff; color: var(--memory);">&#9881;</span> Non-Functional Requirements</h3>
+
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Bare-Metal Performance</div>
+          <div class="req-desc">Bare-metal instances (*.metal) provide direct hardware access with no hypervisor overhead for workloads requiring hardware-level features or licensing.</div>
+        </div>
+
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">Placement Groups for Low Latency</div>
+          <div class="req-desc">Cluster placement groups pack instances physically close for &lt;2 microsecond inter-node latency, critical for HPC and tightly coupled workloads.</div>
+        </div>
+
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Burstable Performance (T Series)</div>
+          <div class="req-desc">CPU burst credits enable T-series instances to handle traffic spikes, accumulating credits during idle periods and spending them under load.</div>
+        </div>
+
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Enhanced Networking (400 Gbps)</div>
+          <div class="req-desc">Elastic Network Adapter (ENA) and Elastic Fabric Adapter (EFA) deliver up to 400 Gbps bandwidth with low latency and high packet-per-second performance.</div>
+        </div>
+
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">High Availability (99.99% SLA)</div>
+          <div class="req-desc">EC2 SLA guarantees 99.99% availability per region; Auto Scaling and multi-AZ deployments ensure resilience against instance or AZ failures.</div>
+        </div>
+
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Live Migration Support</div>
+          <div class="req-desc">Transparent live migration of instances during host maintenance events, minimizing downtime and avoiding application disruption.</div>
+        </div>
+
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Security &amp; Isolation</div>
+          <div class="req-desc">Hardware-based isolation via Nitro System, encrypted EBS volumes, IMDSv2, and VPC integration for defense-in-depth security posture.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 9: Best Practices -->
   <section id="best-practices">
     <div class="section-header">
       <h2>Best Practices</h2>

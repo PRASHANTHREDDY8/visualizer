@@ -719,6 +719,26 @@ h1 {
 .git-msg { color: #c9d1d9; }
 .git-merge { color: #a5d6ff; }
 .git-graph-pipe { color: #8b949e; }
+
+/* Requirements Section */
+.req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+@media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+.req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+.req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+.req-item:hover { transform: translateX(4px); }
+.req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+.req-item .req-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
+.req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+.req-item.functional .req-id { color: var(--accent); }
+.req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+.req-item.nonfunctional .req-id { color: var(--purple); }
+.req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+.req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+.req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+.req-summary-card .label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
 </style>
 </head>
 <body>
@@ -736,6 +756,7 @@ h1 {
             <a class="nav-link" href="#pitfalls" onclick="scrollToSection('pitfalls')">Pitfalls</a>
             <a class="nav-link" href="#practices" onclick="scrollToSection('practices')">Best Practices</a>
             <a class="nav-link" href="#scaling" onclick="scrollToSection('scaling')">Scaling</a>
+            <a class="nav-link" href="#requirements" onclick="scrollToSection('requirements')">Requirements</a>
             <a class="nav-link" href="#playground" onclick="scrollToSection('playground')">Playground</a>
         </div>
     </nav>
@@ -927,7 +948,117 @@ h1 {
         <div id="failures-container"></div>
     </section>
 
-    <!-- Section 8: Playground -->
+    <!-- Section 8: Functional & Non-Functional Requirements -->
+    <section class="section" id="requirements">
+        <h2><span class="icon" style="background:var(--accent-light);color:var(--accent);">&#9745;</span> Functional & Non-Functional Requirements</h2>
+        <p style="font-size:0.95rem;color:var(--text-secondary);margin-bottom:1.5rem;max-width:720px;">Core platform capabilities and quality attributes for the world's leading code hosting and collaboration platform</p>
+
+        <div class="req-summary">
+            <div class="req-summary-card"><div class="metric" style="color:var(--accent);">10</div><div class="label">Functional Reqs</div></div>
+            <div class="req-summary-card"><div class="metric" style="color:var(--purple);">7</div><div class="label">Non-Functional Reqs</div></div>
+            <div class="req-summary-card"><div class="metric" style="color:var(--green);">99.95%</div><div class="label">API Uptime</div></div>
+            <div class="req-summary-card"><div class="metric" style="color:var(--orange);">100M+</div><div class="label">Repositories</div></div>
+        </div>
+
+        <div class="req-grid">
+            <div class="req-column">
+                <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9776;</span> Functional Requirements</h3>
+
+                <div class="req-item functional">
+                    <div class="req-id">FR-01</div>
+                    <div class="req-title">Git Repository Hosting</div>
+                    <div class="req-desc">Host unlimited public and private Git repositories with full version control, branching, tagging, and merge capabilities.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-02</div>
+                    <div class="req-title">Pull Requests & Code Review</div>
+                    <div class="req-desc">Enable collaborative code review with inline comments, review approvals, suggested changes, and merge queue management.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-03</div>
+                    <div class="req-title">Issue Tracking</div>
+                    <div class="req-desc">Provide comprehensive issue management with labels, milestones, assignees, templates, and cross-repository references.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-04</div>
+                    <div class="req-title">GitHub Actions (CI/CD)</div>
+                    <div class="req-desc">Offer workflow automation with event-triggered pipelines, reusable actions marketplace, matrix builds, and artifact management.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-05</div>
+                    <div class="req-title">Branch Protection Rules</div>
+                    <div class="req-desc">Enforce code quality gates including required reviews, status checks, signed commits, and linear history requirements.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-06</div>
+                    <div class="req-title">Codespaces</div>
+                    <div class="req-desc">Provide cloud-based development environments with configurable containers, prebuilds, and VS Code/JetBrains IDE integration.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-07</div>
+                    <div class="req-title">Packages Registry</div>
+                    <div class="req-desc">Host and manage software packages (npm, Maven, Docker, NuGet, RubyGems) with version management and access control.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-08</div>
+                    <div class="req-title">Discussions</div>
+                    <div class="req-desc">Enable community conversations with threaded discussions, categories, polls, and answer marking for Q&A-style forums.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-09</div>
+                    <div class="req-title">Projects (Kanban Boards)</div>
+                    <div class="req-desc">Offer flexible project management with customizable boards, automated workflows, custom fields, and cross-repo tracking.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-10</div>
+                    <div class="req-title">Copilot Integration</div>
+                    <div class="req-desc">Provide AI-powered code completion, chat assistance, PR summaries, and code review suggestions across the platform.</div>
+                </div>
+            </div>
+
+            <div class="req-column">
+                <h3><span class="req-icon" style="background:var(--purple-light);color:var(--purple);">&#9881;</span> Non-Functional Requirements</h3>
+
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-01</div>
+                    <div class="req-title">API Uptime</div>
+                    <div class="req-desc">Maintain 99.95% uptime for REST and GraphQL APIs with transparent status reporting and incident communication.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-02</div>
+                    <div class="req-title">Repository Scale</div>
+                    <div class="req-desc">Support 100M+ repositories with efficient storage, deduplication, and fast clone/fetch operations regardless of repository size.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-03</div>
+                    <div class="req-title">Git Operation Speed</div>
+                    <div class="req-desc">Complete git push/pull operations within 1 second for typical repositories, with optimized packfile generation and transfer protocols.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-04</div>
+                    <div class="req-title">Global CDN</div>
+                    <div class="req-desc">Serve static assets, release downloads, and raw file content through a global CDN with edge caching for low-latency access worldwide.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-05</div>
+                    <div class="req-title">Authentication & Security</div>
+                    <div class="req-desc">Support 2FA, SSO (SAML), fine-grained personal access tokens, deploy keys, and GitHub Apps with granular permission scopes.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-06</div>
+                    <div class="req-title">Unlimited Public Repos</div>
+                    <div class="req-desc">Provide unlimited public repository hosting with full feature access for open-source projects at no cost.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-07</div>
+                    <div class="req-title">Large File Storage (LFS)</div>
+                    <div class="req-desc">Support Git LFS for versioning large binary files with configurable storage quotas and bandwidth limits per repository.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 9: Playground -->
     <section class="section" id="playground">
         <h2><span class="icon" style="background:var(--purple-light);color:var(--purple);">&#9654;</span> Interactive Playground</h2>
         <div class="playground-container">

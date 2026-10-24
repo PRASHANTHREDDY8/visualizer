@@ -605,6 +605,26 @@
       background: var(--red-light);
     }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
     @media (max-width: 768px) {
       .container { padding: 1rem; }
       h1 { font-size: 1.75rem; }
@@ -629,6 +649,7 @@
     <a href="#use-cases">Use Cases</a>
     <a href="#best-practices">Best Practices</a>
     <a href="#scaling">Scaling</a>
+    <a href="#requirements">Requirements</a>
     <a href="#playground">Playground</a>
   </nav>
 
@@ -1135,6 +1156,116 @@
           <p style="margin-top:0.5rem;"><strong>AZ failure:</strong> All EBS volumes in that AZ become unavailable. Snapshots in S3 are unaffected — restore to a different AZ.</p>
           <p style="margin-top:0.5rem;"><strong>EC2 instance failure:</strong> EBS volume persists. Re-attach to a new instance in the same AZ. Root volumes with "Delete on Termination" are the exception.</p>
           <p style="margin-top:0.5rem;"><strong>Network partition:</strong> I/O operations queue and timeout. Application sees I/O errors. EBS retries internally but extended partitions cause volume impairment detection.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: Functional & Non-Functional Requirements -->
+    <section id="requirements">
+      <h2>Functional &amp; Non-Functional Requirements</h2>
+
+      <div class="req-summary">
+        <div class="req-summary-card">
+          <div class="metric" style="color: var(--accent);">99.999%</div>
+          <div class="label">Volume Availability</div>
+        </div>
+        <div class="req-summary-card">
+          <div class="metric" style="color: var(--blue);">64,000</div>
+          <div class="label">Max IOPS (io2)</div>
+        </div>
+        <div class="req-summary-card">
+          <div class="metric" style="color: var(--green);">4,000 MB/s</div>
+          <div class="label">Max Throughput</div>
+        </div>
+        <div class="req-summary-card">
+          <div class="metric" style="color: var(--purple);">&lt;1ms</div>
+          <div class="label">Latency (io2)</div>
+        </div>
+      </div>
+
+      <div class="req-grid">
+        <div class="req-column">
+          <h3>
+            <span class="req-icon" style="background: var(--accent-light); color: var(--accent);">&#9889;</span>
+            Functional Requirements
+          </h3>
+          <div class="req-item functional">
+            <div class="req-id">FR-01</div>
+            <div class="req-title">Block Storage Volumes</div>
+            <div class="req-desc">Persistent block-level storage volumes for EC2 instances. Appear as raw, unformatted block devices with file system support.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-02</div>
+            <div class="req-title">Volume Types</div>
+            <div class="req-desc">gp3 (general purpose), io2/io2 Block Express (provisioned IOPS), st1 (throughput optimized HDD), sc1 (cold HDD) for different workload profiles.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-03</div>
+            <div class="req-title">Snapshots</div>
+            <div class="req-desc">Point-in-time snapshots stored in S3. Incremental backups capturing only changed blocks. Cross-region snapshot copy.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-04</div>
+            <div class="req-title">Encryption</div>
+            <div class="req-desc">AES-256 encryption using AWS KMS. Encrypt volumes, snapshots, and data in transit between EC2 and EBS. Transparent to applications.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-05</div>
+            <div class="req-title">Multi-Attach</div>
+            <div class="req-desc">io2 volumes attachable to up to 16 Nitro-based EC2 instances simultaneously. Enables highly available clustered applications.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-06</div>
+            <div class="req-title">Elastic Volumes</div>
+            <div class="req-desc">Modify volume type, size, IOPS, and throughput without downtime or detaching. Changes apply while volume is in use.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-07</div>
+            <div class="req-title">IOPS Provisioning</div>
+            <div class="req-desc">Provision up to 64,000 IOPS (io2) or 256,000 IOPS (io2 Block Express). Independent of volume size for io2 volumes.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-08</div>
+            <div class="req-title">Throughput Optimization</div>
+            <div class="req-desc">Up to 4,000 MB/s throughput with io2 Block Express. st1 optimized for large sequential workloads at 500 MB/s.</div>
+          </div>
+        </div>
+
+        <div class="req-column">
+          <h3>
+            <span class="req-icon" style="background: var(--purple-light); color: var(--purple);">&#9878;</span>
+            Non-Functional Requirements
+          </h3>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-01</div>
+            <div class="req-title">Availability</div>
+            <div class="req-desc">99.999% availability SLA for io2 volumes. Data replicated within AZ to protect against hardware failure.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-02</div>
+            <div class="req-title">IOPS Performance</div>
+            <div class="req-desc">Up to 64,000 IOPS (io2) and 256,000 IOPS (io2 Block Express). Consistent performance within 10% of provisioned IOPS 99.9% of the time.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-03</div>
+            <div class="req-title">Latency</div>
+            <div class="req-desc">Sub-millisecond latency for io2 volumes. Single-digit millisecond latency for gp3. Optimized for database and transactional workloads.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-04</div>
+            <div class="req-title">Snapshot Efficiency</div>
+            <div class="req-desc">Incremental snapshots only store changed blocks, reducing storage costs. Snapshot restore creates immediately usable volumes.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-05</div>
+            <div class="req-title">Durability</div>
+            <div class="req-desc">99.8-99.9% annual failure rate depending on volume type. Automatic replication within AZ. Snapshots stored with 99.999999999% (11 9s) durability in S3.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-06</div>
+            <div class="req-title">Cross-AZ Replication</div>
+            <div class="req-desc">Multi-attach io2 volumes support cross-instance access. Snapshot copy enables cross-region disaster recovery.</div>
+          </div>
         </div>
       </div>
     </section>

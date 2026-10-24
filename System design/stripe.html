@@ -419,6 +419,26 @@
 
         .chevron.open { transform: rotate(180deg); }
 
+        /* Requirements Section */
+        .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+        @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+        .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+        .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+        .req-item:hover { transform: translateX(4px); }
+        .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+        .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+        .req-item.functional { background: var(--accent-bg); border-left-color: var(--accent); }
+        .req-item.functional .req-id { color: var(--accent); }
+        .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+        .req-item.nonfunctional .req-id { color: #7c3aed; }
+        .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+        .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+        .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+        .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
         /* Scaling Section */
         .scaling-grid {
             display: grid;
@@ -718,6 +738,7 @@
             <a class="nav-link" href="#pitfalls" onclick="scrollToSection('pitfalls')">Pitfalls</a>
             <a class="nav-link" href="#practices" onclick="scrollToSection('practices')">Best Practices</a>
             <a class="nav-link" href="#scaling" onclick="scrollToSection('scaling')">Scaling</a>
+            <a class="nav-link" href="#requirements" onclick="scrollToSection('requirements')">Requirements</a>
             <a class="nav-link" href="#playground" onclick="scrollToSection('playground')">Playground</a>
         </div>
     </nav>
@@ -973,7 +994,120 @@
 
     <hr class="section-divider">
 
-    <!-- Section 9: Playground -->
+    <!-- Section 9: Requirements -->
+    <section class="section" id="requirements">
+        <div class="section-header">
+            <h2>Functional & Non-Functional Requirements</h2>
+            <p>Core capabilities and quality attributes that define a production-grade payment processing platform like Stripe.</p>
+        </div>
+
+        <div class="req-summary">
+            <div class="req-summary-card">
+                <div class="metric" style="color: var(--accent);">99.999%</div>
+                <div class="label">API Uptime</div>
+            </div>
+            <div class="req-summary-card">
+                <div class="metric" style="color: var(--success);">&lt;300ms</div>
+                <div class="label">Payment Processing</div>
+            </div>
+            <div class="req-summary-card">
+                <div class="metric" style="color: var(--warning);">PCI L1</div>
+                <div class="label">Compliance Level</div>
+            </div>
+            <div class="req-summary-card">
+                <div class="metric" style="color: var(--info);">1000s</div>
+                <div class="label">TPS Capacity</div>
+            </div>
+        </div>
+
+        <div class="req-grid">
+            <div class="req-column">
+                <h3><span class="req-icon" style="background:var(--accent-bg);color:var(--accent);">&#9889;</span> Functional Requirements</h3>
+                <div class="req-item functional">
+                    <div class="req-id">FR-01</div>
+                    <div class="req-title">Payment Processing</div>
+                    <div class="req-desc">Accept credit/debit cards, digital wallets (Apple Pay, Google Pay), bank transfers (ACH, SEPA), and buy-now-pay-later. Multi-currency support for 135+ currencies.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-02</div>
+                    <div class="req-title">Subscription Management</div>
+                    <div class="req-desc">Recurring billing with flexible plans, usage-based pricing, trials, proration, and automatic payment retries with smart dunning.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-03</div>
+                    <div class="req-title">Invoicing</div>
+                    <div class="req-desc">Generate, send, and track invoices. Automatic tax calculation, payment links, and customizable templates with branding.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-04</div>
+                    <div class="req-title">Refunds & Disputes</div>
+                    <div class="req-desc">Full and partial refunds with metadata tracking. Automated dispute response with evidence submission. Chargeback management workflow.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-05</div>
+                    <div class="req-title">Multi-Currency</div>
+                    <div class="req-desc">Process payments in 135+ currencies. Automatic currency conversion. Settlement in 40+ currencies. FX rate transparency.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-06</div>
+                    <div class="req-title">PCI Compliance Abstraction</div>
+                    <div class="req-desc">Abstract PCI DSS complexity with Stripe Elements and Payment Intents. Tokenization ensures raw card data never touches merchant servers.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-07</div>
+                    <div class="req-title">Connect Platform</div>
+                    <div class="req-desc">Marketplace and platform payments. Split payments, managed accounts, custom onboarding, and 1099 tax reporting for US platforms.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-08</div>
+                    <div class="req-title">Radar Fraud Detection</div>
+                    <div class="req-desc">Machine learning-based fraud scoring on every transaction. Customizable rules engine. 3D Secure adaptive authentication. Chargeback protection.</div>
+                </div>
+            </div>
+            <div class="req-column">
+                <h3><span class="req-icon" style="background:#f5f3ff;color:#7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-01</div>
+                    <div class="req-title">API Uptime</div>
+                    <div class="req-desc">99.999% availability for the core payments API. Geographic redundancy across multiple data centers. Graceful degradation strategies.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-02</div>
+                    <div class="req-title">Processing Speed</div>
+                    <div class="req-desc">End-to-end payment authorization under 300ms. Async webhook delivery within seconds. Real-time balance updates.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-03</div>
+                    <div class="req-title">PCI DSS Level 1</div>
+                    <div class="req-desc">Highest level of PCI compliance. Annual audits by QSA. Point-to-point encryption. SOC 1 and SOC 2 Type II reports.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-04</div>
+                    <div class="req-title">Idempotent Design</div>
+                    <div class="req-desc">All API operations are idempotent with Idempotency-Key header. Safe to retry failed requests without duplicate charges.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-05</div>
+                    <div class="req-title">Throughput</div>
+                    <div class="req-desc">Handle thousands of transactions per second per merchant. Auto-scaling infrastructure. Rate limiting with graceful 429 responses.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-06</div>
+                    <div class="req-title">Fraud Scoring</div>
+                    <div class="req-desc">Real-time ML scoring on every transaction in under 50ms. Trained on billions of transactions across the Stripe network.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-07</div>
+                    <div class="req-title">Global Compliance</div>
+                    <div class="req-desc">GDPR, PSD2/SCA, local payment method regulations. Automatic Strong Customer Authentication for European payments.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- Section 10: Playground -->
     <section class="section" id="playground">
         <div class="section-header">
             <h2>Interactive Playground</h2>

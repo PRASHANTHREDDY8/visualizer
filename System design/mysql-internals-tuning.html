@@ -555,6 +555,26 @@
       border-radius: 3px;
     }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
+
     /* Keyboard */
     kbd {
       background: var(--surface-alt);
@@ -578,6 +598,7 @@
     <button class="nav-tab" data-tab="query-flow">Query Pipeline</button>
     <button class="nav-tab" data-tab="tuning">Tuning Parameters</button>
     <button class="nav-tab" data-tab="scaling">Scaling & Traffic</button>
+    <button class="nav-tab" data-tab="requirements">Requirements</button>
     <button class="nav-tab" data-tab="calculator">Buffer Pool Calculator</button>
   </div>
 
@@ -1081,6 +1102,98 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Requirements Section -->
+    <div class="section" id="requirements">
+    <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 8px;">Functional & Non-Functional Requirements</h2>
+    <p style="color: var(--text-muted, var(--text-secondary)); font-size: 1.05rem; margin-bottom: 28px;">Core requirements for MySQL database internals and performance tuning in production environments.</p>
+
+    <div class="req-summary">
+      <div class="req-summary-card"><div class="metric" style="color: var(--accent);">&lt;1ms</div><div class="label">Indexed Query Latency</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--green, #22c55e);">10K+ QPS</div><div class="label">Query Throughput</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--purple, #8b5cf6);">ACID</div><div class="label">Compliance Level</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--orange, #f59e0b);">&lt;1s</div><div class="label">Replication Lag</div></div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--accent-light, #e8ecff); color: var(--accent, #4f6ef7);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Query Optimization</div>
+          <div class="req-desc">Analyze and optimize query execution plans using EXPLAIN, identifying full table scans, inefficient joins, and missing index opportunities for critical query paths.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Index Management</div>
+          <div class="req-desc">Support B-tree, hash, full-text, and spatial indexes with composite index optimization. Monitor index usage statistics and identify redundant or unused indexes.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Buffer Pool Tuning</div>
+          <div class="req-desc">Configure InnoDB buffer pool size (typically 70-80% of RAM), instances, and page flushing parameters to maximize cache hit ratios above 99%.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Slow Query Logging</div>
+          <div class="req-desc">Capture queries exceeding configurable thresholds (e.g., 100ms) with full execution details, enabling systematic performance regression detection.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">EXPLAIN Analysis</div>
+          <div class="req-desc">Provide detailed query execution plans showing access types, key usage, row estimates, and join strategies for every SELECT, UPDATE, and DELETE statement.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Partition Pruning</div>
+          <div class="req-desc">Implement table partitioning (RANGE, LIST, HASH, KEY) with efficient partition pruning to limit scanned data for time-series and multi-tenant workloads.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Connection Pool Management</div>
+          <div class="req-desc">Configure thread pool and connection pooling with ProxySQL or built-in thread_pool, managing max_connections, wait_timeout, and connection recycling.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: #f5f3ff; color: #7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Sub-Millisecond Indexed Lookups</div>
+          <div class="req-desc">Achieve sub-millisecond query latency for indexed point lookups and short range scans with properly sized buffer pool and optimized indexes.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">High Throughput</div>
+          <div class="req-desc">Sustain 10,000+ queries per second with mixed read/write workloads through buffer pool optimization, query caching, and prepared statement reuse.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Crash Recovery</div>
+          <div class="req-desc">Guarantee crash-safe recovery using InnoDB redo logs (WAL) and undo logs, with configurable doublewrite buffer and checkpoint frequency.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">ACID Compliance</div>
+          <div class="req-desc">Maintain full ACID compliance with configurable isolation levels (READ COMMITTED default for performance, SERIALIZABLE for strict consistency).</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Low Replication Lag</div>
+          <div class="req-desc">Maintain replication lag under 1 second using parallel replication (slave_parallel_workers), GTID-based replication, and semi-synchronous replication.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Storage Efficiency</div>
+          <div class="req-desc">Optimize storage through InnoDB page compression, compact row format, and efficient data type selection — reducing disk I/O and improving cache utilization.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Monitoring &amp; Diagnostics</div>
+          <div class="req-desc">Expose performance_schema and sys schema metrics for real-time monitoring of query performance, lock contention, I/O throughput, and memory utilization.</div>
+        </div>
+      </div>
+    </div>
     </div>
 
     <!-- Calculator Section -->

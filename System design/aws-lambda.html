@@ -131,6 +131,26 @@
     .nav-btn:hover { background: var(--surface-alt); color: var(--text); }
     .nav-btn.active { background: var(--accent-light); color: var(--accent-dark); font-weight: 600; }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
+
     /* Main content */
     .container {
       max-width: 1200px;
@@ -876,6 +896,7 @@
       <button class="nav-btn" data-section="pricing">Pricing</button>
       <button class="nav-btn" data-section="sequence">Request Flow</button>
       <button class="nav-btn" data-section="decision">When to Use</button>
+      <button class="nav-btn" data-section="requirements">Requirements</button>
       <button class="nav-btn" data-section="practices">Best Practices</button>
     </div>
   </nav>
@@ -1528,6 +1549,101 @@
 
         <div class="decision-node result">
           &#10003; Lambda is likely the right choice. Use it!
+        </div>
+      </div>
+    </section>
+
+    <!-- Requirements -->
+    <section id="requirements">
+      <div class="section-header">
+        <div class="section-num">&#128203;</div>
+        <h2>Functional & Non-Functional Requirements</h2>
+      </div>
+      <p style="color: var(--text-muted); font-size: 1.05rem; margin-bottom: 28px;">Key requirements for designing serverless applications with AWS Lambda, covering event-driven execution, scaling, and operational constraints.</p>
+
+      <div class="req-summary">
+        <div class="req-summary-card"><div class="metric" style="color: var(--accent);">&lt;1s</div><div class="label">Cold Start Target</div></div>
+        <div class="req-summary-card"><div class="metric" style="color: var(--green);">15 min</div><div class="label">Max Execution Time</div></div>
+        <div class="req-summary-card"><div class="metric" style="color: var(--purple);">10 GB</div><div class="label">Max Memory</div></div>
+        <div class="req-summary-card"><div class="metric" style="color: var(--blue, var(--accent));">1000</div><div class="label">Default Concurrency</div></div>
+      </div>
+
+      <div class="req-grid">
+        <div class="req-column">
+          <h3><span class="req-icon" style="background: var(--accent-light); color: var(--accent-dark, var(--accent));">&#9889;</span> Functional Requirements</h3>
+          <div class="req-item functional">
+            <div class="req-id">FR-01</div>
+            <div class="req-title">Event-Driven Execution</div>
+            <div class="req-desc">Execute functions in response to events from 200+ AWS services including API Gateway, S3, DynamoDB Streams, SQS, SNS, and EventBridge with automatic payload parsing.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-02</div>
+            <div class="req-title">Multiple Runtime Support</div>
+            <div class="req-desc">Support managed runtimes for Python, Node.js, Java, Go, .NET, and Ruby with custom runtime API for any language via Lambda Runtime Interface.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-03</div>
+            <div class="req-title">Environment Configuration</div>
+            <div class="req-desc">Configure environment variables, memory allocation (128MB-10GB), timeout (up to 15min), and ephemeral storage (512MB-10GB) per function version.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-04</div>
+            <div class="req-title">Lambda Layers</div>
+            <div class="req-desc">Package shared libraries, custom runtimes, and dependencies as reusable layers (up to 5 per function), reducing deployment package sizes and enabling code sharing.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-05</div>
+            <div class="req-title">Concurrency Controls</div>
+            <div class="req-desc">Configure reserved concurrency per function, provisioned concurrency for consistent cold starts, and account-level concurrency limits for resource governance.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-06</div>
+            <div class="req-title">Versioning &amp; Aliases</div>
+            <div class="req-desc">Publish immutable function versions and create aliases (dev, staging, prod) with weighted traffic shifting for canary and blue-green deployments.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-07</div>
+            <div class="req-title">VPC Integration</div>
+            <div class="req-desc">Deploy functions inside VPCs to access private resources (RDS, ElastiCache, internal APIs) with Hyperplane ENI for fast network attachment without cold start penalty.</div>
+          </div>
+        </div>
+        <div class="req-column">
+          <h3><span class="req-icon" style="background: #f5f3ff; color: #7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-01</div>
+            <div class="req-title">Cold Start Under 1 Second</div>
+            <div class="req-desc">Achieve cold start latency under 1s for most runtimes (Node.js/Python ~200-500ms), with provisioned concurrency eliminating cold starts for latency-critical paths.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-02</div>
+            <div class="req-title">Execution Limits</div>
+            <div class="req-desc">Support up to 15 minutes maximum execution time, 10GB memory, 6MB synchronous payload, and 256KB asynchronous payload per invocation.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-03</div>
+            <div class="req-title">Automatic Scaling</div>
+            <div class="req-desc">Scale automatically from zero to 1,000 concurrent executions (default), with burst limits of 3,000 in us-east-1 and 500-1,000 in other regions.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-04</div>
+            <div class="req-title">Pay-Per-Invocation Pricing</div>
+            <div class="req-desc">Charge per invocation ($0.20/1M requests) plus compute time (GB-seconds), with 1M free requests and 400,000 GB-seconds free tier per month.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-05</div>
+            <div class="req-title">High Availability</div>
+            <div class="req-desc">Run across multiple Availability Zones automatically with built-in fault tolerance, automatic retries for async invocations, and dead letter queue integration.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-06</div>
+            <div class="req-title">Security Isolation</div>
+            <div class="req-desc">Execute each function in an isolated Firecracker microVM with dedicated kernel, providing strong tenant isolation, IAM-based least privilege, and encryption at rest.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-07</div>
+            <div class="req-title">Observability</div>
+            <div class="req-desc">Integrate natively with CloudWatch Logs, X-Ray tracing, and CloudWatch Metrics for invocation count, duration, errors, throttles, and concurrent execution monitoring.</div>
+          </div>
         </div>
       </div>
     </section>

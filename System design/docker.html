@@ -634,6 +634,26 @@
       .scaling-grid { grid-template-columns: 1fr; }
       .nav-links a { font-size: 0.78rem; padding: 0.4rem 0.6rem; }
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: #e8f4fd; border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -654,6 +674,7 @@
       <li><a href="#usecases">Use Cases</a></li>
       <li><a href="#pitfalls">Pitfalls</a></li>
       <li><a href="#bestpractices">Best Practices</a></li>
+      <li><a href="#requirements">Requirements</a></li>
       <li><a href="#scaling">Scaling</a></li>
     </ul>
   </div>
@@ -1176,6 +1197,105 @@
 </section>
 
 <!-- Section 7: Scaling & Trade-offs -->
+<section id="requirements" class="section">
+  <div class="section-header">
+    <h2>Functional &amp; Non-Functional Requirements</h2>
+    <p>Core capabilities and quality attributes for containerized application development and deployment with Docker</p>
+  </div>
+
+  <div class="req-summary">
+    <div class="req-summary-card"><div class="metric" style="color:var(--primary)">Sub-Second</div><div class="label">Container Startup</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--success)">&lt;2%</div><div class="label">Performance Overhead</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--accent)">Billions</div><div class="label">Container Pulls/Month</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--purple)">127+</div><div class="label">Supported Platforms</div></div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:#e8f4fd;color:var(--accent)">&#9881;</span> Functional Requirements</h3>
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Container Image Building (Dockerfile)</div>
+        <div class="req-desc">Define reproducible container images using declarative Dockerfiles with instructions for base image, dependencies, configuration, and entrypoint.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Image Layering &amp; Caching</div>
+        <div class="req-desc">Build images as stacked layers with intelligent caching; unchanged layers are reused across builds, dramatically reducing build times and storage.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Container Networking</div>
+        <div class="req-desc">Support bridge (default isolated), host (shared network stack), overlay (multi-host Swarm), and macvlan (physical network) network drivers for flexible connectivity.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Volume Mounts &amp; Persistent Storage</div>
+        <div class="req-desc">Mount host directories, named volumes, or tmpfs into containers for persistent data, shared state, and configuration that survives container restarts.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Multi-Stage Builds</div>
+        <div class="req-desc">Use multiple FROM statements in a single Dockerfile to separate build and runtime stages, producing minimal production images without build tools or source code.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Docker Compose</div>
+        <div class="req-desc">Define and run multi-container applications using YAML configuration files, managing service dependencies, networks, volumes, and environment variables declaratively.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Container Registry</div>
+        <div class="req-desc">Push and pull images from Docker Hub, AWS ECR, GCR, or private registries with versioning via tags, content-addressable digests, and access control.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">Resource Limits (CPU &amp; Memory)</div>
+        <div class="req-desc">Constrain container resource usage with --cpus, --memory flags and cgroup controls, preventing noisy-neighbor issues in multi-tenant environments.</div>
+      </div>
+    </div>
+
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:#f5f3ff;color:#7c3aed">&#9733;</span> Non-Functional Requirements</h3>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Sub-Second Container Startup</div>
+        <div class="req-desc">Start containers in under 1 second for most images, enabling rapid scaling, fast CI/CD pipelines, and instant development environment provisioning.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Minimal Performance Overhead</div>
+        <div class="req-desc">Container overhead is less than 2% compared to bare metal for CPU and memory workloads, using kernel namespaces and cgroups instead of hardware virtualization.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Image Size Optimization</div>
+        <div class="req-desc">Alpine-based images start at 5 MB; multi-stage builds and .dockerignore reduce production images to minimal footprint, improving pull times and security surface.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Process Isolation (Namespaces)</div>
+        <div class="req-desc">Kernel namespaces (PID, NET, MNT, UTS, IPC, USER) provide process-level isolation, ensuring containers cannot see or interfere with each other's resources.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Resource Control (cgroups)</div>
+        <div class="req-desc">Control groups enforce CPU, memory, I/O, and network bandwidth limits per container with OOM-kill policies and priority scheduling for predictable performance.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Security Scanning</div>
+        <div class="req-desc">Scan images for known CVEs using Docker Scout, Trivy, or Snyk; integrate into CI/CD pipelines to block deployment of vulnerable images with severity thresholds.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">Rootless Mode</div>
+        <div class="req-desc">Run Docker daemon and containers without root privileges, reducing the attack surface and meeting security compliance requirements for production environments.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="scaling" class="section">
   <div class="section-header">
     <h2>Scaling & Trade-offs</h2>

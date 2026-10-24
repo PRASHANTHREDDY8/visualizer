@@ -744,6 +744,26 @@
       border-left: 3px solid var(--danger);
     }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
+    .req-item.functional { background: var(--primary-light); border-left-color: var(--primary); }
+    .req-item.functional .req-id { color: var(--primary); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
+
     /* Responsive */
     @media (max-width: 768px) {
       .main { padding: 1rem; }
@@ -771,6 +791,7 @@
   <a href="#usecases">Use Cases</a>
   <a href="#bestpractices">Best Practices</a>
   <a href="#scaling">Scaling</a>
+  <a href="#requirements">Requirements</a>
   <a href="#playground">Playground</a>
 </nav>
 
@@ -993,6 +1014,124 @@
       <h2>Scaling & Trade-offs</h2>
     </div>
     <div class="scaling-grid" id="scalingGrid"></div>
+  </section>
+
+  <!-- Section: Functional & Non-Functional Requirements -->
+  <section id="requirements">
+    <div class="section-header">
+      <div class="section-number">&#10003;</div>
+      <h2>Functional &amp; Non-Functional Requirements</h2>
+    </div>
+
+    <div class="req-summary">
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--primary);">1B+</div>
+        <div class="label">Daily Queries</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--accent);">&lt;200ms</div>
+        <div class="label">Tile Load Time</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--purple);">&lt;5m</div>
+        <div class="label">GPS Accuracy</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--warning);">60fps</div>
+        <div class="label">Map Interaction</div>
+      </div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3>
+          <span class="req-icon" style="background: var(--primary-light); color: var(--primary);">&#9889;</span>
+          Functional Requirements
+        </h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Map Rendering</div>
+          <div class="req-desc">Vector tile-based map rendering with multiple layers: roads, terrain, satellite, transit. Smooth zoom from street to global level.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Geocoding</div>
+          <div class="req-desc">Forward geocoding (address to coordinates) and reverse geocoding (coordinates to address). Support for partial addresses and place names.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Route Planning</div>
+          <div class="req-desc">Multi-modal routing: driving, walking, cycling, and public transit. Alternative routes, waypoints, and real-time traffic-aware routing.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Real-time Traffic</div>
+          <div class="req-desc">Live traffic data from GPS signals, road sensors, and crowdsourced reports. Predictive traffic based on historical patterns.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Street View</div>
+          <div class="req-desc">360-degree street-level imagery with navigation. Coverage across roads, landmarks, and indoor spaces. Time-travel for historical imagery.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Places API</div>
+          <div class="req-desc">Search for businesses, points of interest, and addresses. Place details: hours, reviews, photos, contact info. Autocomplete suggestions.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Geofencing</div>
+          <div class="req-desc">Define virtual geographic boundaries. Trigger events on entry/exit. Track assets and vehicles within defined zones.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-08</div>
+          <div class="req-title">Navigation</div>
+          <div class="req-desc">Turn-by-turn navigation with voice guidance. Real-time rerouting based on traffic, incidents, and road closures. Offline navigation support.</div>
+        </div>
+      </div>
+
+      <div class="req-column">
+        <h3>
+          <span class="req-icon" style="background: var(--purple-light); color: var(--purple);">&#9878;</span>
+          Non-Functional Requirements
+        </h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Tile Performance</div>
+          <div class="req-desc">Map tile load time under 200ms. Vector tiles compressed and cached at edge locations. Progressive tile loading for smooth experience.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">Query Scale</div>
+          <div class="req-desc">Handle 1 billion+ queries per day across all APIs. Auto-scaling infrastructure with global load balancing.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Route Speed</div>
+          <div class="req-desc">Route calculation under 1 second for typical queries. Pre-computed routes for popular corridors. Dijkstra and contraction hierarchies for fast pathfinding.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">GPS Accuracy</div>
+          <div class="req-desc">Location accuracy within 5 meters in open sky. Enhanced indoor positioning using Wi-Fi, Bluetooth, and sensor fusion.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Offline Support</div>
+          <div class="req-desc">Download map regions for offline use. Offline routing and search for downloaded areas. Background sync when connectivity resumes.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Rendering Performance</div>
+          <div class="req-desc">Smooth 60fps map interaction (pan, zoom, rotate, tilt). GPU-accelerated rendering with WebGL. Level-of-detail optimization.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Data Freshness</div>
+          <div class="req-desc">Map data updated weekly for roads and points of interest. Real-time traffic updates every 2 minutes. User-reported changes reviewed within hours.</div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Section 8: Interactive Playground -->

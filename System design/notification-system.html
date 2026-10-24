@@ -798,6 +798,26 @@ nav a:hover, nav a.active {
   .uc-grid { grid-template-columns: 1fr; }
   .sim-canvas { height: 300px; }
 }
+
+/* ===== REQUIREMENTS SECTION ===== */
+.req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+@media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+.req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+.req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+.req-item:hover { transform: translateX(4px); }
+.req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+.req-item .req-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
+.req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+.req-item.functional .req-id { color: var(--accent); }
+.req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+.req-item.nonfunctional .req-id { color: var(--purple); }
+.req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+.req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+.req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+.req-summary-card .label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
 </style>
 </head>
 <body>
@@ -819,6 +839,7 @@ nav a:hover, nav a.active {
     <a href="#use-cases">Use Cases & Pitfalls</a>
     <a href="#best-practices">Best Practices</a>
     <a href="#scaling">Scaling</a>
+    <a href="#requirements">Requirements</a>
     <a href="#playground">Playground</a>
   </div>
 </nav>
@@ -1488,10 +1509,138 @@ nav a:hover, nav a.active {
 
 <hr class="divider">
 
-<!-- SECTION 8: PLAYGROUND -->
-<div class="section" id="playground">
+<!-- SECTION 8: FUNCTIONAL & NON-FUNCTIONAL REQUIREMENTS -->
+<div class="section" id="requirements">
   <div class="section-header">
     <span class="section-num">8</span>
+    <h2>Functional &amp; Non-Functional Requirements</h2>
+  </div>
+
+  <p style="font-size:0.95rem;color:var(--text-secondary);margin-bottom:1.5rem;">Core capabilities and quality attributes for a scalable, multi-channel notification delivery platform</p>
+
+  <div class="req-summary">
+    <div class="req-summary-card">
+      <div class="metric" style="color:var(--accent);">10</div>
+      <div class="label">Functional Reqs</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color:var(--purple);">7</div>
+      <div class="label">Non-Functional Reqs</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color:var(--green);">&lt;1s</div>
+      <div class="label">Delivery Latency</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color:var(--amber);">1M+</div>
+      <div class="label">Notifications/min</div>
+    </div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9881;</span> Functional Requirements</h3>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Multi-channel Delivery</div>
+        <div class="req-desc">Support push notifications, email, SMS, in-app messages, and webhooks through a unified API with channel-specific formatting and delivery logic.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Template Management</div>
+        <div class="req-desc">Provide a template engine with variable substitution, conditional blocks, localization support, and version-controlled template storage.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">User Preferences</div>
+        <div class="req-desc">Allow users to configure per-channel opt-in/opt-out, quiet hours, frequency caps, and notification category preferences.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Scheduling</div>
+        <div class="req-desc">Support immediate, delayed (send-at), and recurring notification delivery with timezone-aware scheduling and calendar-based triggers.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Batching &amp; Digest</div>
+        <div class="req-desc">Aggregate multiple notifications into digest summaries (hourly, daily, weekly) to reduce notification fatigue while preserving information delivery.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Priority Levels</div>
+        <div class="req-desc">Classify notifications as critical (bypass quiet hours), high, normal, or low priority with priority-based queue processing and delivery guarantees.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Delivery Tracking</div>
+        <div class="req-desc">Track notification lifecycle (created, queued, sent, delivered, opened, clicked, bounced, failed) with per-channel delivery status and analytics.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">Unsubscribe Management</div>
+        <div class="req-desc">Provide one-click unsubscribe links, preference centers, and automatic suppression list management compliant with CAN-SPAM and GDPR.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-09</div>
+        <div class="req-title">A/B Testing</div>
+        <div class="req-desc">Support content and timing experiments across notification variants with statistical significance tracking and automatic winner selection.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-10</div>
+        <div class="req-title">Webhook Delivery</div>
+        <div class="req-desc">Deliver event notifications to registered webhook endpoints with configurable retry policies, payload signing, and delivery confirmation.</div>
+      </div>
+    </div>
+
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--purple-light);color:var(--purple);">&#9889;</span> Non-Functional Requirements</h3>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Delivery Latency</div>
+        <div class="req-desc">Push and in-app notifications must be delivered within 1 second of trigger; email and SMS within 30 seconds under normal load.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Delivery Rate</div>
+        <div class="req-desc">Achieve 99.9% successful delivery rate for all channels with automatic retry, failover providers, and dead letter queue handling.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Throughput</div>
+        <div class="req-desc">Handle 1M+ notifications per minute with horizontal scaling, supporting traffic spikes during flash sales, breaking news, or system-wide alerts.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Deduplication</div>
+        <div class="req-desc">Prevent duplicate notification delivery using idempotency keys and message fingerprinting within configurable time windows.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Per-user Rate Limiting</div>
+        <div class="req-desc">Enforce configurable rate limits per user per channel to prevent notification fatigue and comply with carrier/provider sending limits.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">At-least-once Delivery</div>
+        <div class="req-desc">Guarantee that every notification is delivered at least once, using persistent queues, delivery receipts, and compensating retry mechanisms.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">Cross-timezone Scheduling</div>
+        <div class="req-desc">Schedule notifications relative to each recipient's local timezone with DST awareness and configurable delivery window enforcement.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- SECTION 9: PLAYGROUND -->
+<div class="section" id="playground">
+  <div class="section-header">
+    <span class="section-num">9</span>
     <h2>Interactive Playground</h2>
   </div>
 

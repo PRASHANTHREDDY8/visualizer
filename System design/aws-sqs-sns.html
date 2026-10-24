@@ -586,6 +586,26 @@
     .anti-marker.do { background: var(--success); }
     .anti-marker.dont { background: var(--danger); }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: var(--sns-bg); border-left-color: var(--sns-color); }
+    .req-item.nonfunctional .req-id { color: var(--sns-color); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
     /* Responsive */
     @media (max-width: 900px) {
       .components-grid, .practices-grid, .scaling-grid, .usecase-grid {
@@ -608,6 +628,7 @@
     <a class="nav-link" data-section="comparison">Comparisons</a>
     <a class="nav-link" data-section="usecases">Use Cases & Pitfalls</a>
     <a class="nav-link" data-section="practices">Best Practices</a>
+    <a class="nav-link" data-section="requirements">Requirements</a>
     <a class="nav-link" data-section="scaling">Scaling</a>
   </div>
 </nav>
@@ -992,7 +1013,118 @@
   </div>
 </section>
 
-<!-- Section 7: Scaling & Trade-offs -->
+<!-- Section 7: Requirements -->
+<section class="section" id="requirements">
+  <div class="section-header">
+    <h2 class="section-title">Functional & Non-Functional Requirements</h2>
+    <p class="section-subtitle">Core capabilities and quality attributes for building decoupled, event-driven architectures with AWS messaging services</p>
+  </div>
+
+  <div class="req-summary">
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--accent);">Unlimited</div>
+      <div class="label">Standard Throughput</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--sqs-color);">14 Days</div>
+      <div class="label">Max Retention</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--sns-color);">256 KB</div>
+      <div class="label">Max Message Size</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--success);">99.9%</div>
+      <div class="label">Availability SLA</div>
+    </div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--accent-light); color: var(--accent);">&#9881;</span> Functional Requirements</h3>
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Standard Queues (At-Least-Once)</div>
+        <div class="req-desc">Deliver messages with at-least-once guarantee and best-effort ordering, supporting unlimited throughput for high-volume decoupled architectures.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">FIFO Queues (Exactly-Once)</div>
+        <div class="req-desc">Guarantee exactly-once processing and strict ordering within message groups, preventing duplicate delivery for financial transactions and order processing.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Dead-Letter Queues (DLQ)</div>
+        <div class="req-desc">Automatically route messages that fail processing after a configurable number of attempts (maxReceiveCount) to a separate queue for analysis and reprocessing.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">SNS Topics & Subscriptions</div>
+        <div class="req-desc">Publish messages to topics with fan-out to multiple subscriber endpoints including SQS, Lambda, HTTP/S, email, SMS, and mobile push notifications.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Fan-Out Pattern</div>
+        <div class="req-desc">Combine SNS topics with multiple SQS queue subscribers to deliver a single published message to multiple independent consumers for parallel processing.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Message Filtering</div>
+        <div class="req-desc">Apply JSON-based filter policies on SNS subscriptions to route messages to specific subscribers based on message attributes, reducing unnecessary processing.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">SQS Long Polling</div>
+        <div class="req-desc">Reduce empty responses and API costs by holding connections open (up to 20 seconds) until messages arrive, eliminating the need for frequent short-poll requests.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">Batch Operations</div>
+        <div class="req-desc">Send, receive, and delete up to 10 messages in a single API call, reducing costs by up to 90% and improving throughput for high-volume scenarios.</div>
+      </div>
+    </div>
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--sns-bg); color: var(--sns-color);">&#9889;</span> Non-Functional Requirements</h3>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Unlimited Throughput (Standard)</div>
+        <div class="req-desc">Standard SQS queues support virtually unlimited transactions per second with no pre-provisioning, automatically scaling with demand.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">FIFO Throughput (300 msg/sec)</div>
+        <div class="req-desc">FIFO queues support up to 300 messages/second (3,000 with batching and high-throughput mode up to 30,000) per queue with ordering guarantees.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Message Retention (14 Days)</div>
+        <div class="req-desc">Retain unprocessed messages for a configurable period from 1 minute to 14 days, with default of 4 days, preventing message loss during consumer downtime.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Message Size Limit (256 KB)</div>
+        <div class="req-desc">Support messages up to 256 KB in size, with Extended Client Library enabling payloads up to 2 GB by storing content in S3 and passing references.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Availability SLA (99.9%)</div>
+        <div class="req-desc">AWS guarantees 99.9% monthly uptime for SQS and SNS, with messages stored redundantly across multiple AZs within a region.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">At-Rest Encryption</div>
+        <div class="req-desc">Support server-side encryption using AWS KMS (SSE-KMS) or SQS-managed keys (SSE-SQS) for all messages stored in queues and topics.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">Access Control & Policies</div>
+        <div class="req-desc">Fine-grained IAM policies and resource-based queue/topic policies for cross-account access, with VPC endpoints for private connectivity.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 8: Scaling & Trade-offs -->
 <section class="section" id="scaling">
   <div class="section-header">
     <h2 class="section-title">Scaling & Trade-offs</h2>

@@ -128,6 +128,102 @@
       border-bottom-color: var(--kafka-orange);
     }
 
+    /* Requirements Section */
+    .req-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 768px) {
+      .req-grid { grid-template-columns: 1fr; }
+    }
+    .req-column {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow);
+    }
+    .req-column h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .req-column h3 .req-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+    .req-item {
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      border-left: 4px solid transparent;
+      transition: all 0.2s;
+    }
+    .req-item:hover {
+      transform: translateX(4px);
+    }
+    .req-item .req-id {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .req-item .req-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+    .req-item .req-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .req-item.functional {
+      background: var(--accent-light);
+      border-left-color: var(--kafka-orange);
+    }
+    .req-item.functional .req-id { color: var(--kafka-orange); }
+    .req-item.nonfunctional {
+      background: #f5f3ff;
+      border-left-color: var(--zk);
+    }
+    .req-item.nonfunctional .req-id { color: var(--zk); }
+    .req-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .req-summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .req-summary-card .metric {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .req-summary-card .label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
     /* Sections */
     .section {
       padding: 60px 40px;
@@ -1046,6 +1142,7 @@
   <div class="nav-item" data-section="capacity">Capacity & Scaling</div>
   <div class="nav-item" data-section="comparison">Comparison</div>
   <div class="nav-item" data-section="config">Configuration</div>
+  <div class="nav-item" data-section="requirements">Requirements</div>
   <div class="nav-item" data-section="playground">Playground</div>
 </nav>
 
@@ -1800,6 +1897,137 @@
 
   <div class="config-block" id="configBlock">
     <!-- Filled by JS -->
+  </div>
+</section>
+
+<!-- Requirements Section -->
+<section class="section" id="requirements">
+  <h2 class="section-title">Functional & Non-Functional Requirements</h2>
+  <p class="section-subtitle">What Kafka must do and how well it must do it — the contract every component is designed to fulfill</p>
+
+  <div class="req-summary">
+    <div class="req-summary-card">
+      <div class="metric" style="color:var(--kafka-orange);">8</div>
+      <div class="label">Functional Requirements</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color:var(--zk);">8</div>
+      <div class="label">Non-Functional Requirements</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color:var(--success);">1M+</div>
+      <div class="label">Messages/sec Target</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color:var(--info);">&lt;5ms</div>
+      <div class="label">Publish Latency (p99)</div>
+    </div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--accent-light);color:var(--kafka-orange);">&#9889;</span> Functional Requirements</h3>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Publish Messages</div>
+        <div class="req-desc">Producers must be able to publish messages to named topics. Support key-based partitioning, round-robin, and custom partition assignment strategies.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Subscribe & Consume</div>
+        <div class="req-desc">Consumers subscribe to topics and read messages in order within each partition. Support consumer groups with automatic partition rebalancing for parallel consumption.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Message Ordering</div>
+        <div class="req-desc">Guarantee strict ordering of messages within a single partition. Cross-partition ordering is not guaranteed — applications must design around this constraint.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Message Retention</div>
+        <div class="req-desc">Retain messages for a configurable period (time-based or size-based). Messages remain available for replay even after all consumers have read them. Support log compaction for key-based topics.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Offset Management</div>
+        <div class="req-desc">Track consumer position (offset) per partition per consumer group. Support automatic and manual offset commits. Allow consumers to seek to any offset for replay.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Topic Management</div>
+        <div class="req-desc">Create, delete, and configure topics dynamically. Support configurable partition count, replication factor, and retention policies per topic.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Exactly-Once Semantics</div>
+        <div class="req-desc">Support idempotent producers and transactional writes for exactly-once processing. Enable atomic read-process-write cycles across topics using transactions.</div>
+      </div>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">Schema Management</div>
+        <div class="req-desc">Integrate with Schema Registry for message serialization (Avro, Protobuf, JSON Schema). Enforce schema compatibility rules (backward, forward, full) on topic evolution.</div>
+      </div>
+    </div>
+
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:#f5f3ff;color:var(--zk);">&#128737;</span> Non-Functional Requirements</h3>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">High Throughput</div>
+        <div class="req-desc">Sustain 1M+ messages/sec per cluster with batching and compression. Achieve near-sequential disk I/O speeds using append-only log segments and zero-copy transfer.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Low Latency</div>
+        <div class="req-desc">End-to-end publish-to-consume latency under 5ms (p99) for acks=1. Under 15ms for acks=all with 3 replicas. Support both latency-optimized and throughput-optimized configurations.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Durability</div>
+        <div class="req-desc">Zero message loss with acks=all and min.insync.replicas=2. Messages replicated synchronously to ISR before acknowledgment. Survive single-broker and single-rack failures.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Fault Tolerance</div>
+        <div class="req-desc">Automatic leader election on broker failure within seconds. No data loss during failover if ISR is maintained. Support rack-aware replica placement for datacenter resilience.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Horizontal Scalability</div>
+        <div class="req-desc">Add brokers to linearly increase throughput and storage. Partition reassignment for load balancing. Support clusters of 100+ brokers handling petabytes of data.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Backpressure Handling</div>
+        <div class="req-desc">Decouple producer and consumer speeds. Slow consumers do not block producers — messages accumulate in the log. Support consumer lag monitoring and alerting.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">Security</div>
+        <div class="req-desc">Support TLS encryption in transit, SASL authentication (PLAIN, SCRAM, Kerberos), and ACL-based authorization per topic/consumer-group. Audit logging for compliance.</div>
+      </div>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-08</div>
+        <div class="req-title">Observability</div>
+        <div class="req-desc">Expose JMX metrics for broker health, partition lag, ISR shrinkage, and request latency. Integrate with Prometheus/Grafana. Alert on under-replicated partitions and consumer lag thresholds.</div>
+      </div>
+    </div>
   </div>
 </section>
 

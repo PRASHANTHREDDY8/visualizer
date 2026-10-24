@@ -710,6 +710,26 @@ body {
 
 .sub-tab:hover { border-color: var(--primary); }
 .sub-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+/* Requirements Section */
+.req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+@media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+.req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+.req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+.req-item:hover { transform: translateX(4px); }
+.req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+.req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+.req-item.functional { background: var(--primary-light); border-left-color: var(--primary); }
+.req-item.functional .req-id { color: var(--primary); }
+.req-item.nonfunctional { background: var(--accent-purple-light); border-left-color: var(--accent-purple); }
+.req-item.nonfunctional .req-id { color: var(--accent-purple); }
+.req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+.req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+.req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+.req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
 </style>
 </head>
 <body>
@@ -731,6 +751,7 @@ body {
     <a class="nav-link" onclick="scrollToSection('pitfalls')">Pitfalls</a>
     <a class="nav-link" onclick="scrollToSection('practices')">Best Practices</a>
     <a class="nav-link" onclick="scrollToSection('scaling')">Scaling</a>
+    <a class="nav-link" onclick="scrollToSection('requirements')">Requirements</a>
     <a class="nav-link" onclick="scrollToSection('playground')">Playground</a>
   </div>
 </nav>
@@ -1010,10 +1031,126 @@ body {
   </div>
 </div>
 
-<!-- Section 8: Playground -->
+<!-- Section 8: Requirements -->
+<div class="section" id="requirements">
+  <div class="section-header">
+    <h2><span class="num">8</span> Functional &amp; Non-Functional Requirements</h2>
+    <p>Core capabilities and quality attributes that define Swiggy's food delivery platform at scale</p>
+  </div>
+
+  <div class="req-summary">
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--primary);">&lt;200ms</div>
+      <div class="label">Search Response Time</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--accent-green);">1M+</div>
+      <div class="label">Concurrent Orders</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--accent-blue);">3s</div>
+      <div class="label">GPS Tracking Interval</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--accent-purple);">99.9%</div>
+      <div class="label">Payment Success Rate</div>
+    </div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--primary-light);color:var(--primary);">&#9889;</span> Functional Requirements</h3>
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Restaurant Discovery &amp; Search</div>
+        <div class="req-desc">Users can search restaurants by name, cuisine, dish, or location with auto-suggestions, filters (rating, delivery time, price), and personalized ranking based on order history.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Menu Browsing &amp; Ordering</div>
+        <div class="req-desc">Display restaurant menus with item details, customizations, add-ons, and availability. Support cart management with multi-restaurant detection and minimum order validation.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Real-Time Order Tracking</div>
+        <div class="req-desc">Live order status updates from placement through preparation, pickup, and delivery. Show delivery partner location on map with ETA updates every 3 seconds.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Delivery Partner Assignment</div>
+        <div class="req-desc">Intelligent matching of delivery partners to orders based on proximity, current load, route optimization, and restaurant preparation time to minimize wait and delivery time.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Payment Processing</div>
+        <div class="req-desc">Support multiple payment methods (UPI, cards, wallets, COD) with secure tokenization, split payments, refund handling, and automatic retry for failed transactions.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Ratings &amp; Reviews</div>
+        <div class="req-desc">Post-delivery rating system for restaurants, food items, and delivery partners. Aggregate ratings with fraud detection to filter fake or incentivized reviews.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Promotions &amp; Coupons</div>
+        <div class="req-desc">Dynamic coupon engine supporting percentage/flat discounts, BOGO, free delivery, and first-order offers with budget caps, user targeting, and real-time validation.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">ETA Estimation</div>
+        <div class="req-desc">ML-based delivery time prediction considering restaurant prep time, partner proximity, route distance, traffic conditions, weather, and historical delivery patterns.</div>
+      </div>
+    </div>
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--accent-purple-light);color:var(--accent-purple);">&#128737;</span> Non-Functional Requirements</h3>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Low-Latency Search</div>
+        <div class="req-desc">Restaurant and menu search queries must return results in under 200ms at P99, using Elasticsearch with geo-indexed sharding and pre-computed ranking scores.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">High Concurrency</div>
+        <div class="req-desc">System must handle 1M+ concurrent active orders with horizontally scalable order management microservices and event-driven state machines for order lifecycle.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Real-Time GPS Tracking</div>
+        <div class="req-desc">Delivery partner location updates ingested and broadcast every 3 seconds via WebSocket connections, with geospatial indexing for proximity queries and ETA recalculation.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Payment Reliability</div>
+        <div class="req-desc">Achieve 99.9% payment success rate with multi-gateway failover, idempotent transaction handling, and automatic reconciliation for edge cases like double-charges.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Peak Load Handling</div>
+        <div class="req-desc">Auto-scale to handle 2-3x normal traffic during meal-hour peaks (12-2 PM, 7-10 PM) and festive surges without degradation in order placement latency.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Data Consistency</div>
+        <div class="req-desc">Eventual consistency for catalog data (menus, ratings) with strong consistency for order state transitions and payment processing using saga-based distributed transactions.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">Fault Tolerance</div>
+        <div class="req-desc">Circuit breakers and graceful degradation across all microservices. Critical paths (ordering, payments) operate independently with bulkhead isolation and automatic failover.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-08</div>
+        <div class="req-title">Regional Scalability</div>
+        <div class="req-desc">Multi-region deployment supporting 500+ cities with geo-partitioned databases, CDN-cached static assets, and region-aware routing for minimal cross-region latency.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 9: Playground -->
 <div class="section" id="playground">
   <div class="section-header">
-    <h2><span class="num">8</span> Interactive Playground</h2>
+    <h2><span class="num">9</span> Interactive Playground</h2>
     <p>Experiment with delivery assignment, capacity estimation, and surge pricing</p>
   </div>
   <div class="playground-container">

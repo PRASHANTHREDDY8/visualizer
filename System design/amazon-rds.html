@@ -542,6 +542,26 @@
       .card-grid { grid-template-columns: 1fr; }
       .nav-inner { gap: 0.75rem; }
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -560,6 +580,7 @@
       <li><a href="#usecases">Use Cases</a></li>
       <li><a href="#pitfalls">Pitfalls</a></li>
       <li><a href="#best-practices">Best Practices</a></li>
+      <li><a href="#requirements">Requirements</a></li>
       <li><a href="#scaling">Scaling</a></li>
     </ul>
   </div>
@@ -1153,6 +1174,97 @@
         <li>Use RDS Proxy for connection pooling when > 100 simultaneous connections expected</li>
         <li>For cross-region: use cross-region read replicas (DR) or Aurora Global Database (sub-second replication)</li>
       </ul>
+    </div>
+  </section>
+
+  <section class="section" id="requirements">
+    <h2 class="section-title">Functional & Non-Functional Requirements</h2>
+    <p class="section-subtitle" style="color: var(--text-muted, var(--text-secondary)); font-size: 1.05rem; margin-bottom: 28px;">Essential requirements for Amazon RDS as a managed relational database service supporting multiple database engines with automated operations.</p>
+
+    <div class="req-summary">
+      <div class="req-summary-card"><div class="metric" style="color: var(--accent, #4f6ef7);">99.95%</div><div class="label">SLA Availability</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--green, #22c55e);">64 TB</div><div class="label">Max Storage</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--purple, #8b5cf6);">35 Days</div><div class="label">Backup Retention</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--orange, #f59e0b);">7+7</div><div class="label">FR + NFR Count</div></div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--accent-light, #e8ecff); color: var(--accent, #4f6ef7);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Multi-Engine Support</div>
+          <div class="req-desc">Support managed instances for MySQL, PostgreSQL, MariaDB, Oracle, and SQL Server with engine-specific parameter groups and feature parity.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Automated Backups</div>
+          <div class="req-desc">Perform automated daily snapshots and continuous transaction log backups, enabling point-in-time recovery to any second within the retention period (up to 35 days).</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Point-in-Time Recovery</div>
+          <div class="req-desc">Restore a database to any specific second within the backup retention window, creating a new DB instance with the recovered data and transaction logs applied.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Read Replicas</div>
+          <div class="req-desc">Create up to 15 read replicas (Aurora) or 5 read replicas (other engines) for read scaling, with cross-region replicas for disaster recovery and lower latency.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Multi-AZ Deployment</div>
+          <div class="req-desc">Deploy synchronous standby replicas across Availability Zones for automatic failover, providing high availability with RPO=0 and RTO under 60 seconds.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Parameter Groups</div>
+          <div class="req-desc">Configure database engine parameters through parameter groups and option groups, enabling fine-tuned performance settings without direct config file access.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Database Migration</div>
+          <div class="req-desc">Support seamless migration from on-premises or EC2-hosted databases using AWS DMS with minimal downtime, schema conversion, and continuous replication.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: #f5f3ff; color: #7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">99.95% Availability SLA</div>
+          <div class="req-desc">Guarantee 99.95% availability for Multi-AZ deployments with automatic failover, DNS endpoint switching, and connection draining during failover events.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">Automated Patching</div>
+          <div class="req-desc">Apply minor version upgrades and security patches automatically during configurable maintenance windows, with pre-patch snapshots for rollback safety.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Storage Auto-Scaling</div>
+          <div class="req-desc">Automatically scale storage from initial allocation up to 64TB as data grows, with zero downtime and no manual intervention required.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Fast Multi-AZ Failover</div>
+          <div class="req-desc">Complete automatic failover to standby replica in under 60 seconds (sub-millisecond with RDS Proxy), with no data loss due to synchronous replication.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Backup Retention</div>
+          <div class="req-desc">Retain automated backups for up to 35 days with manual snapshots persisted indefinitely. Support cross-region snapshot copy for disaster recovery.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Encryption</div>
+          <div class="req-desc">Encrypt data at rest using AWS KMS (AES-256) and in transit using SSL/TLS, with encrypted snapshots, replicas, and automated backups inheriting encryption.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Monitoring &amp; Performance Insights</div>
+          <div class="req-desc">Provide Performance Insights dashboard with up to 2 years of history, Enhanced Monitoring (1-second granularity), and CloudWatch integration for alerts on CPU, IOPS, and connections.</div>
+        </div>
+      </div>
     </div>
   </section>
 

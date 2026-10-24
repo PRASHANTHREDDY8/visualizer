@@ -701,6 +701,26 @@
       border-radius: 4px;
       margin-bottom: 0.5rem;
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -716,6 +736,7 @@
     <a href="#usecases">Use Cases</a>
     <a href="#pitfalls">Pitfalls</a>
     <a href="#practices">Best Practices</a>
+    <a href="#requirements">Requirements</a>
     <a href="#scaling">Scaling</a>
   </div>
 </nav>
@@ -1318,7 +1339,113 @@
     </div>
   </section>
 
-  <!-- Section 9: Scaling -->
+  <!-- Section 9: Requirements -->
+  <section id="requirements">
+    <div class="section-header">
+      <h2>Functional &amp; Non-Functional Requirements</h2>
+      <p>What a MySQL ACID-compliant system must do and how well it must do it</p>
+    </div>
+
+    <div class="req-summary">
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--accent);">4</div>
+        <div class="label">ACID Properties</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--accent);">4</div>
+        <div class="label">Isolation Levels</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: #7c3aed;">&lt;60s</div>
+        <div class="label">Crash Recovery Target</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: #7c3aed;">99.99%</div>
+        <div class="label">Durability Guarantee</div>
+      </div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Transaction Atomicity &amp; Rollback</div>
+          <div class="req-desc">All statements within a transaction must succeed or all must be rolled back. Partial commits are never visible. InnoDB uses undo logs to reverse incomplete transactions.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Constraint Enforcement (Consistency)</div>
+          <div class="req-desc">The database must enforce primary keys, foreign keys, unique constraints, CHECK constraints, and NOT NULL at all times. Triggers and cascading actions must fire to maintain referential integrity.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Configurable Isolation Levels</div>
+          <div class="req-desc">Support READ UNCOMMITTED, READ COMMITTED, REPEATABLE READ (default), and SERIALIZABLE. Each level defines visibility rules for uncommitted data, phantom reads, and locking behavior.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Durable Commit via Redo/Undo Logs</div>
+          <div class="req-desc">Committed transactions must survive power loss or crashes. InnoDB writes redo logs (WAL) before data pages and uses the doublewrite buffer to prevent torn-page corruption.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Savepoint &amp; Partial Rollback</div>
+          <div class="req-desc">Transactions must support named savepoints so applications can roll back to an intermediate state without aborting the entire transaction.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Deadlock Detection &amp; Resolution</div>
+          <div class="req-desc">InnoDB must automatically detect lock-wait cycles and roll back the least costly transaction, returning an error so the application can retry.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">XA Distributed Transactions</div>
+          <div class="req-desc">Support two-phase commit (prepare/commit) for distributed transactions spanning multiple MySQL instances or heterogeneous systems via the XA protocol.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:#f5f3ff;color:#7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">MVCC for Non-Blocking Reads</div>
+          <div class="req-desc">Readers must never block writers and vice versa under REPEATABLE READ. InnoDB uses multi-version concurrency control with hidden row versions and read views for snapshot isolation.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">Minimal Lock Contention</div>
+          <div class="req-desc">Row-level locking with gap locks only where needed. Lock waits should remain below 1% of total transactions under normal load to maximize throughput.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Crash Recovery Under 60 Seconds</div>
+          <div class="req-desc">After an unexpected shutdown, InnoDB must replay redo logs and roll back uncommitted transactions to restore a consistent state within 60 seconds for typical workloads.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Redo Log Write Performance</div>
+          <div class="req-desc">Sequential redo log writes must sustain high throughput. With innodb_flush_log_at_trx_commit=1 (full durability), target 10K+ TPS on SSD; with group commit batching, 30K+ TPS.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Checkpoint Frequency Tuning</div>
+          <div class="req-desc">Checkpoints must be configurable to balance write I/O smoothness vs. crash recovery time. Adaptive flushing should keep dirty page percentage within target bounds.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Buffer Pool Efficiency</div>
+          <div class="req-desc">The InnoDB buffer pool (70-80% of RAM) must maintain a hit ratio above 99% for read-heavy workloads, reducing disk I/O while preserving ACID guarantees through WAL.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Undo Log Purge Timeliness</div>
+          <div class="req-desc">Purge threads must keep undo log growth bounded. Long-running transactions should not cause unbounded tablespace growth; monitoring should alert when purge lag exceeds thresholds.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 10: Scaling -->
   <section id="scaling">
     <div class="section-header">
       <h2>Scaling & Trade-offs</h2>

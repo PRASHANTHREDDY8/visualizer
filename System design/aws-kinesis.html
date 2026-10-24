@@ -586,6 +586,26 @@
     .code-keyword { color: #c084fc; }
     .code-string { color: #86efac; }
     .code-comment { color: #64748b; }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -607,6 +627,7 @@
       <li><a href="#usecases">Use Cases</a></li>
       <li><a href="#pitfalls">Pitfalls</a></li>
       <li><a href="#practices">Best Practices</a></li>
+      <li><a href="#requirements">Requirements</a></li>
       <li><a href="#scaling">Scaling</a></li>
     </ul>
   </div>
@@ -1194,7 +1215,103 @@ response = kinesis.put_records(
   </div>
 </section>
 
-<!-- Section 7: Scaling & Trade-offs -->
+<!-- Section 7: Requirements -->
+<section class="section" id="requirements">
+  <h2 class="section-title">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Functional &amp; Non-Functional Requirements
+  </h2>
+  <p class="section-subtitle">Core capabilities and quality attributes for real-time data streaming and analytics with Amazon Kinesis</p>
+
+  <div class="req-summary">
+    <div class="req-summary-card"><div class="metric" style="color:var(--accent)">&lt;200ms</div><div class="label">End-to-End Latency</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--blue)">1 MB/sec</div><div class="label">Per Shard Ingestion</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--green)">365 Days</div><div class="label">Max Retention</div></div>
+    <div class="req-summary-card"><div class="metric" style="color:var(--purple)">99.9%</div><div class="label">Availability SLA</div></div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent)">&#9881;</span> Functional Requirements</h3>
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Real-Time Data Streaming</div>
+        <div class="req-desc">Ingest and process continuous data streams from thousands of sources (IoT devices, clickstreams, logs) with sub-second data availability for consumers.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Shard-Based Partitioning</div>
+        <div class="req-desc">Distribute data across shards using partition keys for parallel processing; each shard provides deterministic ordering and dedicated throughput capacity.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Kinesis Data Streams</div>
+        <div class="req-desc">Core streaming service providing durable, ordered, replayable data streams with configurable retention for building custom real-time processing applications.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Kinesis Data Firehose</div>
+        <div class="req-desc">Fully managed delivery service that automatically batches, compresses, transforms, and loads streaming data into S3, Redshift, Elasticsearch, and Splunk.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Kinesis Data Analytics</div>
+        <div class="req-desc">Run SQL queries and Apache Flink applications directly on streaming data for real-time analytics, anomaly detection, and time-series analysis without managing infrastructure.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Enhanced Fan-Out</div>
+        <div class="req-desc">Provide dedicated 2 MB/sec throughput per consumer per shard using HTTP/2 push, eliminating throughput contention between multiple consumer applications.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Consumer Scaling (KCL)</div>
+        <div class="req-desc">Kinesis Client Library automatically distributes shard processing across multiple workers with checkpointing, lease management, and dynamic rebalancing.</div>
+      </div>
+    </div>
+
+    <div class="req-column">
+      <h3><span class="req-icon" style="background:var(--purple-light);color:var(--purple)">&#9733;</span> Non-Functional Requirements</h3>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Low Latency (&lt;200ms)</div>
+        <div class="req-desc">Achieve sub-200ms end-to-end latency from producer put to consumer read, enabling real-time dashboards, alerting, and responsive event-driven architectures.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Ingestion Throughput (1 MB/sec/shard)</div>
+        <div class="req-desc">Each shard supports up to 1 MB/sec or 1,000 records/sec ingestion rate, with throughput scaling linearly by adding more shards.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Consumption Throughput (2 MB/sec/shard)</div>
+        <div class="req-desc">Each shard provides 2 MB/sec read throughput shared across standard consumers, or 2 MB/sec dedicated per consumer with enhanced fan-out.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Extended Data Retention (365 Days)</div>
+        <div class="req-desc">Retain stream data from default 24 hours up to 365 days, enabling historical replay, reprocessing after bug fixes, and audit compliance.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Availability SLA (99.9%)</div>
+        <div class="req-desc">AWS guarantees 99.9% uptime with data replicated synchronously across 3 Availability Zones within a region for durability and fault tolerance.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">On-Demand Capacity Mode</div>
+        <div class="req-desc">Automatically provision and scale shards based on traffic patterns, eliminating capacity planning and supporting unpredictable workloads without over-provisioning.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">Server-Side Encryption</div>
+        <div class="req-desc">Encrypt all data at rest using AWS KMS customer master keys (CMKs) with automatic key rotation, and enforce TLS 1.2 for all data in transit.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 8: Scaling & Trade-offs -->
 <section class="section" id="scaling">
   <h2 class="section-title">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>

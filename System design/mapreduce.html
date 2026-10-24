@@ -625,6 +625,26 @@
     .code-block .str { color: #34d399; }
     .code-block .cmt { color: #64748b; }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
     @media (max-width: 768px) {
       .hero h1 { font-size: 2rem; }
       .section { padding: 2rem 1rem; }
@@ -647,6 +667,7 @@
   <a href="#pitfalls">Pitfalls</a>
   <a href="#practices">Best Practices</a>
   <a href="#scaling">Scaling</a>
+  <a href="#requirements">Requirements</a>
   <a href="#playground">Playground</a>
 </nav>
 
@@ -1270,6 +1291,113 @@
       <text x="470" y="20" font-size="9" fill="#64748b">~600s</text>
       <text x="735" y="20" font-size="9" fill="#64748b">891s</text>
     </svg>
+  </div>
+</div>
+
+<!-- Section: Requirements -->
+<div class="section" id="requirements">
+  <h2 class="section-title">Functional & Non-Functional Requirements</h2>
+  <p class="section-subtitle">Core processing capabilities and quality attributes for distributed batch computation frameworks</p>
+
+  <div class="req-summary">
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--accent);">8</div>
+      <div class="label">Functional Reqs</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--purple);">6</div>
+      <div class="label">Non-Functional Reqs</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--green);">Petabyte-scale</div>
+      <div class="label">Data</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--teal);">Linear</div>
+      <div class="label">Scalability</div>
+    </div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--accent-light); color: var(--accent);">&#9881;</span> Functional Requirements</h3>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Map Phase Processing</div>
+        <div class="req-desc">Execute user-defined map functions in parallel across input splits, transforming each record into intermediate key-value pairs.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Shuffle & Sort</div>
+        <div class="req-desc">Automatically group and sort intermediate key-value pairs by key, transferring data across nodes to co-locate all values for each key.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Reduce Phase Aggregation</div>
+        <div class="req-desc">Apply user-defined reduce functions to each group of values sharing a key, producing final output results.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Input Splitting</div>
+        <div class="req-desc">Automatically partition input data into configurable splits for parallel processing, respecting data locality when possible.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Combiner Optimization</div>
+        <div class="req-desc">Support optional combiner functions that perform local aggregation on map output before the shuffle phase to reduce network transfer.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Custom Partitioner</div>
+        <div class="req-desc">Allow custom partitioning logic to control how intermediate keys are distributed across reduce tasks for balanced workload distribution.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Output Format Configuration</div>
+        <div class="req-desc">Support configurable output formats (text, sequence files, custom) and multiple output paths for flexible result storage.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">Job Chaining</div>
+        <div class="req-desc">Enable multi-stage MapReduce pipelines where output of one job feeds as input to the next, supporting complex data processing workflows.</div>
+      </div>
+    </div>
+
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--purple-light); color: var(--purple);">&#9889;</span> Non-Functional Requirements</h3>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Linear Horizontal Scalability</div>
+        <div class="req-desc">Processing throughput must scale linearly with added nodes; doubling cluster size should halve processing time for parallelizable workloads.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Fault Tolerance</div>
+        <div class="req-desc">Automatically detect and re-execute failed tasks on other nodes; job completion must be guaranteed despite individual node failures.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Data Locality Optimization</div>
+        <div class="req-desc">Schedule map tasks on nodes where input data resides, minimizing network data transfer and maximizing disk I/O throughput.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Petabyte-scale Processing</div>
+        <div class="req-desc">Handle datasets ranging from gigabytes to petabytes without architectural changes or manual data partitioning.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Automatic Task Scheduling</div>
+        <div class="req-desc">Dynamically schedule and reschedule tasks based on cluster resource availability, node health, and data locality preferences.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Speculative Execution</div>
+        <div class="req-desc">Detect and mitigate straggler tasks by launching backup copies on faster nodes, using the first completed result.</div>
+      </div>
+    </div>
   </div>
 </div>
 

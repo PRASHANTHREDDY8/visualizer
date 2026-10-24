@@ -131,6 +131,26 @@
       margin-bottom: 32px;
     }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
+
     /* Architecture Diagram */
     .arch-container {
       background: var(--surface);
@@ -1114,7 +1134,102 @@
   </div>
 </section>
 
-<!-- Section 6: Interactive Playground -->
+<!-- Section 6: Requirements -->
+<section style="background: var(--surface-alt);">
+  <div class="container">
+    <div class="section-label">&#128203; Requirements</div>
+    <h2 class="section-title">Functional & Non-Functional Requirements</h2>
+    <p class="section-desc">Key requirements for designing a production-grade rate limiting system that protects APIs while maintaining fairness and performance.</p>
+
+    <div class="req-summary">
+      <div class="req-summary-card"><div class="metric" style="color: var(--accent);">&lt;1ms</div><div class="label">Overhead Per Request</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--green);">99.999%</div><div class="label">Accuracy Guarantee</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--purple);">6+</div><div class="label">Functional Requirements</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--orange);">6+</div><div class="label">Non-Functional Requirements</div></div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--accent-light); color: var(--accent);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Multiple Algorithm Support</div>
+          <div class="req-desc">Support token bucket, sliding window log, sliding window counter, and fixed window counter algorithms with configurable parameters per endpoint.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Granular Rate Limit Keys</div>
+          <div class="req-desc">Apply rate limits per user, per IP address, per API key, or per custom composite key (e.g., user + endpoint combination).</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Configurable Rules Engine</div>
+          <div class="req-desc">Allow dynamic rule configuration with JSON/YAML policies specifying limits, windows, burst allowances, and escalation thresholds without redeployment.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Standard Rate Limit Headers</div>
+          <div class="req-desc">Return X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, and Retry-After headers on every response per RFC 6585.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Whitelist &amp; Blacklist Management</div>
+          <div class="req-desc">Maintain allow-lists for trusted internal services and block-lists for known abusive clients, bypassing or enforcing stricter limits respectively.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Distributed Rate Limiting</div>
+          <div class="req-desc">Synchronize rate limit counters across multiple nodes using a centralized store (Redis) to enforce global limits in distributed deployments.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Quota &amp; Throttling Tiers</div>
+          <div class="req-desc">Support tiered rate limits (free, pro, enterprise) with per-plan quotas, burst allowances, and graceful degradation policies.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: #f5f3ff; color: #7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Sub-Millisecond Overhead</div>
+          <div class="req-desc">Add less than 1ms of latency per request for rate limit checks, ensuring negligible impact on API response times at P99.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">High Accuracy</div>
+          <div class="req-desc">Achieve 99.999% accuracy in rate limit enforcement, minimizing both false positives (legitimate requests blocked) and false negatives (excess requests allowed).</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Horizontal Scalability</div>
+          <div class="req-desc">Scale linearly with traffic by adding rate limiter nodes, handling millions of requests per second across the cluster without bottlenecks.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Atomic Counter Operations</div>
+          <div class="req-desc">Guarantee atomicity for increment-and-check operations using Redis MULTI/EXEC or Lua scripts, preventing race conditions under concurrent access.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Minimal Memory Footprint</div>
+          <div class="req-desc">Use compact data structures (e.g., ~100 bytes per sliding window entry) to track millions of active rate limit keys within constrained memory budgets.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Graceful Degradation</div>
+          <div class="req-desc">Continue serving requests (fail-open or fail-closed configurable) when the rate limit store is unavailable, with automatic recovery on reconnection.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Observability &amp; Alerting</div>
+          <div class="req-desc">Expose Prometheus metrics for rate limit hits, rejections, and latency percentiles. Trigger alerts when rejection rates exceed configurable thresholds.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 7: Interactive Playground -->
 <section style="background: var(--surface-alt);">
   <div class="container">
     <div class="section-label">&#127918; Playground</div>

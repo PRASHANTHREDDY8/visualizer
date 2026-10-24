@@ -677,6 +677,26 @@
     .circuit-closed { background: var(--green); }
     .circuit-open { background: var(--red); }
     .circuit-half { background: var(--amber); }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -693,6 +713,7 @@
   <a href="#pitfalls">Pitfalls</a>
   <a href="#best-practices">Best Practices</a>
   <a href="#scaling">Scaling</a>
+  <a href="#requirements">Requirements</a>
   <a href="#playground">Playground</a>
 </nav>
 
@@ -1395,7 +1416,113 @@
   </div>
 </section>
 
-<!-- Section 8: Playground -->
+<!-- Section 8: Functional & Non-Functional Requirements -->
+<section class="section" id="requirements">
+  <div class="section-header">
+    <h2>Functional &amp; Non-Functional Requirements</h2>
+    <p>Core functional capabilities and quality attributes that define a robust microservices architecture</p>
+  </div>
+
+  <div class="req-summary">
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--accent);">8+</div>
+      <div class="label">Functional Reqs</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--purple);">6+</div>
+      <div class="label">Non-Functional Reqs</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--green);">&lt;100ms</div>
+      <div class="label">Inter-service Latency</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--teal);">&#x2713;</div>
+      <div class="label">Independent Deployability</div>
+    </div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--accent-light); color: var(--accent);">&#x2699;</span> Functional Requirements</h3>
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Service Decomposition by Business Capability</div>
+        <div class="req-desc">Decompose monolithic applications into independently deployable services aligned with business capabilities, ensuring clear ownership boundaries.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Service Decomposition by Subdomain</div>
+        <div class="req-desc">Apply Domain-Driven Design to identify bounded contexts and decompose services along subdomain boundaries for optimal cohesion.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">API Gateway Pattern</div>
+        <div class="req-desc">Implement a single entry point that handles request routing, composition, protocol translation, and cross-cutting concerns like authentication.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Service Discovery</div>
+        <div class="req-desc">Enable dynamic service registration and lookup so services can find and communicate with each other without hardcoded endpoints.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Circuit Breaker</div>
+        <div class="req-desc">Prevent cascading failures by detecting downstream service failures and short-circuiting requests, providing fallback responses when services are unavailable.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Saga Pattern</div>
+        <div class="req-desc">Manage distributed transactions across services using choreography (event-driven) or orchestration (central coordinator) to maintain data consistency.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">CQRS (Command Query Responsibility Segregation)</div>
+        <div class="req-desc">Separate read and write models to optimize query performance independently from command processing.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">Event Sourcing</div>
+        <div class="req-desc">Store all state changes as an immutable sequence of events, enabling complete audit trails and temporal queries across service boundaries.</div>
+      </div>
+    </div>
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--purple-light); color: var(--purple);">&#x26A1;</span> Non-Functional Requirements</h3>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Independent Deployability</div>
+        <div class="req-desc">Each service must be independently deployable without requiring coordinated releases, enabling continuous delivery per service.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Fault Isolation</div>
+        <div class="req-desc">Failures in one service must not cascade to others; blast radius must be contained through bulkheads, timeouts, and circuit breakers.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Polyglot Persistence</div>
+        <div class="req-desc">Support different database technologies per service, allowing each team to choose the optimal data store for their use case.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Inter-service Latency</div>
+        <div class="req-desc">Service-to-service communication must complete within 100ms (p99) to maintain acceptable end-to-end response times.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Distributed Tracing</div>
+        <div class="req-desc">All cross-service requests must be traceable end-to-end using correlation IDs, enabling root cause analysis across service boundaries.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Eventual Consistency Tolerance</div>
+        <div class="req-desc">The system must gracefully handle temporary data inconsistencies across services, converging to a consistent state within defined SLAs.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 9: Playground -->
 <section class="section" id="playground">
   <div class="section-header">
     <h2>Interactive Playground</h2>

@@ -645,6 +645,26 @@ section > h2 .icon {
   color: var(--accent);
   background: var(--accent-light);
 }
+
+/* Requirements Section */
+.req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+@media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+.req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+.req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+.req-item:hover { transform: translateX(4px); }
+.req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+.req-item .req-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
+.req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+.req-item.functional .req-id { color: var(--accent); }
+.req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+.req-item.nonfunctional .req-id { color: var(--purple); }
+.req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+.req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+.req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+.req-summary-card .label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
 </style>
 </head>
 <body>
@@ -660,6 +680,7 @@ section > h2 .icon {
     <a class="nav-link" href="#pitfalls">Pitfalls</a>
     <a class="nav-link" href="#best-practices">Best Practices</a>
     <a class="nav-link" href="#scaling">Scaling</a>
+    <a class="nav-link" href="#requirements">Requirements</a>
     <a class="nav-link" href="#playground">Playground</a>
   </div>
 </nav>
@@ -1226,6 +1247,124 @@ section > h2 .icon {
       <div>
         <h4 style="font-size:0.92rem;">Compute Locally vs. Server-Side</h4>
         <p style="font-size:0.82rem;color:var(--text-secondary);">Formulas could evaluate client-side (instant) or server-side (authoritative). Google uses server-side for consistency across clients, with client-side preview for responsiveness.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION: REQUIREMENTS ==================== -->
+<section id="requirements" class="fade-in">
+  <h2><span class="icon" style="background:var(--accent-light);color:var(--accent);">&#9744;</span> Functional & Non-Functional Requirements</h2>
+
+  <p style="color:var(--text-secondary);margin-bottom:1.5rem;">Core capabilities and quality attributes for a collaborative cloud-based spreadsheet platform</p>
+
+  <div class="req-summary">
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--accent);">10</div>
+      <div class="label">Functional Reqs</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--purple);">6</div>
+      <div class="label">Non-Functional Reqs</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--green);">&lt;50ms</div>
+      <div class="label">Cell Updates</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--teal);">100+</div>
+      <div class="label">Concurrent Editors</div>
+    </div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--accent-light); color: var(--accent);">&#9881;</span> Functional Requirements</h3>
+
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Cell-based Data Editing</div>
+        <div class="req-desc">Support rich cell editing with multiple data types (text, numbers, dates, booleans), auto-detection, and bulk operations across ranges.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Formula Engine</div>
+        <div class="req-desc">Implement 400+ built-in functions (math, text, lookup, statistical, financial) with dependency tracking and automatic recalculation.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Real-time Collaboration</div>
+        <div class="req-desc">Enable multiple users to simultaneously edit the same spreadsheet with live cursor tracking, cell-level locking, and instant sync.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Conditional Formatting</div>
+        <div class="req-desc">Apply dynamic visual formatting rules based on cell values, formulas, or data ranges with priority-based rule ordering.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Charts & Visualizations</div>
+        <div class="req-desc">Generate interactive charts (bar, line, pie, scatter, etc.) from data ranges with auto-updating when source data changes.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Pivot Tables</div>
+        <div class="req-desc">Create dynamic pivot tables for data summarization with drag-and-drop field configuration, calculated fields, and grouping.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Data Validation</div>
+        <div class="req-desc">Define cell-level validation rules (dropdowns, ranges, custom formulas) with error messages and input rejection/warning modes.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-08</div>
+        <div class="req-title">Import/Export</div>
+        <div class="req-desc">Support bidirectional conversion with CSV, XLSX, TSV, PDF, and ODS formats while preserving formatting and formulas where possible.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-09</div>
+        <div class="req-title">Apps Script Automation</div>
+        <div class="req-desc">Provide a JavaScript-based scripting environment for custom functions, automation triggers, and third-party API integrations.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-10</div>
+        <div class="req-title">Cross-sheet References</div>
+        <div class="req-desc">Enable formula references across sheets and workbooks with automatic dependency tracking and update propagation.</div>
+      </div>
+    </div>
+
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--purple-light); color: var(--purple);">&#9889;</span> Non-Functional Requirements</h3>
+
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Cell Update Propagation</div>
+        <div class="req-desc">Cell edits must propagate to all connected clients within 50ms to maintain a seamless real-time collaboration experience.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Sheet Capacity</div>
+        <div class="req-desc">Support up to 10 million cells per spreadsheet with responsive scrolling and search performance across large datasets.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Concurrent Editing</div>
+        <div class="req-desc">Handle 100+ simultaneous editors per document using operational transformation or CRDT-based conflict resolution.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Formula Recalculation</div>
+        <div class="req-desc">Complete dependency graph recalculation within 1 second for sheets with complex formula chains and cross-references.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Offline Editing Support</div>
+        <div class="req-desc">Enable offline edits with automatic conflict-free synchronization when connectivity is restored.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Version History</div>
+        <div class="req-desc">Maintain complete revision history with named versions, user attribution, and the ability to restore any previous state.</div>
       </div>
     </div>
   </div>

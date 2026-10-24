@@ -595,6 +595,26 @@
     .code-block .func { color: #89b4fa; }
     .code-block .num { color: #fab387; }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.functional .req-id { color: var(--accent); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
     @media (max-width: 768px) {
       .container { padding: 1rem; }
       .nav { padding: 0 1rem; }
@@ -615,6 +635,7 @@
     <a href="#comparisons" class="nav-link">Comparisons</a>
     <a href="#use-cases" class="nav-link">Use Cases & Pitfalls</a>
     <a href="#best-practices" class="nav-link">Best Practices</a>
+    <a href="#requirements" class="nav-link">Requirements</a>
     <a href="#scaling" class="nav-link">Scaling</a>
   </div>
 </nav>
@@ -1194,7 +1215,113 @@
     </div>
   </section>
 
-  <!-- Section 7: Scaling -->
+  <!-- Section 7: Requirements -->
+  <section id="requirements">
+    <div class="section-header">
+      <h2>Functional & Non-Functional Requirements</h2>
+      <p>Core capabilities and quality attributes for distributed data processing with PySpark</p>
+    </div>
+
+    <div class="req-summary">
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--accent);">100x</div>
+        <div class="label">Faster than MapReduce</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--blue);">Petabytes</div>
+        <div class="label">Data Scale</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--green);">4</div>
+        <div class="label">Processing Engines</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--purple);">In-Memory</div>
+        <div class="label">Execution Model</div>
+      </div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--accent-light); color: var(--accent);">&#9881;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Distributed DataFrame API</div>
+          <div class="req-desc">Provide a high-level DataFrame abstraction for structured data processing, supporting column operations, filtering, grouping, joins, and window functions across distributed datasets.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">SQL Engine (SparkSQL)</div>
+          <div class="req-desc">Execute ANSI SQL queries directly on DataFrames and registered tables, with support for subqueries, CTEs, and integration with Hive metastore.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">RDD Transformations</div>
+          <div class="req-desc">Support low-level Resilient Distributed Dataset operations (map, filter, reduce, flatMap) for fine-grained control over distributed computation and custom partitioning.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">User-Defined Functions (UDFs)</div>
+          <div class="req-desc">Allow custom Python functions to be applied to DataFrame columns, with support for Pandas UDFs (vectorized) for 10-100x better performance than row-at-a-time UDFs.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Multi-Format Read/Write</div>
+          <div class="req-desc">Read and write data in Parquet, ORC, CSV, JSON, Avro, Delta Lake, and JDBC formats with schema inference, partition pruning, and predicate pushdown.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Structured Streaming</div>
+          <div class="req-desc">Process real-time data streams using the same DataFrame API as batch, with exactly-once semantics, watermarking, and windowed aggregations.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">MLlib Integration</div>
+          <div class="req-desc">Built-in machine learning library with distributed implementations of classification, regression, clustering, collaborative filtering, and feature engineering pipelines.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--purple-light); color: var(--purple);">&#9889;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Linear Scalability</div>
+          <div class="req-desc">Scale horizontally by adding executor nodes, achieving near-linear performance gains for data-parallel workloads across hundreds of nodes.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">In-Memory Processing</div>
+          <div class="req-desc">Cache intermediate results in memory (RAM) across the cluster, achieving up to 100x speedup over disk-based MapReduce for iterative algorithms.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Lazy Evaluation</div>
+          <div class="req-desc">Defer computation until an action is triggered, enabling the Catalyst optimizer to analyze the full query plan and apply optimizations like predicate pushdown and join reordering.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Catalyst Optimizer</div>
+          <div class="req-desc">Automatically optimize query plans through rule-based and cost-based optimization, including constant folding, filter pushdown, and join strategy selection.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Tungsten Execution Engine</div>
+          <div class="req-desc">Operate on raw binary data with whole-stage code generation, bypassing JVM object overhead for 10x improvement in memory efficiency and CPU throughput.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Fault Tolerance via Lineage</div>
+          <div class="req-desc">Recover lost partitions by recomputing them from the RDD lineage graph, avoiding expensive data replication while ensuring resilience to node failures.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Delta Lake Support</div>
+          <div class="req-desc">Enable ACID transactions, schema enforcement, time travel, and upsert (MERGE) operations on data lake storage for reliable, production-grade data pipelines.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 8: Scaling -->
   <section id="scaling">
     <div class="section-header">
       <h2>Scaling & Trade-offs</h2>

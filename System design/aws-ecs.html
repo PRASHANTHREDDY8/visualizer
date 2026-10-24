@@ -360,6 +360,26 @@
 
         .bp-card ul li { margin-bottom: 0.3rem; }
 
+        /* Requirements Section */
+        .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+        @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+        .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+        .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+        .req-item:hover { transform: translateX(4px); }
+        .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+        .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+        .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+        .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+        .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+        .req-item.nonfunctional .req-id { color: #7c3aed; }
+        .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+        .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+        .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+        .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
+
         /* Scaling section */
         .metric-grid {
             display: grid;
@@ -566,6 +586,7 @@
         <a href="#usecases">Use Cases</a>
         <a href="#pitfalls">Pitfalls</a>
         <a href="#best-practices">Best Practices</a>
+        <a href="#requirements">Requirements</a>
         <a href="#scaling">Scaling</a>
         <a href="#playground">Playground</a>
     </nav>
@@ -1079,6 +1100,102 @@
                 <li>For EC2 launch type: use managed scaling with capacity providers to auto-scale ASG</li>
                 <li>Pre-warm for known traffic patterns using scheduled scaling (e.g., morning spike)</li>
             </ul>
+        </div>
+    </section>
+
+    <!-- Requirements Section -->
+    <section id="requirements">
+        <h2>Functional &amp; Non-Functional Requirements</h2>
+
+        <div class="req-summary">
+            <div class="req-summary-card"><div class="metric">1000s</div><div class="label">Tasks Per Cluster</div></div>
+            <div class="req-summary-card"><div class="metric">&lt;30s</div><div class="label">Container Startup</div></div>
+            <div class="req-summary-card"><div class="metric">99.99%</div><div class="label">Control Plane SLA</div></div>
+            <div class="req-summary-card"><div class="metric">2</div><div class="label">Launch Types</div></div>
+        </div>
+
+        <div class="req-grid">
+            <div class="req-column">
+                <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9889;</span> Functional Requirements</h3>
+                <div class="req-item functional">
+                    <div class="req-id">FR-01</div>
+                    <div class="req-title">Container Orchestration</div>
+                    <div class="req-desc">Run and manage Docker containers at scale. Schedule tasks across a cluster of EC2 instances or Fargate.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-02</div>
+                    <div class="req-title">Task Definitions</div>
+                    <div class="req-desc">Declarative JSON/YAML configuration for containers: image, CPU, memory, ports, volumes, environment variables, and logging.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-03</div>
+                    <div class="req-title">Service Auto-Scaling</div>
+                    <div class="req-desc">Target tracking, step scaling, and scheduled scaling policies. Scale based on CPU, memory, ALB request count, or custom CloudWatch metrics.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-04</div>
+                    <div class="req-title">Service Discovery</div>
+                    <div class="req-desc">AWS Cloud Map integration for DNS-based and API-based service discovery. Automatic registration/deregistration of tasks.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-05</div>
+                    <div class="req-title">Load Balancer Integration</div>
+                    <div class="req-desc">Native ALB, NLB, and CLB integration. Dynamic port mapping. Path-based and host-based routing for microservices.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-06</div>
+                    <div class="req-title">Launch Types</div>
+                    <div class="req-desc">EC2 launch type for full control over instances. Fargate launch type for serverless container execution. Mixed strategies supported.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-07</div>
+                    <div class="req-title">Task Placement</div>
+                    <div class="req-desc">Spread, binpack, and random placement strategies. Placement constraints by instance type, AZ, or custom attributes.</div>
+                </div>
+                <div class="req-item functional">
+                    <div class="req-id">FR-08</div>
+                    <div class="req-title">ECS Exec</div>
+                    <div class="req-desc">Interactive shell access to running containers for debugging. Based on AWS Systems Manager Session Manager.</div>
+                </div>
+            </div>
+            <div class="req-column">
+                <h3><span class="req-icon" style="background:#f5f3ff;color:#7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-01</div>
+                    <div class="req-title">Startup Performance</div>
+                    <div class="req-desc">Container startup time under 30 seconds for pre-pulled images. Image layer caching on EC2 instances for faster subsequent starts.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-02</div>
+                    <div class="req-title">Cluster Scale</div>
+                    <div class="req-desc">Support thousands of tasks per cluster. Horizontal scaling with auto-scaling groups for EC2 launch type.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-03</div>
+                    <div class="req-title">Zero-Downtime Deployments</div>
+                    <div class="req-desc">Rolling updates with configurable minimum healthy percent and maximum percent. Blue/green deployments via CodeDeploy.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-04</div>
+                    <div class="req-title">Control Plane SLA</div>
+                    <div class="req-desc">99.99% availability for the ECS control plane. Regional service with multi-AZ redundancy.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-05</div>
+                    <div class="req-title">Security</div>
+                    <div class="req-desc">IAM task roles for fine-grained permissions. Secrets Manager and SSM Parameter Store integration. VPC networking and security groups.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-06</div>
+                    <div class="req-title">Observability</div>
+                    <div class="req-desc">CloudWatch Container Insights for metrics and logs. X-Ray tracing integration. FireLens for custom log routing to Splunk, Datadog, etc.</div>
+                </div>
+                <div class="req-item nonfunctional">
+                    <div class="req-id">NFR-07</div>
+                    <div class="req-title">Cost Optimization</div>
+                    <div class="req-desc">EC2 Spot instances for fault-tolerant workloads. Savings Plans and Reserved Instances. Right-sizing recommendations via Compute Optimizer.</div>
+                </div>
+            </div>
         </div>
     </section>
 

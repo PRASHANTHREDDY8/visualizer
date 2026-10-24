@@ -121,6 +121,26 @@
       font-size: 1.05rem;
     }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
+
     /* Architecture Diagram */
     .arch-tabs {
       display: flex;
@@ -1154,6 +1174,100 @@
       </div>
     </div>
   </section>
+
+  <!-- Functional & Non-Functional Requirements -->
+<section style="padding: 48px 0; background: var(--surface-alt, #f3f4f6);">
+  <div class="container">
+    <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.02em;">Functional & Non-Functional Requirements</h2>
+    <p style="color: var(--muted, var(--text-muted, #64748b)); font-size: 1.05rem; margin-bottom: 28px;">Key requirements for designing a distributed unique ID generation system that produces globally unique, sortable identifiers at scale.</p>
+
+    <div class="req-summary">
+      <div class="req-summary-card"><div class="metric" style="color: var(--accent, #4f6ef7);">&lt;1ms</div><div class="label">Generation Time</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--green, #22c55e);">10K+/sec</div><div class="label">IDs Per Node</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--purple, #8b5cf6);">Zero</div><div class="label">Collision Rate</div></div>
+      <div class="req-summary-card"><div class="metric" style="color: var(--orange, #f59e0b);">7+7</div><div class="label">FR + NFR Count</div></div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: var(--accent-light, #e8ecff); color: var(--accent, #4f6ef7);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Globally Unique IDs</div>
+          <div class="req-desc">Generate IDs that are guaranteed unique across all nodes, data centers, and time — with zero coordination between generators.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">Time-Ordered / Sortable</div>
+          <div class="req-desc">Produce IDs that are roughly time-ordered (k-sortable), enabling efficient range queries and chronological ordering in databases.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Configurable Formats</div>
+          <div class="req-desc">Support multiple ID formats including UUID v4, Snowflake (64-bit), ULID (128-bit), and custom formats with configurable bit allocation.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">No Coordination Required</div>
+          <div class="req-desc">Generate IDs independently on each node without requiring network calls to a central authority, using embedded machine/datacenter identifiers.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Embeddable Metadata</div>
+          <div class="req-desc">Encode metadata within the ID structure — timestamp, datacenter ID, machine ID, and sequence number — extractable without external lookups.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Clock Drift Handling</div>
+          <div class="req-desc">Detect and handle clock drift or backward clock jumps gracefully, using strategies like sequence number waiting or logical clock fallback.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Batch Generation</div>
+          <div class="req-desc">Support pre-allocated ID ranges for batch operations, allowing services to reserve blocks of sequential IDs for bulk inserts without per-ID overhead.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background: #f5f3ff; color: #7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Sub-Millisecond Generation</div>
+          <div class="req-desc">Generate each ID in under 1ms with P99 latency below 0.5ms, ensuring ID generation never becomes a bottleneck in request processing.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">High Throughput</div>
+          <div class="req-desc">Produce 10,000+ unique IDs per second per node, with Snowflake supporting up to 4,096 IDs per millisecond per machine.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Zero Collisions</div>
+          <div class="req-desc">Guarantee zero ID collisions across the entire distributed system through bit-space partitioning (machine ID + sequence) and timestamp embedding.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Monotonically Increasing (Per Node)</div>
+          <div class="req-desc">Ensure IDs generated on the same node are strictly monotonically increasing, preserving insertion order for B-tree index efficiency.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">K-Sortable Across Nodes</div>
+          <div class="req-desc">Maintain approximate time ordering across nodes (k-sortable within clock skew bounds), enabling distributed merge-sort operations.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Compact Representation</div>
+          <div class="req-desc">Use space-efficient encoding — 64-bit Snowflake IDs for storage optimization or 128-bit ULIDs with Crockford Base32 for human readability.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Fault Tolerance</div>
+          <div class="req-desc">Continue generating unique IDs during partial system failures — no single point of failure, with graceful handling of ZooKeeper/etcd unavailability for worker ID assignment.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
   <!-- Interactive Demo -->
   <section>

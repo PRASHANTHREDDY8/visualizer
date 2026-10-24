@@ -626,6 +626,26 @@
       accent-color: var(--primary);
     }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: #e0f2fe; border-left-color: var(--primary); }
+    .req-item.functional .req-id { color: var(--primary); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
     /* Responsive */
     @media (max-width: 900px) {
       .hero h1 { font-size: 1.8rem; }
@@ -656,6 +676,7 @@
       <li><a href="#usecases">Use Cases</a></li>
       <li><a href="#pitfalls">Pitfalls</a></li>
       <li><a href="#best-practices">Best Practices</a></li>
+      <li><a href="#requirements">Requirements</a></li>
       <li><a href="#scaling">Scaling</a></li>
     </ul>
   </div>
@@ -1142,10 +1163,127 @@
     </div>
   </section>
 
-  <!-- Section 7: Scaling -->
-  <section id="scaling">
+  <!-- Section 7: Requirements -->
+  <section id="requirements">
     <div class="section-header">
       <span class="section-number">7</span>
+      <h2>Functional &amp; Non-Functional Requirements</h2>
+    </div>
+    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Core capabilities PostgreSQL must provide and the quality attributes it must uphold at scale</p>
+
+    <div class="req-summary">
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--primary);">8</div>
+        <div class="label">Functional Requirements</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--primary);">50K+</div>
+        <div class="label">TPS (Single Node OLTP)</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: #7c3aed;">0</div>
+        <div class="label">Read Locks (MVCC)</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: #7c3aed;">100+</div>
+        <div class="label">Extensions Available</div>
+      </div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:#e0f2fe;color:var(--primary);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Advanced SQL Support</div>
+          <div class="req-desc">Full support for CTEs (WITH queries), window functions (ROW_NUMBER, RANK, LAG/LEAD), LATERAL joins, and recursive queries for complex analytical and hierarchical data retrieval.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">JSONB Storage &amp; Querying</div>
+          <div class="req-desc">Native binary JSON storage with GIN indexing, containment operators (@&gt;), path queries (jsonb_path_query), and partial updates via jsonb_set — enabling document-store use cases within a relational database.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Full-Text Search</div>
+          <div class="req-desc">Built-in text search with tsvector/tsquery types, GIN/GiST indexes, language-aware stemming, ranking functions (ts_rank), and phrase search without requiring external search engines.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Table Inheritance &amp; Partitioning</div>
+          <div class="req-desc">Declarative partitioning by range, list, or hash. Table inheritance allows shared schemas across related tables. Partition pruning ensures queries only scan relevant partitions.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Custom Types &amp; Domains</div>
+          <div class="req-desc">Define composite types, enumerated types, range types, and domains with constraints. Enables type-safe schemas that enforce business rules at the database level.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">Foreign Data Wrappers</div>
+          <div class="req-desc">Query external data sources (other databases, CSV files, APIs) as if they were local tables using the SQL/MED standard. postgres_fdw enables cross-server joins and pushdown optimization.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Logical Replication</div>
+          <div class="req-desc">Publish/subscribe model for selective table replication across PostgreSQL instances. Supports schema migration, version upgrades with zero downtime, and multi-master topologies via extensions.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-08</div>
+          <div class="req-title">Stored Procedures &amp; PL/pgSQL</div>
+          <div class="req-desc">Server-side procedural logic with transaction control (COMMIT/ROLLBACK inside procedures), exception handling, cursors, and support for multiple languages (PL/Python, PL/Perl, PL/V8).</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:#f5f3ff;color:#7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">MVCC Without Read Locks</div>
+          <div class="req-desc">Readers never block writers and writers never block readers. Each transaction sees a consistent snapshot via multi-version concurrency control, enabling high-throughput concurrent access.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">WAL for Crash Recovery</div>
+          <div class="req-desc">Write-Ahead Logging ensures durability by writing changes to WAL before data files. After a crash, WAL replay restores the database to a consistent state with zero data loss for committed transactions.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Parallel Query Execution</div>
+          <div class="req-desc">Parallel sequential scans, hash joins, aggregations, and index scans across multiple CPU cores. Configurable via max_parallel_workers_per_gather for balancing query speed vs. resource usage.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Connection Pooling Compatibility</div>
+          <div class="req-desc">Designed for external connection poolers (PgBouncer, pgpool-II). Each backend is a separate process; pooling is critical for handling thousands of concurrent clients without exhausting OS resources.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Vacuum &amp; Autovacuum Performance</div>
+          <div class="req-desc">Autovacuum must reclaim dead tuples and update visibility maps without disrupting production workloads. Tunable throttling (autovacuum_vacuum_cost_delay) prevents I/O saturation during cleanup.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Extensibility Ecosystem</div>
+          <div class="req-desc">First-class extension support (CREATE EXTENSION) for adding capabilities: PostGIS for geospatial, TimescaleDB for time-series, pg_stat_statements for query analytics, Citus for distributed tables.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Point-in-Time Recovery (PITR)</div>
+          <div class="req-desc">Continuous WAL archiving enables restoring the database to any point in time. Combined with base backups, provides RPO of seconds and supports compliance requirements for data retention.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-08</div>
+          <div class="req-title">Monitoring &amp; Observability</div>
+          <div class="req-desc">Rich system catalog views (pg_stat_activity, pg_stat_user_tables, pg_locks) and extensions (pg_stat_statements, auto_explain) provide deep visibility into query performance and resource usage.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 8: Scaling -->
+  <section id="scaling">
+    <div class="section-header">
+      <span class="section-number">8</span>
       <h2>Scaling & Trade-offs</h2>
     </div>
     <div class="scaling-grid">

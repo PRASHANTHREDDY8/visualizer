@@ -770,6 +770,26 @@
       color: var(--text-muted);
       width: 100%;
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-c-light); border-left-color: var(--accent-c); }
+    .req-item.functional .req-id { color: var(--accent-c); }
+    .req-item.nonfunctional { background: var(--accent-cp-light); border-left-color: var(--accent-cp); }
+    .req-item.nonfunctional .req-id { color: var(--accent-cp); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -782,6 +802,7 @@
     <a href="#use-cases">Use Cases & Pitfalls</a>
     <a href="#best-practices">Best Practices</a>
     <a href="#scaling">Scaling & Trade-offs</a>
+    <a href="#requirements">Requirements</a>
     <a href="#playground">Playground</a>
   </nav>
 
@@ -1236,10 +1257,95 @@
       </div>
     </section>
 
-    <!-- Section 8: Interactive Playground -->
-    <section id="playground">
+    <!-- Section 8: Functional & Non-Functional Requirements -->
+    <section id="requirements">
       <div class="section-header">
         <span class="num">8</span>
+        <h2>Functional & Non-Functional Requirements</h2>
+      </div>
+      <p style="color:var(--text-secondary);margin-bottom:1.5rem;font-size:0.95rem;">Core theoretical properties and quality attributes for understanding distributed system trade-offs</p>
+
+      <div class="req-summary">
+        <div class="req-summary-card"><div class="metric" style="color:var(--accent-c);">6</div><div class="label">Functional Reqs</div></div>
+        <div class="req-summary-card"><div class="metric" style="color:var(--accent-cp);">6</div><div class="label">Non-Functional Reqs</div></div>
+        <div class="req-summary-card"><div class="metric" style="color:var(--accent-p);">3</div><div class="label">Trade-off Axes</div></div>
+        <div class="req-summary-card"><div class="metric" style="color:var(--accent-a);">Formal</div><div class="label">Guarantees</div></div>
+      </div>
+
+      <div class="req-grid">
+        <div class="req-column">
+          <h3><span class="req-icon" style="background:var(--accent-c-light);color:var(--accent-c);">F</span> Functional Requirements</h3>
+          <div class="req-item functional">
+            <div class="req-id">FR-01</div>
+            <div class="req-title">Consistency Models</div>
+            <div class="req-desc">Define and implement consistency levels ranging from strong (linearizable) to eventual, including causal, sequential, and read-your-writes consistency.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-02</div>
+            <div class="req-title">Availability Patterns</div>
+            <div class="req-desc">Implement high availability through data replication (synchronous/asynchronous), automatic failover, and graceful degradation strategies.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-03</div>
+            <div class="req-title">Partition Tolerance Strategies</div>
+            <div class="req-desc">Handle network partitions through split-brain detection, quorum-based decisions, and partition recovery with conflict resolution.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-04</div>
+            <div class="req-title">CP System Implementations</div>
+            <div class="req-desc">Analyze CP databases (HBase, MongoDB with majority write concern, ZooKeeper) that sacrifice availability during partitions to maintain consistency.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-05</div>
+            <div class="req-title">AP System Implementations</div>
+            <div class="req-desc">Analyze AP databases (Cassandra, DynamoDB, CouchDB) that sacrifice consistency during partitions to maintain availability with eventual convergence.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-06</div>
+            <div class="req-title">Trade-off Analysis Framework</div>
+            <div class="req-desc">Provide a structured approach to evaluate system requirements and choose the appropriate CAP trade-off based on business needs and failure modes.</div>
+          </div>
+        </div>
+        <div class="req-column">
+          <h3><span class="req-icon" style="background:var(--accent-cp-light);color:var(--accent-cp);">NF</span> Non-Functional Requirements</h3>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-01</div>
+            <div class="req-title">Formal Correctness Guarantees</div>
+            <div class="req-desc">System consistency model must be formally specified and verifiable, with clear documentation of invariants and violation boundaries.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-02</div>
+            <div class="req-title">Linearizability vs Serializability</div>
+            <div class="req-desc">Distinguish between linearizability (real-time ordering of single operations) and serializability (transactional ordering) with documented guarantees per operation.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-03</div>
+            <div class="req-title">Tunable Consistency</div>
+            <div class="req-desc">Support configurable consistency levels per operation (e.g., Cassandra's ONE, QUORUM, ALL) to enable fine-grained trade-off decisions.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-04</div>
+            <div class="req-title">Partition Detection Latency</div>
+            <div class="req-desc">Detect network partitions within seconds using heartbeat mechanisms, phi-accrual failure detectors, or gossip protocols.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-05</div>
+            <div class="req-title">Eventual Consistency Convergence</div>
+            <div class="req-desc">Guarantee convergence to a consistent state within defined time bounds (typically seconds to minutes) after partition healing.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-06</div>
+            <div class="req-title">Split-brain Resolution</div>
+            <div class="req-desc">Implement deterministic conflict resolution strategies (last-writer-wins, vector clocks, CRDTs) with documented data loss boundaries.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 9: Interactive Playground -->
+    <section id="playground">
+      <div class="section-header">
+        <span class="num">9</span>
         <h2>Interactive Playground</h2>
       </div>
       <div class="playground-container">

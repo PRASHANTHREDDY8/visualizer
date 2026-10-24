@@ -659,6 +659,26 @@
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm, 8px); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary, #64748b)); line-height: 1.5; }
+    .req-item.functional { background: var(--accent-light, #e8ecff); border-left-color: var(--accent, #4f6ef7); }
+    .req-item.functional .req-id { color: var(--accent, #4f6ef7); }
+    .req-item.nonfunctional { background: #f5f3ff; border-left-color: #7c3aed; }
+    .req-item.nonfunctional .req-id { color: #7c3aed; }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 18px; text-align: center; box-shadow: var(--shadow-sm, var(--shadow, 0 1px 3px rgba(0,0,0,0.08))); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary, #64748b)); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -672,6 +692,7 @@
       <a href="#usecases">Use Cases</a>
       <a href="#bestpractices">Best Practices</a>
       <a href="#scaling">Scaling</a>
+      <a href="#requirements">Requirements</a>
       <a href="#playground">Playground</a>
     </div>
   </nav>
@@ -1191,6 +1212,102 @@
           <div style="padding: 1rem; background: var(--danger-light); border-radius: 8px;">
             <strong style="color: var(--danger);">File truncation during sendfile()</strong>
             <p style="font-size: 0.82rem; margin-top: 0.3rem;">If another process truncates the file mid-transfer, sendfile() may return short or signal an error depending on timing. Mitigation: use immutable segments or flock().</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: Functional & Non-Functional Requirements -->
+    <section id="requirements">
+      <div class="section-header">
+        <h2>Functional &amp; Non-Functional Requirements</h2>
+        <p>Core capabilities and quality attributes that a zero-copy transfer implementation must satisfy for production-grade I/O performance.</p>
+      </div>
+
+      <div class="req-summary">
+        <div class="req-summary-card">
+          <div class="metric" style="color: var(--primary);">0</div>
+          <div class="label">CPU Copies Eliminated</div>
+        </div>
+        <div class="req-summary-card">
+          <div class="metric" style="color: var(--accent);">10 Gbps+</div>
+          <div class="label">Target Throughput</div>
+        </div>
+        <div class="req-summary-card">
+          <div class="metric" style="color: var(--secondary);">2x</div>
+          <div class="label">Context Switch Reduction</div>
+        </div>
+        <div class="req-summary-card">
+          <div class="metric" style="color: var(--warning);">6 + 6</div>
+          <div class="label">FR + NFR Requirements</div>
+        </div>
+      </div>
+
+      <div class="req-grid">
+        <div class="req-column">
+          <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#9889;</span> Functional Requirements</h3>
+          <div class="req-item functional">
+            <div class="req-id">FR-01</div>
+            <div class="req-title">sendfile() System Call Support</div>
+            <div class="req-desc">Transfer data directly from a file descriptor to a socket descriptor without copying into user-space buffers. Must support offset tracking and partial transfers for large files.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-02</div>
+            <div class="req-title">Memory-Mapped I/O (mmap)</div>
+            <div class="req-desc">Map file contents into the process virtual address space, enabling direct access to page cache pages. Support MAP_SHARED and MAP_PRIVATE modes with configurable page-fault handling.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-03</div>
+            <div class="req-title">splice/tee for Pipe-Based Transfer</div>
+            <div class="req-desc">Move data between two file descriptors using kernel-space pipe buffers without crossing the user-kernel boundary. Support SPLICE_F_MOVE and SPLICE_F_NONBLOCK flags.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-04</div>
+            <div class="req-title">DMA (Direct Memory Access)</div>
+            <div class="req-desc">Leverage hardware DMA engines to transfer data directly between device buffers and main memory, bypassing CPU involvement entirely for bulk data movement.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-05</div>
+            <div class="req-title">Scatter-Gather I/O</div>
+            <div class="req-desc">Support vectored I/O operations (readv/writev) that read from or write to multiple non-contiguous buffers in a single system call, reducing syscall overhead.</div>
+          </div>
+          <div class="req-item functional">
+            <div class="req-id">FR-06</div>
+            <div class="req-title">Network Buffer Management</div>
+            <div class="req-desc">Manage socket send/receive buffers efficiently with zero-copy semantics. Support SO_ZEROCOPY socket option and MSG_ZEROCOPY flag for send operations with completion notifications.</div>
+          </div>
+        </div>
+        <div class="req-column">
+          <h3><span class="req-icon" style="background:#f5f3ff;color:#7c3aed;">&#128737;</span> Non-Functional Requirements</h3>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-01</div>
+            <div class="req-title">Eliminate CPU Copies at User-Kernel Boundary</div>
+            <div class="req-desc">Reduce data copies from 4 (traditional) to 0 CPU-involved copies. All data movement should occur via DMA without CPU-mediated copy_to_user / copy_from_user calls.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-02</div>
+            <div class="req-title">Reduce Context Switches</div>
+            <div class="req-desc">Minimize user-to-kernel mode transitions from 4 (read+write) to 2 (single sendfile) per transfer. Each context switch costs 1-5 microseconds of CPU overhead.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-03</div>
+            <div class="req-title">Maximize Throughput (10 Gbps+)</div>
+            <div class="req-desc">Achieve sustained throughput above 10 Gbps for large file transfers by eliminating memory bandwidth waste from redundant copies and reducing CPU cache pollution.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-04</div>
+            <div class="req-title">Minimize Transfer Latency</div>
+            <div class="req-desc">Reduce per-request latency by 30-50% compared to traditional copy paths. Tail latency (p99) should remain stable under high concurrency with no GC-like pauses.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-05</div>
+            <div class="req-title">Lower CPU Utilization for I/O Workloads</div>
+            <div class="req-desc">Free CPU cycles from data copying, reducing I/O-bound CPU usage by 50-80%. This allows the CPU to handle more application logic and concurrent connections.</div>
+          </div>
+          <div class="req-item nonfunctional">
+            <div class="req-id">NFR-06</div>
+            <div class="req-title">Memory Efficiency</div>
+            <div class="req-desc">Avoid allocating user-space buffers for data transit. Reduce per-connection memory footprint and RSS, enabling higher connection density on the same hardware.</div>
           </div>
         </div>
       </div>

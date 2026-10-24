@@ -509,6 +509,26 @@
       font-weight: bold;
     }
 
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--primary-light); border-left-color: var(--primary); }
+    .req-item.functional .req-id { color: var(--primary); }
+    .req-item.nonfunctional { background: var(--accent-light); border-left-color: var(--accent); }
+    .req-item.nonfunctional .req-id { color: var(--accent); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
     /* Scaling */
     .scaling-grid {
       display: grid;
@@ -791,6 +811,7 @@
   <a href="#usecases">Use Cases & Pitfalls</a>
   <a href="#best-practices">Best Practices</a>
   <a href="#scaling">Scaling</a>
+  <a href="#requirements">Requirements</a>
   <a href="#playground">Playground</a>
 </nav>
 
@@ -1416,10 +1437,122 @@
     </div>
   </section>
 
-  <!-- Section 8: Playground -->
-  <section id="playground">
+  <!-- Section 8: Requirements -->
+  <section id="requirements">
     <div class="section-header">
       <span class="section-number">8</span>
+      <h2>Functional & Non-Functional Requirements</h2>
+    </div>
+    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Core capabilities and quality attributes for a production-grade real-time fraud detection system in banking.</p>
+
+    <div class="req-summary">
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--primary);">&lt;100ms</div>
+        <div class="label">Scoring Latency</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--success);">95%+</div>
+        <div class="label">Detection Rate</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--warning);">&lt;0.1%</div>
+        <div class="label">False Positive Rate</div>
+      </div>
+      <div class="req-summary-card">
+        <div class="metric" style="color: var(--accent);">10,000+</div>
+        <div class="label">TPS Capacity</div>
+      </div>
+    </div>
+
+    <div class="req-grid">
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:var(--primary-light);color:var(--primary);">&#9889;</span> Functional Requirements</h3>
+        <div class="req-item functional">
+          <div class="req-id">FR-01</div>
+          <div class="req-title">Rule Engine</div>
+          <div class="req-desc">Configurable velocity checks (transactions per hour/day), amount thresholds, geographic restrictions, and merchant category blocks. Boolean and weighted rule composition.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-02</div>
+          <div class="req-title">ML Model Scoring</div>
+          <div class="req-desc">Real-time anomaly detection using isolation forests and autoencoders. Supervised classification with gradient-boosted trees. Ensemble model architecture.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-03</div>
+          <div class="req-title">Transaction Screening</div>
+          <div class="req-desc">Real-time screening of every transaction against rules, ML models, and watchlists. Risk score assignment with configurable action thresholds.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-04</div>
+          <div class="req-title">Case Management</div>
+          <div class="req-desc">Alert triage dashboard for fraud analysts. Case assignment, priority queuing, investigation tools, and resolution tracking. SLA monitoring.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-05</div>
+          <div class="req-title">Alert Prioritization</div>
+          <div class="req-desc">Smart ranking of alerts by risk score, dollar amount, customer segment, and pattern novelty. Reduce analyst workload by surfacing highest-impact cases first.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-06</div>
+          <div class="req-title">SAR Filing</div>
+          <div class="req-desc">Suspicious Activity Report generation and filing with FinCEN. Automated pre-population of SAR fields. Audit trail for regulatory examination.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-07</div>
+          <div class="req-title">Customer Risk Profiling</div>
+          <div class="req-desc">Dynamic risk scores per customer based on transaction history, behavioral biometrics, device fingerprinting, and account age.</div>
+        </div>
+        <div class="req-item functional">
+          <div class="req-id">FR-08</div>
+          <div class="req-title">Pattern Detection</div>
+          <div class="req-desc">Identify fraud rings, account takeover patterns, synthetic identity fraud, and money laundering networks using graph analytics and link analysis.</div>
+        </div>
+      </div>
+      <div class="req-column">
+        <h3><span class="req-icon" style="background:var(--accent-light);color:var(--accent);">&#128737;</span> Non-Functional Requirements</h3>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-01</div>
+          <div class="req-title">Scoring Latency</div>
+          <div class="req-desc">Transaction risk scoring under 100ms at p99 for real-time authorization decisions. Synchronous scoring in the payment processing pipeline.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-02</div>
+          <div class="req-title">Detection Accuracy</div>
+          <div class="req-desc">95%+ fraud detection rate with less than 0.1% false positive rate. Balanced precision-recall optimized for financial impact.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-03</div>
+          <div class="req-title">Transaction Throughput</div>
+          <div class="req-desc">Process 10,000+ transactions per second during peak periods. Horizontal scaling with partition-based processing.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-04</div>
+          <div class="req-title">Model Retraining</div>
+          <div class="req-desc">Automated ML pipeline with daily feature refresh and weekly model retraining. Champion-challenger framework for safe model deployment.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-05</div>
+          <div class="req-title">Audit Compliance</div>
+          <div class="req-desc">Complete audit trail for every decision: rule matches, model scores, analyst actions. Immutable logs for regulatory examination (BSA/AML).</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-06</div>
+          <div class="req-title">Explainable AI</div>
+          <div class="req-desc">Model predictions must include feature importance and decision rationale. SHAP values for individual transaction explanations. Required for regulatory review.</div>
+        </div>
+        <div class="req-item nonfunctional">
+          <div class="req-id">NFR-07</div>
+          <div class="req-title">Data Security</div>
+          <div class="req-desc">PII encryption at rest and in transit. Role-based access control. Data masking for analyst views. SOX and GLBA compliance.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 9: Playground -->
+  <section id="playground">
+    <div class="section-header">
+      <span class="section-number">9</span>
       <h2>Interactive Playground</h2>
     </div>
     <div class="playground">

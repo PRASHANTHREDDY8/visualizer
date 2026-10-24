@@ -700,6 +700,26 @@
       width: 80px;
       accent-color: var(--primary);
     }
+
+    /* Requirements Section */
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    @media (max-width: 768px) { .req-grid { grid-template-columns: 1fr; } }
+    .req-column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-sm); }
+    .req-column h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .req-column h3 .req-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .req-item { padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; border-left: 4px solid transparent; transition: all 0.2s; }
+    .req-item:hover { transform: translateX(4px); }
+    .req-item .req-id { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .req-item .req-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .req-item .req-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .req-item.functional { background: var(--primary-light); border-left-color: var(--primary); }
+    .req-item.functional .req-id { color: var(--primary); }
+    .req-item.nonfunctional { background: var(--purple-light); border-left-color: var(--purple); }
+    .req-item.nonfunctional .req-id { color: var(--purple); }
+    .req-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; margin-bottom: 32px; }
+    .req-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+    .req-summary-card .metric { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .req-summary-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -715,6 +735,7 @@
     <a class="nav-link" onclick="scrollToSection('usecases')">Use Cases</a>
     <a class="nav-link" onclick="scrollToSection('pitfalls')">Pitfalls</a>
     <a class="nav-link" onclick="scrollToSection('practices')">Best Practices</a>
+    <a class="nav-link" onclick="scrollToSection('requirements')">Requirements</a>
     <a class="nav-link" onclick="scrollToSection('scaling')">Scaling</a>
   </div>
 </nav>
@@ -934,6 +955,114 @@
     <p class="section-subtitle">Proven patterns for building production RAG systems.</p>
   </div>
   <div class="practices-grid" id="practicesGrid"></div>
+</section>
+
+<!-- Section: Functional & Non-Functional Requirements -->
+<section class="section" id="requirements">
+  <div class="section-header">
+    <div class="section-label">&#9670; Requirements</div>
+    <h2 class="section-title">Functional &amp; Non-Functional Requirements</h2>
+    <p class="section-subtitle">Core capabilities and quality attributes for Retrieval-Augmented Generation systems in production AI applications</p>
+  </div>
+
+  <div class="req-summary">
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--primary);">&lt;500ms</div>
+      <div class="label">Retrieval Latency</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--success);">95%+</div>
+      <div class="label">Recall@k Target</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--accent);">Millions</div>
+      <div class="label">Document Scale</div>
+    </div>
+    <div class="req-summary-card">
+      <div class="metric" style="color: var(--purple);">384-1536</div>
+      <div class="label">Embedding Dimensions</div>
+    </div>
+  </div>
+
+  <div class="req-grid">
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--primary-light); color: var(--primary);">F</span> Functional Requirements</h3>
+      <div class="req-item functional">
+        <div class="req-id">FR-01</div>
+        <div class="req-title">Document Ingestion &amp; Chunking</div>
+        <div class="req-desc">Process documents (PDF, HTML, markdown, code) into optimally-sized chunks (256-1024 tokens) with configurable overlap, preserving semantic coherence and metadata.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-02</div>
+        <div class="req-title">Embedding Generation</div>
+        <div class="req-desc">Convert text chunks into dense vector representations using embedding models (OpenAI, Cohere, Sentence Transformers) with dimensionality from 384 to 1536 based on quality/cost trade-offs.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-03</div>
+        <div class="req-title">Vector Store Indexing</div>
+        <div class="req-desc">Index embedding vectors in specialized stores (Pinecone, Weaviate, Chroma, pgvector) with support for HNSW, IVF, and PQ indexing algorithms for efficient similarity search.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-04</div>
+        <div class="req-title">Similarity Search (k-NN/ANN)</div>
+        <div class="req-desc">Retrieve top-k most relevant chunks using approximate nearest neighbor search with cosine similarity, dot product, or Euclidean distance metrics.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-05</div>
+        <div class="req-title">Prompt Augmentation with Context</div>
+        <div class="req-desc">Construct LLM prompts by injecting retrieved context into structured templates, managing token budgets and context window limits (4K-128K tokens).</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-06</div>
+        <div class="req-title">Citation &amp; Attribution</div>
+        <div class="req-desc">Track source documents through the retrieval pipeline, enabling the LLM to cite specific passages and providing users with verifiable references to original content.</div>
+      </div>
+      <div class="req-item functional">
+        <div class="req-id">FR-07</div>
+        <div class="req-title">Hybrid Search (Semantic + Keyword)</div>
+        <div class="req-desc">Combine dense vector search with sparse keyword search (BM25) using reciprocal rank fusion or linear combination for improved recall across query types.</div>
+      </div>
+    </div>
+
+    <div class="req-column">
+      <h3><span class="req-icon" style="background: var(--purple-light); color: var(--purple);">NF</span> Non-Functional Requirements</h3>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-01</div>
+        <div class="req-title">Retrieval Latency (&lt;500ms)</div>
+        <div class="req-desc">Complete vector similarity search and context assembly in under 500ms (p95), including embedding generation, ANN search, and result ranking.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-02</div>
+        <div class="req-title">Embedding Dimension Trade-offs</div>
+        <div class="req-desc">Balance quality vs. cost: 384-dim models (MiniLM) for fast/cheap retrieval; 1536-dim (OpenAI ada-002) for maximum semantic accuracy; choose based on use case.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-03</div>
+        <div class="req-title">Recall@k &gt; 95%</div>
+        <div class="req-desc">Achieve greater than 95% recall at k=10 through index tuning (HNSW ef_search, nprobe), re-ranking models, and hybrid search strategies.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-04</div>
+        <div class="req-title">Scale to Millions of Documents</div>
+        <div class="req-desc">Support indexing and searching across millions of document chunks with sub-second latency through distributed vector stores, sharding, and quantization.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-05</div>
+        <div class="req-title">Token Budget Management</div>
+        <div class="req-desc">Efficiently manage LLM context windows by ranking, truncating, and compressing retrieved passages to maximize relevant information within token limits.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-06</div>
+        <div class="req-title">Hallucination Reduction</div>
+        <div class="req-desc">Reduce LLM hallucination rates by 40-60% compared to non-RAG baselines through grounded generation, confidence scoring, and faithfulness evaluation.</div>
+      </div>
+      <div class="req-item nonfunctional">
+        <div class="req-id">NFR-07</div>
+        <div class="req-title">Freshness &amp; Index Updates</div>
+        <div class="req-desc">Support incremental index updates with sub-minute latency for new documents, enabling RAG systems to serve current information without full re-indexing.</div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- Section 7: Scaling -->
